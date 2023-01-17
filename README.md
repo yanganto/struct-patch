@@ -52,4 +52,4 @@ such that patch structure is good for partial update by `apply` method of `struc
 [mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
 [mit-url]: https://github.com/yanganto/struct-patch/blob/readme/LICENSE
 [doc-badge]: https://img.shields.io/badge/docs-rs-orange.svg
-[doc-url]: https://docs.rs/struct-patch-derive/0.1.0/struct_patch_derive/
+[doc-url]: https://docs.rs/struct-patch/
