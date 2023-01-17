@@ -4,8 +4,8 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use struct_patch::Patch;
     use serde::{Deserialize, Serialize};
+    use struct_patch::Patch;
 
     #[derive(Default, Patch)]
     #[patch_derive(Debug, Default, Deserialize, Serialize)]
@@ -27,7 +27,10 @@ mod tests {
 
         let patch = serde_json::from_str(data).unwrap();
 
-        assert_eq!(format!("{patch:?}"), "ItemPatch { field_bool: None, field_int: Some(7), field_string: None }");
+        assert_eq!(
+            format!("{patch:?}"),
+            "ItemPatch { field_bool: None, field_int: Some(7), field_string: None }"
+        );
 
         item.apply(patch);
 
