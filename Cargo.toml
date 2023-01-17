@@ -1,0 +1,18 @@
+[workspace]
+members = [
+    "struct-patch",
+    "struct-patch-derive",
+    "struct-patch-trait"
+]
+
+
+[workspace.package]
+authors = ["Antonio Yang <yanganto@gmail.com>"]
+version = "0.1.0"
+edition = "2021"
+categories = ["Accessibility"]
+keywords = ["struct", "patch", "macro", "derive"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/yanganto/struct-patch/"
+description = "A lib help you patch Rust instance, and easy to partial update configures."

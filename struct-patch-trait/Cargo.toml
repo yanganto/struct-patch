@@ -1,0 +1,10 @@
+[package]
+name = "struct-patch-trait"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+categories.workspace = true
+keywords.workspace = true
+repository.workspace = true
+
+[dependencies]
