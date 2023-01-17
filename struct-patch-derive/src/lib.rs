@@ -16,7 +16,7 @@ use quote::quote;
 ///   }
 /// ```
 ///
-/// Patch derive will genereate ItemPatch and implement Patch trait for struct.
+/// Patch derive will generate ItemPatch and implement Patch trait for struct.
 /// ```rust
 /// #[derive(Default)]
 ///  struct ItemPatch {
@@ -43,13 +43,13 @@ use quote::quote;
 ///  struct Item { }
 /// ```
 ///
-/// Patch derive will genereate ItemPatch and implement Patch trait for struct.
+/// Patch derive will generate ItemPatch and implement Patch trait for struct.
 /// ```rust
 /// #[derive(Debug, Default, Deserialize, Serialize)]
 ///  struct ItemPatch {}
 /// ```
 /// Such that the patch struct can easily generated from json or other serializer.
-/// Please check the [exmaple](https://github.com/yanganto/struct-patch/blob/main/struct-patch/examples/json.rs).
+/// Please check the [example](https://github.com/yanganto/struct-patch/blob/main/struct-patch/examples/json.rs).
 #[proc_macro_derive(Patch, attributes(patch_derive))]
 pub fn derive_patch(item: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(item as syn::DeriveInput);
