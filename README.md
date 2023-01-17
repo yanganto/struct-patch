@@ -34,7 +34,7 @@ such that patch structure is good for partial update by `apply` method of `struc
         let patch = serde_json::from_str(data).unwrap();
 
         assert_eq!(
-          format!("{patch:?}"), 
+          format!("{patch:?}"),
           "ItemPatch { field_bool: None, field_int: Some(7), field_string: None }"
         );
 
@@ -52,4 +52,4 @@ such that patch structure is good for partial update by `apply` method of `struc
 [mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
 [mit-url]: https://github.com/yanganto/struct-patch/blob/readme/LICENSE
 [doc-badge]: https://img.shields.io/badge/docs-rs-orange.svg
-[doc-url]: https://docs.rs/test-with/latest/struct-patch/
+[doc-url]: https://docs.rs/struct-patch-derive/0.1.0/struct_patch_derive/
