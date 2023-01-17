@@ -19,7 +19,11 @@
 
         publishScript = pkgs.writeShellScriptBin "crate-publish" ''
           cargo login $1
-          cargo publish
+          cargo publish -p struct-patch-trait
+          sleep 5
+          cargo publish -p struct-patch-derive
+          sleep 5
+          cargo publish -p struct-patch
         '';
         updateDependencyScript = pkgs.writeShellScriptBin "update-dependency" ''
           dr ./Cargo.toml

@@ -17,7 +17,7 @@ struct Item {
 //     field_string: Option<String>,
 // }
 
-fn main()  {
+fn main() {
     use struct_patch::traits::Patch;
 
     let mut item = Item::default();
@@ -28,7 +28,10 @@ fn main()  {
 
     patch.field_int = Some(7);
 
-    assert_eq!(format!("{patch:?}"), "ItemPatch { field_bool: None, field_int: Some(7), field_string: None }");
+    assert_eq!(
+        format!("{patch:?}"),
+        "ItemPatch { field_bool: None, field_int: Some(7), field_string: None }"
+    );
 
     item.apply(patch);
 
