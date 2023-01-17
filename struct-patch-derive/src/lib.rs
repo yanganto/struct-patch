@@ -5,6 +5,51 @@ use proc_macro2::{Ident, Span};
 use proc_macro_error::abort;
 use quote::quote;
 
+/// `Patch` help you patch Rust instance, and easy to partial update.
+///
+/// ```rust
+///  #[derive(Patch)]
+///  struct Item {
+///     field_bool: bool,
+///     field_int: usize,
+///     field_string: String,
+///   }
+/// ```
+///
+/// Patch derive will genereate ItemPatch and implement Patch trait for struct.
+/// ```rust
+/// #[derive(Default)]
+///  struct ItemPatch {
+///     field_bool: Option<bool>,
+///     field_int: Option<usize>,
+///     field_string: Option<String>,
+///  }
+/// ```
+/// Such that you can use `apply` function to patch the existing fields from `ItemPatch` to `Item`
+/// ```rust
+/// use struct_patch::traits::Patch;
+/// let mut item = Item::default();
+/// let mut patch = Item::default_patch();
+/// patch.field_int = Some(7);
+///
+/// item.apply(patch); // only `field_int` updated
+/// ```
+///
+///
+/// If you want to add more derives on patch struct, you can use `patch_derive` as following.
+/// ```rust
+///  #[derive(Patch)]
+///  #[patch_derive(Debug, Default, Deserialize, Serialize)]
+///  struct Item { }
+/// ```
+///
+/// Patch derive will genereate ItemPatch and implement Patch trait for struct.
+/// ```rust
+/// #[derive(Debug, Default, Deserialize, Serialize)]
+///  struct ItemPatch {}
+/// ```
+/// Such that the patch struct can easily generated from json or other serializer.
+/// Please check the [exmaple](https://github.com/yanganto/struct-patch/blob/main/struct-patch/examples/json.rs).
 #[proc_macro_derive(Patch, attributes(patch_derive))]
 pub fn derive_patch(item: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(item as syn::DeriveInput);
