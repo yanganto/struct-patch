@@ -6,6 +6,9 @@ edition.workspace = true
 categories.workspace = true
 keywords.workspace = true
 repository.workspace = true
+description.workspace = true
+license.workspace = true
+readme.workspace = true
 
 
 [dependencies]
