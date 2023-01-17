@@ -64,7 +64,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     .to_string();
 
     output += &quote!(
-        impl struct_patch_trait::traits::Patch< #patch_struct_name > for #struct_name {
+        impl struct_patch::traits::Patch< #patch_struct_name > for #struct_name {
             fn apply(&mut self, patch: #patch_struct_name) {
                 #(
                     if let Some(v) = patch.#field_names_clone {
