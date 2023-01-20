@@ -19,6 +19,7 @@ struct Item {
 
 fn main() {
     use struct_patch::traits::Patch;
+    use struct_patch::traits::PatchStruct;
 
     let mut item = Item::default();
 
@@ -26,7 +27,7 @@ fn main() {
     // the same as
     // let mut patch = ItemPatch::default();
 
-    assert!(patch.is_empty());
+    assert!(patch.is_empty()); // provided by PatchStruct
     patch.field_int = Some(7);
     assert!(!patch.is_empty());
 
