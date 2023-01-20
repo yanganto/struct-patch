@@ -138,7 +138,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     .to_string();
 
     output += &quote!(
-        impl #patch_struct_name {
+        impl struct_patch::traits::PatchStruct for #patch_struct_name {
             fn is_empty(&self) -> bool {
                 let mut has_value = false;
                 #(

@@ -52,6 +52,10 @@ Following are attributes you can easy to use patch a struct as you want
   - [`patch_derive`][patch_derive]: passing the derives to patch struct
   - [`patch_name`][patch_name]: specify the patch struct name, default name is {struct name}Patch
 
+## Methods for patch structure
+The patch struct will implment [`PatchStruct`][patch-struct-trait] trait with following methods:
+  - `is_empty`: check there is anything in the patch
+
 [crates-badge]: https://img.shields.io/crates/v/struct-patch.svg
 [crate-url]: https://crates.io/crates/struct-patch
 [mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
@@ -60,5 +64,6 @@ Following are attributes you can easy to use patch a struct as you want
 [doc-url]: https://docs.rs/struct-patch/
 [patch-derive]: https://docs.rs/struct-patch-derive/latest/struct_patch_derive/derive.Patch.html
 [patch-trait]: https://docs.rs/struct-patch-trait/latest/struct_patch_trait/traits/trait.Patch.html
+[patch-struct-trait]: https://docs.rs/struct-patch-trait/latest/struct_patch_trait/traits/trait.PatchStruct.html
 [patch_derive]: https://docs.rs/struct-patch-derive/latest/struct_patch_derive/derive.Patch.html#patch_derive
 [patch_name]: https://docs.rs/struct-patch-derive/latest/struct_patch_derive/derive.Patch.html#patch_name
