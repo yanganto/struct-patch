@@ -26,7 +26,9 @@ fn main() {
     // the same as
     // let mut patch = ItemPatch::default();
 
+    assert!(patch.is_empty());
     patch.field_int = Some(7);
+    assert!(!patch.is_empty());
 
     assert_eq!(
         format!("{patch:?}"),

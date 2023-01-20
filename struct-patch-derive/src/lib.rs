@@ -25,12 +25,16 @@ use quote::quote;
 ///     field_string: Option<String>,
 ///  }
 /// ```
-/// Such that you can use `apply` function to patch the existing fields from `ItemPatch` to `Item`
+/// Such that you can use `apply` function to patch the existing fields from `ItemPatch` to `Item`,
+/// and use `is_empty` to check the patch instance has something to patch or not.
 /// ```rust
 /// use struct_patch::traits::Patch;
 /// let mut item = Item::default();
 /// let mut patch = Item::default_patch();
+/// assert(patch.is_empty());
+///
 /// patch.field_int = Some(7);
+/// assert!(!patch.is_empty());
 ///
 /// item.apply(patch); // only `field_int` updated
 /// ```
@@ -89,6 +93,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
 
     let field_names = wrapped_fields.iter().map(|(f, _)| f);
     let field_names_clone = field_names.clone();
+    let field_names_clone2 = field_names.clone();
     let wrapped_types = wrapped_fields.iter().map(|(_, t)| t);
 
     let mut output = if let Some(patch_derive) = patch_derive {
@@ -109,6 +114,16 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     .to_string();
 
     output += &quote!(
+        impl #patch_struct_name {
+            fn is_empty(&self) -> bool {
+                let mut has_value = false;
+                #(
+                    has_value |= self.#field_names_clone2.is_some();
+                )*
+                ! has_value
+            }
+        }
+
         impl struct_patch::traits::Patch< #patch_struct_name > for #struct_name {
             fn apply(&mut self, patch: #patch_struct_name) {
                 #(
