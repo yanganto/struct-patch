@@ -53,7 +53,7 @@ Following are attributes you can easy to use patch a struct as you want
   - [`patch_name`][patch_name]: specify the patch struct name, default name is {struct name}Patch
 
 ## Methods for patch structure
-The patch struct will implment [`PatchStruct`][patch-struct-trait] trait with following methods:
+The patch struct will implement [`PatchStruct`][patch-struct-trait] trait with following methods:
   - `is_empty`: check there is anything in the patch
 
 [crates-badge]: https://img.shields.io/crates/v/struct-patch.svg
