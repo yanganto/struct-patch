@@ -1,12 +1,20 @@
 /// Define the behavior between patch struct and original sturct
 pub mod traits {
+    /// The trait can apply patch and generete corresponding patch instance
     pub trait Patch<P: Default> {
-        /// apply the patch, only update the existing fields
+        /// Apply the patch, only update the existing fields
         fn apply(&mut self, patch: P);
 
-        /// get an empty patch instance
+        /// Get an empty patch instance
         fn default_patch() -> P {
             P::default()
         }
+    }
+
+    #[cfg(feature = "status")]
+    /// The trait can check on the status of patch instance
+    pub trait PatchStatus {
+        /// There is any field need to patch
+        fn is_empty(&self) -> bool;
     }
 }
