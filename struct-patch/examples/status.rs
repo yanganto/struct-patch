@@ -1,3 +1,4 @@
+//! This exmaple shoud run with `status` feature
 use struct_patch::Patch;
 
 #[derive(Default, Patch)]
@@ -19,23 +20,11 @@ struct Item {
 
 fn main() {
     use struct_patch::traits::Patch;
-
-    let mut item = Item::default();
+    use struct_patch::traits::PatchStatus;
 
     let mut patch = Item::default_patch();
-    // the same as
-    // let mut patch = ItemPatch::default();
 
+    assert!(patch.is_empty()); // provided by PatchStatus
     patch.field_int = Some(7);
-
-    assert_eq!(
-        format!("{patch:?}"),
-        "ItemPatch { field_bool: None, field_int: Some(7), field_string: None }"
-    );
-
-    item.apply(patch);
-
-    assert_eq!(item.field_bool, false);
-    assert_eq!(item.field_int, 7);
-    assert_eq!(item.field_string, "");
+    assert!(!patch.is_empty());
 }

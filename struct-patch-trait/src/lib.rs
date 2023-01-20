@@ -11,8 +11,9 @@ pub mod traits {
         }
     }
 
+    #[cfg(feature = "status")]
     /// The trait can check on the status of patch instance
-    pub trait PatchStruct {
+    pub trait PatchStatus {
         /// There is any field need to patch
         fn is_empty(&self) -> bool;
     }

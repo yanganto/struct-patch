@@ -24,4 +24,4 @@ jobs:
         run: nix develop -c cargo test --example json
 
       - name: Test rename patch struct example
-        run: nix develop -c cargo run --example rename-patch-struct
+        run: nix develop -c cargo run --features status --example rename-patch-struct
