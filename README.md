@@ -6,10 +6,11 @@
 A lib help you patch Rust instance, and easy to partial update configures.
 
 ## Introduction
-A derive macro `struct_patch::Patch` helps you generate patch structure `{Struct}Patch` with all fields in optional,
-such that patch structure is good for partial update by `apply` method of `struct_patch::traits::Patch` traits.
+A derive macro [`struct_patch::Patch`][patch-derive] helps you generate patch structure with all fields in optional,
+and implement [`struct_patch::traits::Patch`][patch-trait],
+such that we can partial update with `apply` method.
 
-## Example
+## Quick Example
 ```rust
     use struct_patch::Patch;
     use serde::{Deserialize, Serialize};
@@ -32,7 +33,6 @@ such that patch structure is good for partial update by `apply` method of `struc
         }"#;
 
         let patch = serde_json::from_str(data).unwrap();
-        assert!(!patch.is_empty());
 
         assert_eq!(
           format!("{patch:?}"),
@@ -47,6 +47,10 @@ such that patch structure is good for partial update by `apply` method of `struc
     }
 
 ```
+## Attributes
+Following are attributes you can easy to use patch a struct as you want
+  - [`patch_derive`][patch_derive]: passing the derives to patch struct
+  - [`patch_name`][patch_name]: specify the patch struct name, default name is {struct name}Patch
 
 [crates-badge]: https://img.shields.io/crates/v/struct-patch.svg
 [crate-url]: https://crates.io/crates/struct-patch
@@ -54,3 +58,7 @@ such that patch structure is good for partial update by `apply` method of `struc
 [mit-url]: https://github.com/yanganto/struct-patch/blob/readme/LICENSE
 [doc-badge]: https://img.shields.io/badge/docs-rs-orange.svg
 [doc-url]: https://docs.rs/struct-patch/
+[patch-derive]: https://docs.rs/struct-patch-derive/latest/struct_patch_derive/derive.Patch.html
+[patch-trait]: https://docs.rs/struct-patch-trait/latest/struct_patch_trait/traits/trait.Patch.html
+[patch_derive]: https://docs.rs/struct-patch-derive/latest/struct_patch_derive/derive.Patch.html#patch_derive
+[patch_name]: https://docs.rs/struct-patch-derive/latest/struct_patch_derive/derive.Patch.html#patch_name

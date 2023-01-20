@@ -1,4 +1,4 @@
-//! `struct_patch` includes [`struct_patch_derive`](https://docs.rs/struct-patch-derive) and [`struct_patch_traits`](https://docs.rs/struct-patch-trait/latest/struct_patch_trait/)
+//! `struct_patch` includes [`struct_patch_derive`](https://docs.rs/struct-patch-derive/latest/struct_patch_derive/derive.Patch.html) and [`struct_patch_traits`](https://docs.rs/struct-patch-trait/latest/struct_patch_trait/traits/trait.Patch.html)
 //! Please see these crates for docs
 //!
 //!

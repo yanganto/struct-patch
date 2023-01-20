@@ -1,7 +1,7 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
-use proc_macro2::{Ident, Span};
+use proc_macro2::{Ident, Span, TokenTree};
 use proc_macro_error::abort;
 use quote::quote;
 
@@ -39,7 +39,7 @@ use quote::quote;
 /// item.apply(patch); // only `field_int` updated
 /// ```
 ///
-///
+/// ## patch_derive
 /// If you want to add more derives on patch struct, you can use `patch_derive` as following.
 /// ```rust
 ///  #[derive(Patch)]
@@ -52,20 +52,44 @@ use quote::quote;
 /// #[derive(Debug, Default, Deserialize, Serialize)]
 ///  struct ItemPatch {}
 /// ```
+///
+/// ## patch_name
+/// If you want to change the patch struct name, you can use `patch_name` as following.
+/// ```rust
+///  #[derive(Patch)]
+///  #[patch_name=ItemOverlay]
+///  struct Item { }
+/// ```
+///
+/// Patch derive will generate ItemOverlay and implement Patch trait for struct.
+/// ```rust
+///  struct ItemOverlay{}
+/// ```
+///
 /// Such that the patch struct can easily generated from json or other serializer.
 /// Please check the [example](https://github.com/yanganto/struct-patch/blob/main/struct-patch/examples/json.rs).
-#[proc_macro_derive(Patch, attributes(patch_derive))]
+#[proc_macro_derive(Patch, attributes(patch_derive, patch_name))]
 pub fn derive_patch(item: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(item as syn::DeriveInput);
     let struct_name = &input.ident;
-    let patch_struct_name = Ident::new(&format!("{}Patch", struct_name), Span::call_site());
+    let mut patch_struct_name = None;
     let mut patch_derive = None;
     let attrs = &input.attrs;
     for syn::Attribute { path, tokens, .. } in attrs.iter() {
         if Some("patch_derive".into()) == path.segments.first().map(|s| s.ident.to_string()) {
             patch_derive = Some(tokens);
         }
+        if Some("patch_name".into()) == path.segments.first().map(|s| s.ident.to_string()) {
+            if let Some(TokenTree::Literal(l)) = tokens.clone().into_iter().nth(1) {
+                patch_struct_name = Some(Ident::new(
+                    format!("{}", l).trim_matches('"'),
+                    Span::call_site(),
+                ));
+            }
+        }
     }
+    let patch_struct_name = patch_struct_name
+        .unwrap_or_else(|| Ident::new(&format!("{}Patch", struct_name), Span::call_site()));
 
     let fields_with_type = match &input.data {
         syn::Data::Struct(syn::DataStruct {
