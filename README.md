@@ -32,6 +32,7 @@ such that patch structure is good for partial update by `apply` method of `struc
         }"#;
 
         let patch = serde_json::from_str(data).unwrap();
+        assert!(!patch.is_empty());
 
         assert_eq!(
           format!("{patch:?}"),
