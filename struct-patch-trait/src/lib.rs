@@ -5,8 +5,8 @@ pub mod traits {
         /// Apply the patch, only update the existing fields
         fn apply(&mut self, patch: P);
 
-        /// Diff on a previous state and get the patch instance
-        fn diff(self, previous_struct: Self) -> P;
+        /// Diff on a previous state and into the patch instance
+        fn into_patch_by_diff(self, previous_struct: Self) -> P;
 
         /// Get an empty patch instance
         fn default_patch() -> P {

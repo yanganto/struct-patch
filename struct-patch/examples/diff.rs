@@ -18,7 +18,7 @@ fn main() {
     };
 
     // Diff on two items to get the patch
-    let patch = new_item.diff(item);
+    let patch = new_item.into_patch_by_diff(item);
 
     assert_eq!(
         format!("{patch:?}"),

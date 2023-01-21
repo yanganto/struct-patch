@@ -66,8 +66,8 @@ use quote::quote;
 ///  struct ItemOverlay{}
 /// ```
 ///
-/// ## diff
-/// You can diff on two instance and get the patch
+/// ## New a patch
+/// You can get a patch by diff on two instances
 /// ```rust
 /// let item = Item::default();
 /// let new_item = Item {
@@ -75,7 +75,7 @@ use quote::quote;
 ///     ..Default::default()
 /// };
 ///
-/// let patch =  new_item.diff(item);
+/// let patch =  new_item.into_patch_by_diff(item);
 /// ```
 ///
 /// Such that the patch struct can easily generated from json or other serializer.
@@ -177,7 +177,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                 )*
             }
 
-            fn diff(self, previous_struct: Self) -> #patch_struct_name {
+            fn into_patch_by_diff(self, previous_struct: Self) -> #patch_struct_name {
                 let mut p = Self::default_patch();
                 #(
                     if self.#field_names_clone3 != previous_struct.#field_names_clone3 {
