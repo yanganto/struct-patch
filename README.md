@@ -52,6 +52,12 @@ Following are attributes you can easy to use patch a struct as you want
   - [`patch_derive`][patch_derive]: passing the derives to patch struct
   - [`patch_name`][patch_name]: specify the patch struct name, default name is {struct name}Patch
 
+## Methods for orginal structure
+The [`struct_patch::traits::Patch`][patch-trait] will implement, you can check the docs for details.
+  - `apply`: apply the patch, only update the existing fields
+  - `diff`: diff on a previous state and get the patch instance
+  - `default_patch`: get an empty patch instance
+
 ## Methods for patch structure
 With `status` feature, the patch struct will implement [`PatchStatus`][patch-status-trait] trait and providing following methods:
   - `is_empty`: check there is anything in the patch
