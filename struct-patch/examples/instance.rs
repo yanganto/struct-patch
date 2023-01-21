@@ -22,9 +22,7 @@ fn main() {
 
     let mut item = Item::default();
 
-    let mut patch = Item::default_patch();
-    // the same as
-    // let mut patch = ItemPatch::default();
+    let mut patch = Item::new_empty_patch();
 
     patch.field_int = Some(7);
 

@@ -30,7 +30,7 @@ use quote::quote;
 /// ```rust
 /// use struct_patch::traits::Patch;
 /// let mut item = Item::default();
-/// let mut patch = Item::default_patch();
+/// let mut patch = Item::new_empty_patch();
 /// assert(patch.is_empty());
 ///
 /// patch.field_int = Some(7);
@@ -132,6 +132,8 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     #[cfg(feature = "status")]
     let field_names_clone2 = field_names.clone();
     let field_names_clone3 = field_names.clone();
+    let field_names_clone4 = field_names.clone();
+
     let wrapped_types = wrapped_fields.iter().map(|(_, t)| t);
 
     let mut output = if let Some(patch_derive) = patch_derive {
@@ -143,7 +145,6 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
         )
     } else {
         quote::quote!(
-            #[derive(Default)]
             pub struct #patch_struct_name {
                 #(pub #field_names: #wrapped_types,)*
             }
@@ -178,13 +179,21 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
             }
 
             fn into_patch_by_diff(self, previous_struct: Self) -> #patch_struct_name {
-                let mut p = Self::default_patch();
+                let mut p = Self::new_empty_patch();
                 #(
                     if self.#field_names_clone3 != previous_struct.#field_names_clone3 {
                         p.#field_names_clone3 = Some(self.#field_names_clone3);
                     }
                 )*
                 p
+            }
+
+            fn new_empty_patch() -> #patch_struct_name {
+                #patch_struct_name {
+                    #(
+                        #field_names_clone4: None,
+                    )*
+                }
             }
         }
     )

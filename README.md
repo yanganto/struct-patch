@@ -56,7 +56,8 @@ Following are attributes you can easy to use patch a struct as you want
 The [`struct_patch::traits::Patch`][patch-trait] will implement, you can check the docs for details.
   - `apply`: apply the patch, only update the existing fields
   - `into_patch_by_diff`: diff on a previous state and get the patch instance
-  - `default_patch`: get an empty patch instance
+  - `new_empty_patch`: get an empty patch instance
+
 
 ## Methods for patch structure
 With `status` feature, the patch struct will implement [`PatchStatus`][patch-status-trait] trait and providing following methods:

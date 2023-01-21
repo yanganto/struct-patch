@@ -21,7 +21,7 @@ struct Item {
 fn main() {
     use struct_patch::traits::Patch;
 
-    let patch = Item::default_patch();
+    let patch = Item::new_empty_patch();
 
     assert_eq!(
         format!("{patch:?}"),
