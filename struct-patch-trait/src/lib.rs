@@ -1,7 +1,7 @@
 /// Define the behavior between patch struct and original sturct
 pub mod traits {
     /// The trait can apply patch and generete corresponding patch instance
-    pub trait Patch<P: Default> {
+    pub trait Patch<P> {
         /// Apply the patch, only update the existing fields
         fn apply(&mut self, patch: P);
 
@@ -9,9 +9,7 @@ pub mod traits {
         fn into_patch_by_diff(self, previous_struct: Self) -> P;
 
         /// Get an empty patch instance
-        fn default_patch() -> P {
-            P::default()
-        }
+        fn new_empty_patch() -> P;
     }
 
     #[cfg(feature = "status")]

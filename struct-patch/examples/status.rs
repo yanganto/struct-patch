@@ -14,7 +14,7 @@ fn main() {
     use struct_patch::traits::Patch;
     use struct_patch::traits::PatchStatus;
 
-    let mut patch = Item::default_patch();
+    let mut patch = Item::new_empty_patch();
 
     assert!(patch.is_empty()); // provided by PatchStatus
     patch.field_int = Some(7);
