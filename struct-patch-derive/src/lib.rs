@@ -188,12 +188,11 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                 p
             }
 
-            fn new_empty_patch(self) -> #patch_struct_name {
+            fn new_empty_patch() -> #patch_struct_name {
                 #patch_struct_name {
                     #(
-                        #field_names_clone4 = None,
+                        #field_names_clone4: None,
                     )*
-
                 }
             }
         }
