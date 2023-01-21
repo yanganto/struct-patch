@@ -133,6 +133,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     let field_names_clone2 = field_names.clone();
     let field_names_clone3 = field_names.clone();
     let field_names_clone4 = field_names.clone();
+
     let wrapped_types = wrapped_fields.iter().map(|(_, t)| t);
 
     let mut output = if let Some(patch_derive) = patch_derive {

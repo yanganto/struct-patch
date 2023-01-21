@@ -58,6 +58,7 @@ The [`struct_patch::traits::Patch`][patch-trait] will implement, you can check t
   - `into_patch_by_diff`: diff on a previous state and get the patch instance
   - `new_empty_patch`: get an empty patch instance
 
+
 ## Methods for patch structure
 With `status` feature, the patch struct will implement [`PatchStatus`][patch-status-trait] trait and providing following methods:
   - `is_empty`: check there is anything in the patch
