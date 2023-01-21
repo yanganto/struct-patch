@@ -165,7 +165,6 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
             }
         )
         .to_string();
-
     }
 
     output += &quote!(
