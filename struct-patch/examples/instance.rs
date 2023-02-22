@@ -18,11 +18,9 @@ struct Item {
 // }
 
 fn main() {
-    use struct_patch::traits::Patch;
-
     let mut item = Item::default();
 
-    let mut patch = Item::new_empty_patch();
+    let mut patch = Item::empty_patch();
 
     patch.field_int = Some(7);
 

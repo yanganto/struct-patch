@@ -9,8 +9,6 @@ struct Item {
 }
 
 fn main() {
-    use struct_patch::traits::Patch;
-
     let item = Item::default();
     let new_item = Item {
         field_int: 7,

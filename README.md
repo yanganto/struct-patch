@@ -6,62 +6,49 @@
 A lib help you patch Rust instance, and easy to partial update configures.
 
 ## Introduction
-A derive macro [`struct_patch::Patch`][patch-derive] helps you generate patch structure with all fields in optional,
-and implement [`struct_patch::traits::Patch`][patch-trait],
-such that we can partial update with `apply` method.
+This crate provides the `Patch` trait and an accompanying derive macro.
+
+Deriving `Patch` on a struct will generate a struct similar to the original one, but with all fields wrapped in an `Option`.  
+An instance of such a patch struct can be applied onto the original struct, replacing values only if they are set to `Some`, leaving them unchanged otherwise.
 
 ## Quick Example
 ```rust
-    use struct_patch::Patch;
-    use serde::{Deserialize, Serialize};
+use struct_patch::Patch;
+use serde::{Deserialize, Serialize};
 
-    #[derive(Default, Patch)]
-    #[patch_derive(Debug, Default, Deserialize, Serialize)]
-    struct Item {
-        field_bool: bool,
-        field_int: usize,
-        field_string: String,
-    }
+#[derive(Default, Debug, PartialEq, Patch)]
+#[patch_derive(Debug, Default, Deserialize, Serialize)]
+struct Item {
+    field_bool: bool,
+    field_int: usize,
+    field_string: String,
+}
 
-    fn patch_json() {
-        use struct_patch::traits::Patch;
+fn patch_json() {
+    let mut item = Item {
+        field_bool: true,
+        field_int: 42,
+        field_string: String::from("hello"),
+    };
 
-        let mut item = Item::default();
+    let data = r#"{
+        "field_int": 7
+    }"#;
 
-        let data = r#"{
-            "field_int": 7
-        }"#;
+    let patch: ItemPatch = serde_json::from_str(data).unwrap();
 
-        let patch = serde_json::from_str(data).unwrap();
+    item.apply(patch);
 
-        assert_eq!(
-          format!("{patch:?}"),
-          "ItemPatch { field_bool: None, field_int: Some(7), field_string: None }"
-        );
-
-        item.apply(patch);
-
-        assert_eq!(item.field_bool, false);
-        assert_eq!(item.field_int, 7);
-        assert_eq!(item.field_string, "");
-    }
-
+    assert_eq!(
+        item,
+        Item {
+            field_bool: true,
+            field_int: 7,
+            field_string: String::from("hello")
+        }
+    );
+}
 ```
-## Attributes
-Following are attributes you can easy to use patch a struct as you want
-  - [`patch_derive`][patch_derive]: passing the derives to patch struct
-  - [`patch_name`][patch_name]: specify the patch struct name, default name is {struct name}Patch
-
-## Methods for original structure
-The [`struct_patch::traits::Patch`][patch-trait] will implement, you can check the docs for details.
-  - `apply`: apply the patch, only update the existing fields
-  - `into_patch_by_diff`: diff on a previous state and get the patch instance
-  - `new_empty_patch`: get an empty patch instance
-
-
-## Methods for patch structure
-With `status` feature, the patch struct will implement [`PatchStatus`][patch-status-trait] trait and providing following methods:
-  - `is_empty`: check there is anything in the patch
 
 [crates-badge]: https://img.shields.io/crates/v/struct-patch.svg
 [crate-url]: https://crates.io/crates/struct-patch
@@ -69,8 +56,3 @@ With `status` feature, the patch struct will implement [`PatchStatus`][patch-sta
 [mit-url]: https://github.com/yanganto/struct-patch/blob/readme/LICENSE
 [doc-badge]: https://img.shields.io/badge/docs-rs-orange.svg
 [doc-url]: https://docs.rs/struct-patch/
-[patch-derive]: https://docs.rs/struct-patch-derive/latest/struct_patch_derive/derive.Patch.html
-[patch-trait]: https://docs.rs/struct-patch-trait/latest/struct_patch_trait/traits/trait.Patch.html
-[patch-status-trait]: https://docs.rs/struct-patch-trait/latest/struct_patch_trait/traits/trait.PatchStatus.html
-[patch_derive]: https://docs.rs/struct-patch-derive/latest/struct_patch_derive/derive.Patch.html#patch_derive
-[patch_name]: https://docs.rs/struct-patch-derive/latest/struct_patch_derive/derive.Patch.html#patch_name
