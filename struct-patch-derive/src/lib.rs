@@ -35,7 +35,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
         }
     }
 
-    let syn::Data::Struct(syn::DataStruct { fields, ..}) = &input.data else { abort!(&input.ident, "Patch derive only use for struct") };
+    let syn::Data::Struct(syn::DataStruct { fields, ..}) = &input.data else { abort!(&input.ident, "patch derive only use for struct") };
     let fields_with_type = match fields {
         syn::Fields::Named(f) => f
             .clone()
@@ -45,11 +45,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
             .map(|f| (f.ident.unwrap(), f.ty, f.attrs))
             .collect::<Vec<_>>(),
 
-        syn::Fields::Unnamed(f) => f.clone().unnamed.into_pairs()
-            .map(|p| p.into_value())
-            .enumerate()
-            .map(|(i, f)| (Ident::new(&i.to_string(), Span::call_site()), f.ty, f.attrs))
-            .collect::<Vec<_>>(),
+        syn::Fields::Unnamed(f) => { abort!(&f, "structs with unnamed fields are currently unsupported"); }
         syn::Fields::Unit => Vec::new(),
     };
 
