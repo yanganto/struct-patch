@@ -1,41 +1,35 @@
-fn main() {
-    println!("please run: cargo test --example json");
+use struct_patch::Patch;
+use serde::{Deserialize, Serialize};
+
+#[derive(Default, Debug, PartialEq, Patch)]
+#[patch_derive(Debug, Default, Deserialize, Serialize)]
+struct Item {
+    field_bool: bool,
+    field_int: usize,
+    field_string: String,
 }
 
-#[cfg(test)]
-mod tests {
-    use serde::{Deserialize, Serialize};
-    use struct_patch::Patch;
+fn main() {
+    let mut item = Item {
+        field_bool: true,
+        field_int: 42,
+        field_string: String::from("hello"),
+    };
 
-    #[derive(Default, Patch)]
-    #[patch_derive(Debug, Default, Deserialize, Serialize)]
-    struct Item {
-        field_bool: bool,
-        field_int: usize,
-        field_string: String,
-    }
+    let data = r#"{
+        "field_int": 7
+    }"#;
 
-    #[test]
-    fn patch_json() {
-        use struct_patch_trait::traits::Patch;
+    let patch: ItemPatch = serde_json::from_str(data).unwrap();
 
-        let mut item = Item::default();
+    item.apply(patch);
 
-        let data = r#"{
-            "field_int": 7
-        }"#;
-
-        let patch = serde_json::from_str(data).unwrap();
-
-        assert_eq!(
-            format!("{patch:?}"),
-            "ItemPatch { field_bool: None, field_int: Some(7), field_string: None }"
-        );
-
-        item.apply(patch);
-
-        assert_eq!(item.field_bool, false);
-        assert_eq!(item.field_int, 7);
-        assert_eq!(item.field_string, "");
-    }
+    assert_eq!(
+        item,
+        Item {
+            field_bool: true,
+            field_int: 7,
+            field_string: String::from("hello")
+        }
+    );
 }

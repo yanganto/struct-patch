@@ -132,10 +132,10 @@ pub trait PatchStatus {
 
 #[cfg(test)]
 mod tests {
-    use struct_patch::{Patch, PatchStatus};
-    use crate as struct_patch;
-
     use serde::Deserialize;
+    use struct_patch::{Patch, PatchStatus};
+
+    use crate as struct_patch;
 
     #[test]
     fn test_basic() {
@@ -209,10 +209,10 @@ mod tests {
         struct Item {
             #[patch_skip]
             id: u32,
-            data: u32
+            data: u32,
         }
 
-        let mut item = Item { id: 1, data: 2};
+        let mut item = Item { id: 1, data: 2 };
         let data = r#"{ "id": 10, "data": 15 }"#; // Note: serde ignores unknown fields by default.
         let patch: ItemPatch = serde_json::from_str(data).unwrap();
         assert_eq!(patch, ItemPatch { data: Some(15) });
