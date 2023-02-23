@@ -17,14 +17,5 @@ jobs:
         with:
           nix_path: nixpkgs=channel:nixos-unstable
 
-      - name: Test instance example
-        run: nix develop -c cargo run --example instance
-
-      - name: Test json example
-        run: nix develop -c cargo test --example json
-
-      - name: Test diff example
-        run: nix develop -c cargo run --example diff
-
-      - name: Test rename patch struct example
-        run: nix develop -c cargo run --features status --example rename-patch-struct
+      - name: Test crate
+        run: nix develop -c cargo test

@@ -10,17 +10,9 @@ description.workspace = true
 license.workspace = true
 readme.workspace = true
 
-
 [dependencies]
-struct-patch-trait = { version = "=0.2.0", path = "../struct-patch-trait" }
-struct-patch-derive = { version = "=0.2.0", path = "../struct-patch-derive" }
+struct-patch-derive = { version = "=0.3", path =  "../struct-patch-derive" }
 
 [dev-dependencies]
 serde_json = "1.0"
 serde = { version = "1", features = ["derive"] }
-
-[features]
-status = [
-    "struct-patch-trait/status",
-    "struct-patch-derive/status"
-]
