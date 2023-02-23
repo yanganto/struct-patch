@@ -5,7 +5,7 @@ use proc_macro2::{Ident, Span, TokenTree};
 use proc_macro_error::{abort, proc_macro_error};
 use quote::quote;
 
-#[proc_macro_derive(Patch, attributes(patch_derive, patch_name, patch_skip, patch_remote))]
+#[proc_macro_derive(Patch, attributes(patch_derive, patch_name, patch_skip))]
 #[proc_macro_error]
 pub fn derive_patch(item: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(item as syn::DeriveInput);
