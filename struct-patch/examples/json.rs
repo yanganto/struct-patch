@@ -1,5 +1,5 @@
-use struct_patch::Patch;
 use serde::{Deserialize, Serialize};
+use struct_patch::Patch;
 
 #[derive(Default, Debug, PartialEq, Patch)]
 #[patch_derive(Debug, Default, Deserialize, Serialize)]

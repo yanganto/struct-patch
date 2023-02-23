@@ -19,8 +19,6 @@
 
         publishScript = pkgs.writeShellScriptBin "crate-publish" ''
           cargo login $1
-          cargo publish -p struct-patch-trait
-          sleep 5
           cargo publish -p struct-patch-derive
           sleep 5
           cargo publish -p struct-patch

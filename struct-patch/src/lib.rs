@@ -121,9 +121,10 @@ pub trait Patch<P> {
     fn into_patch_by_diff(self, previous_struct: Self) -> P;
 
     /// Get an empty patch instance
-    fn empty_patch() -> P;
+    fn new_empty_patch() -> P;
 }
 
+#[cfg(feature = "status")]
 /// A patch struct with extra status information
 pub trait PatchStatus {
     /// Returns `true` if all fields are `None`, `false` otherwise.
@@ -173,7 +174,7 @@ mod tests {
         }
 
         let patch = ItemPatch { data: None };
-        let other_patch = Item::empty_patch();
+        let other_patch = Item::new_empty_patch();
         assert!(patch.is_empty());
         assert_eq!(patch, other_patch);
         let patch = ItemPatch { data: Some(0) };

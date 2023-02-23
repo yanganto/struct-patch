@@ -19,7 +19,7 @@ struct Item {
 // }
 
 fn main() {
-    let patch = Item::empty_patch();
+    let patch = Item::new_empty_patch();
 
     assert_eq!(
         format!("{patch:?}"),

@@ -17,5 +17,8 @@ jobs:
         with:
           nix_path: nixpkgs=channel:nixos-unstable
 
+      - name: Test no defualt features
+        run: nix develop -c cargo run --no-default-features --example instance
+
       - name: Test crate
         run: nix develop -c cargo test
