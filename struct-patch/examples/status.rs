@@ -9,7 +9,7 @@ struct Item {
 }
 
 fn main() {
-    let mut patch = Item::empty_patch();
+    let mut patch = Item::new_empty_patch();
 
     assert!(patch.is_empty()); // provided by PatchStatus
     patch.field_int = Some(7);

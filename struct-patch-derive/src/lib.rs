@@ -99,7 +99,8 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
         )
     });
 
-    let patch_status_impl = Some(quote!(
+    #[cfg(feature = "status")]
+    let patch_status_impl = quote!(
         impl struct_patch::PatchStatus for #patch_struct_name {
             fn is_empty(&self) -> bool {
                 #(
@@ -110,7 +111,9 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                 true
             }
         }
-    ));
+    );
+    #[cfg(not(feature = "status"))]
+    let patch_status_impl = quote!();
 
     let patch_impl = quote! {
         impl struct_patch::Patch< #patch_struct_name > for #struct_name {
@@ -123,7 +126,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
             }
 
             fn into_patch(self) -> #patch_struct_name {
-                let mut p = Self::empty_patch();
+                let mut p = Self::new_empty_patch();
                 #(
                     p.#field_names = Some(self.#field_names);
                 )*
@@ -131,7 +134,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
             }
 
             fn into_patch_by_diff(self, previous_struct: Self) -> #patch_struct_name {
-                let mut p = Self::empty_patch();
+                let mut p = Self::new_empty_patch();
                 #(
                     if self.#field_names != previous_struct.#field_names {
                         p.#field_names = Some(self.#field_names);
@@ -140,7 +143,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                 p
             }
 
-            fn empty_patch() -> #patch_struct_name {
+            fn new_empty_patch() -> #patch_struct_name {
                 #patch_struct_name {
                     #(
                         #field_names: None,
