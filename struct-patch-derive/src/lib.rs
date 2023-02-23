@@ -31,7 +31,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                     ));
                 }
             }
-            _ => {  },
+            _ => {}
         }
     }
 
@@ -45,7 +45,10 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
             .map(|f| (f.ident.unwrap(), f.ty, f.attrs))
             .collect::<Vec<_>>(),
 
-        syn::Fields::Unnamed(f) => f.clone().unnamed.into_pairs()
+        syn::Fields::Unnamed(f) => f
+            .clone()
+            .unnamed
+            .into_pairs()
             .map(|p| p.into_value())
             .enumerate()
             .map(|(i, f)| (Ident::new(&i.to_string(), Span::call_site()), f.ty, f.attrs))
@@ -78,38 +81,36 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
 
     let wrapped_types = wrapped_fields.iter().map(|(_, t)| t);
 
-    let patch_struct_name =
-        patch_struct_name
-            .unwrap_or_else(|| Ident::new(&format!("{}Patch", struct_name), Span::call_site()));
+    let patch_struct_name = patch_struct_name
+        .unwrap_or_else(|| Ident::new(&format!("{}Patch", struct_name), Span::call_site()));
 
-        let patch_struct = Some(if let Some(patch_derive) = patch_derive {
-            quote!(
-                #[derive #patch_derive]
-                pub struct #patch_struct_name {
-                    #(pub #field_names: #wrapped_types,)*
-                }
-            )
-        } else {
-            quote::quote!(
-                pub struct #patch_struct_name {
-                    #(pub #field_names: #wrapped_types,)*
-                }
-            )
-        });
-
-        let patch_status_impl = Some(quote!(
-            impl struct_patch::PatchStatus for #patch_struct_name {
-                fn is_empty(&self) -> bool {
-                    #(
-                        if self.#field_names.is_some() {
-                            return false
-                        }
-                    )*
-                    true
-                }
+    let patch_struct = Some(if let Some(patch_derive) = patch_derive {
+        quote!(
+            #[derive #patch_derive]
+            pub struct #patch_struct_name {
+                #(pub #field_names: #wrapped_types,)*
             }
-        ));
+        )
+    } else {
+        quote::quote!(
+            pub struct #patch_struct_name {
+                #(pub #field_names: #wrapped_types,)*
+            }
+        )
+    });
 
+    let patch_status_impl = Some(quote!(
+        impl struct_patch::PatchStatus for #patch_struct_name {
+            fn is_empty(&self) -> bool {
+                #(
+                    if self.#field_names.is_some() {
+                        return false
+                    }
+                )*
+                true
+            }
+        }
+    ));
 
     let patch_impl = quote! {
         impl struct_patch::Patch< #patch_struct_name > for #struct_name {
