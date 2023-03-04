@@ -35,7 +35,11 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
         }
     }
 
-    let syn::Data::Struct(syn::DataStruct { fields, ..}) = &input.data else { abort!(&input.ident, "Patch derive only use for struct") };
+    let fields = if let syn::Data::Struct(syn::DataStruct { fields, .. }) = &input.data {
+        fields
+    } else {
+        abort!(&input.ident, "Patch derive only use for struct")
+    };
     let fields_with_type = match fields {
         syn::Fields::Named(f) => f
             .clone()
