@@ -19,8 +19,8 @@
 
         publishScript = pkgs.writeShellScriptBin "crate-publish" ''
           cargo login $1
-          cargo publish -p struct-patch-derive
-          sleep 5
+          cargo publish -p struct-patch-derive || echo "publish struct-patch-derive fail"
+          sleep 10
           cargo publish -p struct-patch
         '';
         updateDependencyScript = pkgs.writeShellScriptBin "update-dependency" ''
