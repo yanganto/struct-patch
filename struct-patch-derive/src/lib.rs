@@ -1,9 +1,10 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
-use proc_macro2::{Ident, Span, TokenTree};
+use proc_macro2::{Ident, Span};
 use proc_macro_error::{abort, proc_macro_error};
 use quote::quote;
+use syn::{Expr, Lit, Meta, MetaList, MetaNameValue, PathSegment};
 
 #[proc_macro_derive(Patch, attributes(patch_derive, patch_name, patch_skip))]
 #[proc_macro_error]
@@ -13,25 +14,65 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     let mut patch_struct_name = None;
     let mut patch_derive = None;
     let attrs = input.attrs;
-    for syn::Attribute { path, tokens, .. } in attrs {
-        match path
-            .segments
-            .first()
-            .map(|s| s.ident.to_string())
-            .as_deref()
-        {
-            Some("patch_derive") => {
-                patch_derive = Some(tokens);
-            }
-            Some("patch_name") => {
-                if let Some(TokenTree::Literal(l)) = tokens.clone().into_iter().nth(1) {
-                    patch_struct_name = Some(Ident::new(
-                        format!("{}", l).trim_matches('"'),
-                        Span::call_site(),
-                    ));
+
+    for attr in attrs {
+        let mut attr_clone = attr.clone();
+        let syn::Attribute { meta, .. } = attr;
+        match meta {
+            Meta::List(MetaList {
+                path,
+                tokens,
+                delimiter,
+            }) => {
+                let mut path_clone = path.clone();
+                let mut segments = path.segments.clone();
+                match path
+                    .segments
+                    .first()
+                    .map(|s| s.ident.to_string())
+                    .as_deref()
+                {
+                    Some("patch_derive") => {
+                        if let Some(seg) = segments.first_mut() {
+                            *seg = PathSegment {
+                                ident: Ident::new("derive", Span::call_site()),
+                                arguments: seg.arguments.clone(),
+                            };
+                        }
+                        path_clone.segments = segments;
+                        attr_clone.meta = Meta::List(MetaList {
+                            path: path_clone,
+                            tokens,
+                            delimiter,
+                        });
+                        patch_derive = Some(attr_clone);
+                    }
+                    _ => {}
                 }
             }
-            _ => {}
+            Meta::NameValue(MetaNameValue {
+                path,
+                value: Expr::Lit(lit, ..),
+                ..
+            }) => {
+                match path
+                    .segments
+                    .first()
+                    .map(|s| s.ident.to_string())
+                    .as_deref()
+                {
+                    Some("patch_name") => {
+                        if let Lit::Str(l) = lit.lit {
+                            patch_struct_name = Some(Ident::new(
+                                format!("{}", l.value()).trim_matches('"'),
+                                Span::call_site(),
+                            ));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            _ => (),
         }
     }
 
@@ -63,12 +104,16 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     let wrapped_fields = &mut fields_with_type
         .iter()
         .filter_map(|(f, t, attrs)| {
-            if attrs.iter().any(|syn::Attribute { path, .. }| {
-                path.segments
-                    .first()
-                    .map(|s| s.ident.to_string())
-                    .as_deref()
-                    == Some("patch_skip")
+            if attrs.iter().any(|syn::Attribute { meta, .. }| {
+                if let Meta::Path(path) = meta {
+                    path.segments
+                        .first()
+                        .map(|s| s.ident.to_string())
+                        .as_deref()
+                        == Some("patch_skip")
+                } else {
+                    false
+                }
             }) {
                 None
             } else {
@@ -88,9 +133,9 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     let patch_struct_name = patch_struct_name
         .unwrap_or_else(|| Ident::new(&format!("{}Patch", struct_name), Span::call_site()));
 
-    let patch_struct = Some(if let Some(patch_derive) = patch_derive {
+    let patch_struct = if let Some(patch_derive) = patch_derive {
         quote!(
-            #[derive #patch_derive]
+            #patch_derive
             pub struct #patch_struct_name {
                 #(pub #field_names: #wrapped_types,)*
             }
@@ -101,11 +146,11 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                 #(pub #field_names: #wrapped_types,)*
             }
         )
-    });
+    };
 
     #[cfg(feature = "status")]
     let patch_status_impl = quote!(
-        impl struct_patch::PatchStatus for #patch_struct_name {
+        impl struct_patch::traits::PatchStatus for #patch_struct_name {
             fn is_empty(&self) -> bool {
                 #(
                     if self.#field_names.is_some() {
@@ -120,7 +165,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     let patch_status_impl = quote!();
 
     let patch_impl = quote! {
-        impl struct_patch::Patch< #patch_struct_name > for #struct_name {
+        impl struct_patch::traits::Patch< #patch_struct_name > for #struct_name {
             fn apply(&mut self, patch: #patch_struct_name) {
                 #(
                     if let Some(v) = patch.#field_names {
