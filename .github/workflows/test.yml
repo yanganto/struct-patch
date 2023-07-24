@@ -18,7 +18,14 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Test no defualt features
-        run: nix develop -c cargo run --no-default-features --example instance
+        run: |
+          nix develop -c cargo run --no-default-features --example instance
+          nix develop -c cargo run --no-default-features --example diff
+          nix develop -c cargo run --no-default-features --example json
+          nix develop -c cargo run --no-default-features --example rename-patch-struct
+          nix develop -c cargo test --no-default-features
 
-      - name: Test crate
-        run: nix develop -c cargo test
+      - name: Test with default features
+        run: |
+          nix develop -c cargo run --example status
+          nix develop -c cargo test
