@@ -52,7 +52,9 @@ pub use traits::*;
 #[cfg(test)]
 mod tests {
     use serde::Deserialize;
-    use struct_patch::{Patch, PatchStatus};
+    use struct_patch::Patch;
+    #[cfg(feature = "status")]
+    use struct_patch::PatchStatus;
 
     use crate as struct_patch;
 
@@ -84,6 +86,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "status")]
     fn test_empty() {
         #[derive(Patch)]
         #[patch_derive(Debug, PartialEq)]
