@@ -2,12 +2,10 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
-use proc_macro_error::{abort, proc_macro_error};
 use quote::quote;
 use syn::{Expr, Lit, Meta, MetaList, MetaNameValue, PathSegment};
 
 #[proc_macro_derive(Patch, attributes(patch_derive, patch_name, patch_skip))]
-#[proc_macro_error]
 pub fn derive_patch(item: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(item as syn::DeriveInput);
     let struct_name = &input.ident;
@@ -26,28 +24,25 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
             }) => {
                 let mut path_clone = path.clone();
                 let mut segments = path.segments.clone();
-                match path
+                if let Some("patch_derive") = path
                     .segments
                     .first()
                     .map(|s| s.ident.to_string())
                     .as_deref()
                 {
-                    Some("patch_derive") => {
-                        if let Some(seg) = segments.first_mut() {
-                            *seg = PathSegment {
-                                ident: Ident::new("derive", Span::call_site()),
-                                arguments: seg.arguments.clone(),
-                            };
-                        }
-                        path_clone.segments = segments;
-                        attr_clone.meta = Meta::List(MetaList {
-                            path: path_clone,
-                            tokens,
-                            delimiter,
-                        });
-                        patch_derive = Some(attr_clone);
+                    if let Some(seg) = segments.first_mut() {
+                        *seg = PathSegment {
+                            ident: Ident::new("derive", Span::call_site()),
+                            arguments: seg.arguments.clone(),
+                        };
                     }
-                    _ => {}
+                    path_clone.segments = segments;
+                    attr_clone.meta = Meta::List(MetaList {
+                        path: path_clone,
+                        tokens,
+                        delimiter,
+                    });
+                    patch_derive = Some(attr_clone);
                 }
             }
             Meta::NameValue(MetaNameValue {
@@ -55,21 +50,18 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                 value: Expr::Lit(lit, ..),
                 ..
             }) => {
-                match path
+                if let Some("patch_name") = path
                     .segments
                     .first()
                     .map(|s| s.ident.to_string())
                     .as_deref()
                 {
-                    Some("patch_name") => {
-                        if let Lit::Str(l) = lit.lit {
-                            patch_struct_name = Some(Ident::new(
-                                format!("{}", l.value()).trim_matches('"'),
-                                Span::call_site(),
-                            ));
-                        }
+                    if let Lit::Str(l) = lit.lit {
+                        patch_struct_name = Some(Ident::new(
+                            l.value().to_string().trim_matches('"'),
+                            Span::call_site(),
+                        ));
                     }
-                    _ => {}
                 }
             }
             _ => (),
@@ -79,7 +71,9 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     let fields = if let syn::Data::Struct(syn::DataStruct { fields, .. }) = &input.data {
         fields
     } else {
-        abort!(&input.ident, "Patch derive only use for struct")
+        return syn::Error::new(input.ident.span(), "Patch derive only use for struct")
+            .to_compile_error()
+            .into();
     };
     let fields_with_type = match fields {
         syn::Fields::Named(f) => f
