@@ -111,18 +111,68 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
             }) {
                 None
             } else {
-                Some((
-                    f.clone(),
-                    syn::parse::<syn::Path>(quote!(Option<#t>).to_string().parse().unwrap())
-                        .unwrap(),
-                ))
+                let rename = attrs
+                    .iter()
+                    .find(|syn::Attribute { meta, .. }| {
+                        if let Meta::NameValue(MetaNameValue { path, .. }) = meta {
+                            path.segments
+                                .first()
+                                .map(|s| s.ident.to_string())
+                                .as_deref()
+                                == Some("patch_name")
+                        } else {
+                            false
+                        }
+                    })
+                    .map(|syn::Attribute { meta, .. }| match meta {
+                        Meta::NameValue(MetaNameValue {
+                            path: _,
+                            value: Expr::Lit(lit, ..),
+                            ..
+                        }) => {
+                            if let Lit::Str(l) = &lit.lit {
+                                let ident = Some(Ident::new(
+                                    l.value().to_string().trim_matches('"'),
+                                    Span::call_site(),
+                                ));
+                                (quote!(Option<#ident>), true)
+                            } else {
+                                (quote!(Option<#t>), false)
+                            }
+                        }
+                        _ => (quote!(Option<#t>), false),
+                    })
+                    .unwrap_or((quote!(Option<#t>), false));
+                let new_t = rename.0;
+                let is_renamed = rename.1;
+                let q = new_t.to_string().parse().unwrap();
+                Some((f.clone(), syn::parse::<syn::Path>(q).unwrap(), is_renamed))
             }
         })
         .collect::<Vec<_>>();
 
-    let field_names = wrapped_fields.iter().map(|(f, _)| f).collect::<Vec<_>>();
+    let field_names = wrapped_fields.iter().map(|(f, _, _)| f).collect::<Vec<_>>();
 
-    let wrapped_types = wrapped_fields.iter().map(|(_, t)| t);
+    let wrapped_types = wrapped_fields.iter().map(|(_, t, _)| t);
+
+    let renamed_fields = wrapped_fields
+        .iter()
+        .map(|(_, _, r)| *r)
+        .collect::<Vec<_>>();
+
+    let renamed_field_names = field_names
+        .iter()
+        .zip(&renamed_fields)
+        .filter(|(_, was_renamed)| **was_renamed)
+        .map(|(name, _)| name)
+        .collect::<Vec<_>>();
+
+    let original_field_names = field_names
+        .iter()
+        .zip(&renamed_fields)
+        .filter(|(_, was_renamed)| !*was_renamed)
+        .map(|(name, _)| name)
+        .collect::<Vec<_>>();
 
     let patch_struct_name = patch_struct_name
         .unwrap_or_else(|| Ident::new(&format!("{}Patch", struct_name), Span::call_site()));
@@ -162,8 +212,13 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
         impl struct_patch::traits::Patch< #patch_struct_name > for #struct_name {
             fn apply(&mut self, patch: #patch_struct_name) {
                 #(
-                    if let Some(v) = patch.#field_names {
-                        self.#field_names = v;
+                    if let Some(v) = patch.#renamed_field_names {
+                        self.#renamed_field_names.apply(v);
+                    }
+                )*
+                #(
+                    if let Some(v) = patch.#original_field_names {
+                        self.#original_field_names = v;
                     }
                 )*
             }
@@ -171,7 +226,10 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
             fn into_patch(self) -> #patch_struct_name {
                 let mut p = Self::new_empty_patch();
                 #(
-                    p.#field_names = Some(self.#field_names);
+                    p.#renamed_field_names = Some(self.#renamed_field_names.into_patch());
+                )*
+                #(
+                    p.#original_field_names = Some(self.#original_field_names);
                 )*
                 p
             }
@@ -179,8 +237,13 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
             fn into_patch_by_diff(self, previous_struct: Self) -> #patch_struct_name {
                 let mut p = Self::new_empty_patch();
                 #(
-                    if self.#field_names != previous_struct.#field_names {
-                        p.#field_names = Some(self.#field_names);
+                    if self.#renamed_field_names != previous_struct.#renamed_field_names {
+                        p.#renamed_field_names = Some(self.#renamed_field_names.into_patch_by_diff(previous_struct.#renamed_field_names));
+                    }
+                )*
+                #(
+                    if self.#original_field_names != previous_struct.#original_field_names {
+                        p.#original_field_names = Some(self.#original_field_names);
                     }
                 )*
                 p
