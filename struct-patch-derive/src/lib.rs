@@ -132,7 +132,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
                         }) => {
                             if let Lit::Str(l) = &lit.lit {
                                 let ident = Some(Ident::new(
-                                    l.value().to_string().trim_matches('"'),
+                                    l.value().trim_matches('"'),
                                     Span::call_site(),
                                 ));
                                 (quote!(Option<#ident>), true)
