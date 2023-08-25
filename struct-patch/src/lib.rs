@@ -142,4 +142,40 @@ mod tests {
         item.apply(patch);
         assert_eq!(item, Item { id: 1, data: 15 });
     }
+
+    #[test]
+    fn test_nested() {
+        #[derive(PartialEq, Debug, Patch, Deserialize)]
+        #[patch_derive(PartialEq, Debug, Deserialize)]
+        struct B {
+            c: u32,
+            d: u32,
+        }
+
+        #[derive(PartialEq, Debug, Patch, Deserialize)]
+        #[patch_derive(PartialEq, Debug, Deserialize)]
+        struct A {
+            #[patch_name = "BPatch"]
+            b: B,
+        }
+
+        let mut a = A {
+            b: B { c: 0, d: 0 },
+        };
+        let data = r#"{ "b": { "c": 1 } }"#;
+        let patch: APatch = serde_json::from_str(data).unwrap();
+        // assert_eq!(
+        //     patch,
+        //     APatch {
+        //         b: Some(B { id: 1 })
+        //     }
+        // );
+        a.apply(patch);
+        assert_eq!(
+            a,
+            A {
+                b: B { c: 1, d: 0 }
+            }
+        );
+    }
 }
