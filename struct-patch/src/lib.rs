@@ -126,6 +126,33 @@ mod tests {
     }
 
     #[test]
+    fn test_nullable() {
+        #[derive(Patch, Debug, PartialEq)]
+        struct Item {
+            field: Option<u32>,
+            other: Option<String>,
+        }
+
+        let mut item = Item {
+            field: Some(1),
+            other: Some(String::from("hello")),
+        };
+        let patch = ItemPatch {
+            field: None,
+            other: Some(None),
+        };
+
+        item.apply(patch);
+        assert_eq!(
+            item,
+            Item {
+                field: Some(1),
+                other: None
+            }
+        );
+    }
+
+    #[test]
     fn test_skip() {
         #[derive(Patch, PartialEq, Debug)]
         #[patch_derive(PartialEq, Debug, Deserialize)]
@@ -171,6 +198,80 @@ mod tests {
         //         b: Some(B { id: 1 })
         //     }
         // );
+        a.apply(patch);
+        assert_eq!(
+            a,
+            A {
+                b: B { c: 1, d: 0 }
+            }
+        );
+    }
+
+    #[test]
+    fn test_generic() {
+        #[derive(Patch)]
+        struct Item<T>
+        where
+            T: PartialEq,
+        {
+            pub field: T,
+        }
+
+        let patch = ItemPatch {
+            field: Some(String::from("hello")),
+        };
+        let mut item = Item {
+            field: String::new(),
+        };
+        item.apply(patch);
+        assert_eq!(item.field, "hello");
+    }
+
+    #[test]
+    fn test_named_generic() {
+        #[derive(Patch)]
+        #[patch_name = "PatchItem"]
+        struct Item<T>
+        where
+            T: PartialEq,
+        {
+            pub field: T,
+        }
+
+        let patch = PatchItem {
+            field: Some(String::from("hello")),
+        };
+        let mut item = Item {
+            field: String::new(),
+        };
+        item.apply(patch);
+    }
+
+    #[test]
+    fn test_nested_generic() {
+        #[derive(PartialEq, Debug, Patch, Deserialize)]
+        #[patch_derive(PartialEq, Debug, Deserialize)]
+        struct B<T>
+        where
+            T: PartialEq,
+        {
+            c: T,
+            d: T,
+        }
+
+        #[derive(PartialEq, Debug, Patch, Deserialize)]
+        #[patch_derive(PartialEq, Debug, Deserialize)]
+        struct A {
+            #[patch_name = "BPatch<u32>"]
+            b: B<u32>,
+        }
+
+        let mut a = A {
+            b: B { c: 0, d: 0 },
+        };
+        let data = r#"{ "b": { "c": 1 } }"#;
+        let patch: APatch = serde_json::from_str(data).unwrap();
+
         a.apply(patch);
         assert_eq!(
             a,
