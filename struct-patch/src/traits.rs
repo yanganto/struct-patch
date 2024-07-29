@@ -32,6 +32,22 @@
 /// // struct ItemPatch {}
 /// ```
 ///
+/// ### `#[patch_attribute(...)]`
+/// Use this attribute to pass the attributes on the generated patch struct
+/// ```compile_fail
+/// // This example need `serde` and `serde_with` crates
+/// # use struct_patch::Patch;
+/// #[derive(Patch, Debug)]
+/// #[patch_derive(Serialize, Deserialize, Default)]
+/// #[patch_attribute(skip_serializing_none)]
+/// struct Item;
+///
+/// // Generated struct
+/// // #[derive(Default, Deserialize, Serialize)]
+/// // #[skip_serializing_none]
+/// // struct ItemPatch {}
+/// ```
+///
 /// ### `#[patch_name = "..."]`
 /// Use this attribute to change the name of the generated patch struct
 /// ```rust

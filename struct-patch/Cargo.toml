@@ -11,11 +11,12 @@ license.workspace = true
 readme.workspace = true
 
 [dependencies]
-struct-patch-derive = { version = "=0.5.0", path = "../struct-patch-derive" }
+struct-patch-derive = { version = "=0.6.0", path = "../struct-patch-derive" }
 
 [dev-dependencies]
 serde_json = "1.0"
 serde = { version = "1", features = ["derive"] }
+serde_with = "*"
 
 [features]
 default = ["status"]
