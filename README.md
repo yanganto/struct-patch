@@ -50,9 +50,22 @@ fn patch_json() {
 }
 ```
 
+## Documentation and Examples
+Also, you can modify the patch structure by `#[patch_derive(...)]`, `#[patch_name = "..."]` and `#[patch_skip]`.
+Please check the [traits][doc-traits] of document to learn more.
+
+The [examples][examples] demo following scenarios.
+- diff two instance for a patch
+- create a patch from json string
+- rename the patch structure
+- check a patch is empty or not
+
+
 [crates-badge]: https://img.shields.io/crates/v/struct-patch.svg
 [crate-url]: https://crates.io/crates/struct-patch
 [mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
 [mit-url]: https://github.com/yanganto/struct-patch/blob/readme/LICENSE
 [doc-badge]: https://img.shields.io/badge/docs-rs-orange.svg
 [doc-url]: https://docs.rs/struct-patch/
+[doc-traits]: https://docs.rs/struct-patch/latest/struct_patch/traits/trait.Patch.html#container-attributes
+[examples]: /struct-patch/examples
