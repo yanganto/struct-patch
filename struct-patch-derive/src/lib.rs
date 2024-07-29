@@ -1,5 +1,4 @@
 extern crate proc_macro;
-
 use std::str::FromStr;
 
 use proc_macro::TokenStream;
@@ -7,7 +6,7 @@ use proc_macro2::{Ident, Span};
 use quote::quote;
 use syn::{DeriveInput, Expr, Lit, LitStr, Meta, MetaList, MetaNameValue, PathSegment, Type};
 
-#[proc_macro_derive(Patch, attributes(patch_derive, patch_name, patch_skip))]
+#[proc_macro_derive(Patch, attributes(patch_attribute, patch_derive, patch_name, patch_skip))]
 pub fn derive_patch(item: TokenStream) -> TokenStream {
     let DeriveInput {
         ident,
@@ -20,6 +19,7 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     let where_clause = &generics.where_clause;
     let mut patch_struct_name: Option<Ident> = None;
     let mut patch_derive = None;
+    let mut patch_attrs = Vec::new();
 
     for attr in attrs {
         let mut attr_clone = attr.clone();
@@ -32,25 +32,40 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
             }) => {
                 let mut path_clone = path.clone();
                 let mut segments = path.segments.clone();
-                if let Some("patch_derive") = path
+                match path
                     .segments
                     .first()
                     .map(|s| s.ident.to_string())
                     .as_deref()
                 {
-                    if let Some(seg) = segments.first_mut() {
-                        *seg = PathSegment {
-                            ident: Ident::new("derive", Span::call_site()),
-                            arguments: seg.arguments.clone(),
-                        };
+                    Some("patch_derive") => {
+                        if let Some(seg) = segments.first_mut() {
+                            *seg = PathSegment {
+                                ident: Ident::new("derive", Span::call_site()),
+                                arguments: seg.arguments.clone(),
+                            };
+                        }
+                        path_clone.segments = segments;
+                        attr_clone.meta = Meta::List(MetaList {
+                            path: path_clone,
+                            tokens: tokens.clone(),
+                            delimiter: delimiter.clone(),
+                        });
+                        patch_derive = Some(attr_clone);
+                    },
+                    Some("patch_attribute") => {
+                        for token in tokens.to_string().split(',') {
+                            if ! token.is_empty() {
+                                let attr = proc_macro2::TokenStream::from_str(&format!("#[{}]", token)).expect("");
+                                patch_attrs.push(
+                                    quote::quote!(
+                                        #attr
+                                    )
+                                );
+                            }
+                        }
                     }
-                    path_clone.segments = segments;
-                    attr_clone.meta = Meta::List(MetaList {
-                        path: path_clone,
-                        tokens: tokens.clone(),
-                        delimiter: delimiter.clone(),
-                    });
-                    patch_derive = Some(attr_clone);
+                    _ => (),
                 }
             }
             Meta::NameValue(MetaNameValue {
@@ -185,12 +200,18 @@ pub fn derive_patch(item: TokenStream) -> TokenStream {
     let patch_struct = if let Some(patch_derive) = patch_derive {
         quote!(
             #patch_derive
+            #(
+                #patch_attrs
+            )*
             pub struct #patch_struct_name #generics #where_clause {
                 #(pub #field_names: #wrapped_types,)*
             }
         )
     } else {
         quote::quote!(
+            #(
+                #patch_attrs
+            )*
             pub struct #patch_struct_name #generics #where_clause {
                 #(pub #field_names: #wrapped_types,)*
             }

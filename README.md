@@ -51,7 +51,7 @@ fn patch_json() {
 ```
 
 ## Documentation and Examples
-Also, you can modify the patch structure by `#[patch_derive(...)]`, `#[patch_name = "..."]` and `#[patch_skip]`.
+Also, you can modify the patch structure by `#[patch_attribute(...)]`, `#[patch_derive(...)]`, `#[patch_name = "..."]` and `#[patch_skip]`.
 Please check the [traits][doc-traits] of document to learn more.
 
 The [examples][examples] demo following scenarios.
@@ -59,6 +59,7 @@ The [examples][examples] demo following scenarios.
 - create a patch from json string
 - rename the patch structure
 - check a patch is empty or not
+- add attribute to patch struct
 
 
 [crates-badge]: https://img.shields.io/crates/v/struct-patch.svg
