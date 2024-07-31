@@ -1,7 +1,7 @@
 use struct_patch::Patch;
 
 #[derive(Default, Patch)]
-#[patch_derive(Debug, Default)]
+#[patch(attribute(derive(Debug, Default)))]
 struct Item {
     field_bool: bool,
     field_int: usize,

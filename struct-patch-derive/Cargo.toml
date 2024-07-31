@@ -20,3 +20,6 @@ syn = { version =  "2.0", features = ["parsing"] }
 
 [features]
 status = []
+
+[dev-dependencies]
+pretty_assertions_sorted = "1.2.3"

@@ -9,7 +9,7 @@
 //! use serde::{Deserialize, Serialize};
 //!
 //! #[derive(Default, Debug, PartialEq, Patch)]
-//! #[patch_derive(Debug, Default, Deserialize, Serialize)]
+//! #[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
 //! struct Item {
 //!     field_bool: bool,
 //!     field_int: usize,
@@ -90,7 +90,7 @@ mod tests {
     #[cfg(feature = "status")]
     fn test_empty() {
         #[derive(Patch)]
-        #[patch_derive(Debug, PartialEq)]
+        #[patch(attribute(derive(Debug, PartialEq)))]
         struct Item {
             data: u32,
         }
@@ -106,7 +106,7 @@ mod tests {
     #[test]
     fn test_derive() {
         #[derive(Patch)]
-        #[patch_derive(Copy, Clone, PartialEq, Debug)]
+        #[patch(attribute(derive(Copy, Clone, PartialEq, Debug)))]
         struct Item;
 
         let patch = ItemPatch {};
@@ -117,7 +117,7 @@ mod tests {
     #[test]
     fn test_name() {
         #[derive(Patch)]
-        #[patch_name = "PatchItem"]
+        #[patch(name = "PatchItem")]
         struct Item;
 
         let patch = PatchItem {};
@@ -155,9 +155,9 @@ mod tests {
     #[test]
     fn test_skip() {
         #[derive(Patch, PartialEq, Debug)]
-        #[patch_derive(PartialEq, Debug, Deserialize)]
+        #[patch(attribute(derive(PartialEq, Debug, Deserialize)))]
         struct Item {
-            #[patch_skip]
+            #[patch(skip)]
             id: u32,
             data: u32,
         }
@@ -174,16 +174,16 @@ mod tests {
     #[test]
     fn test_nested() {
         #[derive(PartialEq, Debug, Patch, Deserialize)]
-        #[patch_derive(PartialEq, Debug, Deserialize)]
+        #[patch(attribute(derive(PartialEq, Debug, Deserialize)))]
         struct B {
             c: u32,
             d: u32,
         }
 
         #[derive(PartialEq, Debug, Patch, Deserialize)]
-        #[patch_derive(PartialEq, Debug, Deserialize)]
+        #[patch(attribute(derive(PartialEq, Debug, Deserialize)))]
         struct A {
-            #[patch_name = "BPatch"]
+            #[patch(type = "BPatch")]
             b: B,
         }
 
@@ -230,7 +230,7 @@ mod tests {
     #[test]
     fn test_named_generic() {
         #[derive(Patch)]
-        #[patch_name = "PatchItem"]
+        #[patch(name = "PatchItem")]
         struct Item<T>
         where
             T: PartialEq,
@@ -250,7 +250,7 @@ mod tests {
     #[test]
     fn test_nested_generic() {
         #[derive(PartialEq, Debug, Patch, Deserialize)]
-        #[patch_derive(PartialEq, Debug, Deserialize)]
+        #[patch(attribute(derive(PartialEq, Debug, Deserialize)))]
         struct B<T>
         where
             T: PartialEq,
@@ -260,9 +260,9 @@ mod tests {
         }
 
         #[derive(PartialEq, Debug, Patch, Deserialize)]
-        #[patch_derive(PartialEq, Debug, Deserialize)]
+        #[patch(attribute(derive(PartialEq, Debug, Deserialize)))]
         struct A {
-            #[patch_name = "BPatch<u32>"]
+            #[patch(type = "BPatch<u32>")]
             b: B<u32>,
         }
 
