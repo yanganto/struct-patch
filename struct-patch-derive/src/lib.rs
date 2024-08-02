@@ -1,16 +1,12 @@
 extern crate proc_macro;
-use std::str::FromStr;
-
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
-use syn::{
-    meta::ParseNestedMeta, parenthesized, spanned::Spanned, DeriveInput, Error, LitStr, Type,
-};
+use std::str::FromStr;
+use syn::{meta::ParseNestedMeta, parenthesized, spanned::Spanned, DeriveInput, Error, LitStr, Result, Type};
 
 const PATCH: &str = "patch";
 const NAME: &str = "name";
 const ATTRIBUTE: &str = "attribute";
-const TYPE: &str = "type";
 const SKIP: &str = "skip";
 
 #[proc_macro_derive(Patch, attributes(patch))]
@@ -39,7 +35,8 @@ struct Field {
 }
 
 impl Patch {
-    pub fn to_token_stream(&self) -> Result<TokenStream, syn::Error> {
+    /// Generate the token stream for the patch struct and it resulting implementations
+    pub fn to_token_stream(self) -> Result<TokenStream> {
         let Patch {
             visibility,
             struct_name,
@@ -52,7 +49,7 @@ impl Patch {
         let patch_struct_fields = fields
             .iter()
             .map(|f| f.to_token_stream())
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>>>()?;
         let field_names = fields.iter().map(|f| f.ident.as_ref()).collect::<Vec<_>>();
 
         let renamed_field_names = fields
@@ -160,6 +157,7 @@ impl Patch {
         })
     }
 
+    /// Parse the patch struct
     pub fn from_ast(
         DeriveInput {
             ident,
@@ -168,7 +166,7 @@ impl Patch {
             attrs,
             vis,
         }: syn::DeriveInput,
-    ) -> Result<Patch, Error> {
+    ) -> Result<Patch> {
         let original_fields = if let syn::Data::Struct(syn::DataStruct { fields, .. }) = data {
             fields
         } else {
@@ -247,7 +245,8 @@ impl Patch {
 }
 
 impl Field {
-    pub fn to_token_stream(&self) -> Result<TokenStream, syn::Error> {
+    /// Generate the token stream for the Patch struct fields
+    pub fn to_token_stream(&self) -> Result<TokenStream> {
         let Field {
             ident,
             ty,
@@ -275,11 +274,12 @@ impl Field {
         }
     }
 
+    /// Parse the patch struct field
     pub fn from_ast(
         syn::Field {
             ident, ty, attrs, ..
         }: syn::Field,
-    ) -> Result<Option<Field>, syn::Error> {
+    ) -> Result<Option<Field>> {
         let mut attributes = vec![];
         let mut field_type = None;
         let mut skip = false;
@@ -309,8 +309,8 @@ impl Field {
                         let attribute: TokenStream = content.parse()?;
                         attributes.push(attribute);
                     }
-                    TYPE => {
-                        // #[patch(type = "ItemPatch")]
+                    NAME => {
+                        // #[patch(name = "ItemPatch")]
                         let expr: LitStr = meta.value()?.parse()?;
                         field_type = Some(expr.parse()?)
                     }
@@ -391,7 +391,7 @@ mod tests {
             #[derive(Patch)]
             #[patch(name = "MyPatch", attribute(derive(Debug, PartialEq, Clone, Serialize, Deserialize)))]
             pub struct Item {
-                #[patch(type = "SubItemPatch")]
+                #[patch(name = "SubItemPatch")]
                 pub field1: SubItem,
                 #[patch(skip)]
                 pub field2: Option<String>,

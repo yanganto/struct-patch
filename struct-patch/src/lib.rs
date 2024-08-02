@@ -183,7 +183,7 @@ mod tests {
         #[derive(PartialEq, Debug, Patch, Deserialize)]
         #[patch(attribute(derive(PartialEq, Debug, Deserialize)))]
         struct A {
-            #[patch(type = "BPatch")]
+            #[patch(name = "BPatch")]
             b: B,
         }
 
@@ -262,7 +262,7 @@ mod tests {
         #[derive(PartialEq, Debug, Patch, Deserialize)]
         #[patch(attribute(derive(PartialEq, Debug, Deserialize)))]
         struct A {
-            #[patch(type = "BPatch<u32>")]
+            #[patch(name = "BPatch<u32>")]
             b: B<u32>,
         }
 
