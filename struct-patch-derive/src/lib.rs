@@ -2,7 +2,10 @@ extern crate proc_macro;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
 use std::str::FromStr;
-use syn::{meta::ParseNestedMeta, parenthesized, spanned::Spanned, DeriveInput, Error, LitStr, Result, Type};
+use syn::{
+    meta::ParseNestedMeta, parenthesized, spanned::Spanned, DeriveInput, Error, LitStr, Result,
+    Type,
+};
 
 const PATCH: &str = "patch";
 const NAME: &str = "name";
@@ -113,29 +116,35 @@ impl Patch {
                 }
 
                 fn into_patch(self) -> #name #generics {
-                    let mut p = Self::new_empty_patch();
-                    #(
-                        p.#renamed_field_names = Some(self.#renamed_field_names.into_patch());
-                    )*
-                    #(
-                        p.#original_field_names = Some(self.#original_field_names);
-                    )*
-                    p
+                    #name {
+                        #(
+                            #renamed_field_names: Some(self.#renamed_field_names.into_patch()),
+                        )*
+                        #(
+                            #original_field_names: Some(self.#original_field_names),
+                        )*
+                    }
                 }
 
                 fn into_patch_by_diff(self, previous_struct: Self) -> #name #generics {
-                    let mut p = Self::new_empty_patch();
-                    #(
-                        if self.#renamed_field_names != previous_struct.#renamed_field_names {
-                            p.#renamed_field_names = Some(self.#renamed_field_names.into_patch_by_diff(previous_struct.#renamed_field_names));
-                        }
-                    )*
-                    #(
-                        if self.#original_field_names != previous_struct.#original_field_names {
-                            p.#original_field_names = Some(self.#original_field_names);
-                        }
-                    )*
-                    p
+                    #name {
+                        #(
+                            #renamed_field_names: if self.#renamed_field_names != previous_struct.#renamed_field_names {
+                                Some(self.#renamed_field_names.into_patch_by_diff(previous_struct.#renamed_field_names))
+                            }
+                            else {
+                                None
+                            },
+                        )*
+                        #(
+                            #original_field_names: if self.#original_field_names != previous_struct.#original_field_names {
+                                Some(self.#original_field_names)
+                            }
+                            else {
+                                None
+                            },
+                        )*
+                    }
                 }
 
                 fn new_empty_patch() -> #name #generics {
