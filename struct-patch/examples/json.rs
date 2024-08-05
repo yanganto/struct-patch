@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use struct_patch::Patch;
 
 #[derive(Default, Debug, PartialEq, Patch)]
-#[patch_derive(Debug, Default, Deserialize, Serialize)]
+#[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
 struct Item {
     field_bool: bool,
     field_int: usize,

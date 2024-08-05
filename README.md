@@ -17,7 +17,7 @@ use struct_patch::Patch;
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Debug, PartialEq, Patch)]
-#[patch_derive(Debug, Default, Deserialize, Serialize)]
+#[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
 struct Item {
     field_bool: bool,
     field_int: usize,
@@ -51,7 +51,17 @@ fn patch_json() {
 ```
 
 ## Documentation and Examples
-Also, you can modify the patch structure by `#[patch_attribute(...)]`, `#[patch_derive(...)]`, `#[patch_name = "..."]` and `#[patch_skip]`.
+Also, you can modify the patch structure by defining `#[patch(...)]` attributes on the original struct or fields.
+
+Struct attributes:
+- `#[patch(name = "...")]`: change the name of the generated patch struct.
+- `#[patch(attribute(...))]`: add attributes to the generated patch struct.
+
+Field attributes: 
+- `#[patch(skip)]`: skip the field in the generated patch struct.
+- `#[patch(type = "...")]`: change the type of the field in the generated patch struct.
+- `#[patch(attribute(...))]`: add attributes to the field in the generated patch struct.
+
 Please check the [traits][doc-traits] of document to learn more.
 
 The [examples][examples] demo following scenarios.

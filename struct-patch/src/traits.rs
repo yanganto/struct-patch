@@ -18,13 +18,13 @@
 /// // }
 /// ```
 /// ## Container attributes
-/// ### `#[patch_derive(...)]`
+/// ### `#[patch(attribute(derive(...)))]`
 /// Use this attribute to derive traits on the generated patch struct
 /// ```rust
 /// # use struct_patch::Patch;
 /// # use serde::{Serialize, Deserialize};
 /// #[derive(Patch)]
-/// #[patch_derive(Debug, Default, Deserialize, Serialize)]
+/// #[patch(attribute(derive(Debug, Default, Deserialize, Serialize)))]
 /// struct Item;
 ///
 /// // Generated struct
@@ -32,14 +32,14 @@
 /// // struct ItemPatch {}
 /// ```
 ///
-/// ### `#[patch_attribute(...)]`
+/// ### `#[patch(attribute(...))]`
 /// Use this attribute to pass the attributes on the generated patch struct
 /// ```compile_fail
 /// // This example need `serde` and `serde_with` crates
 /// # use struct_patch::Patch;
 /// #[derive(Patch, Debug)]
-/// #[patch_derive(Serialize, Deserialize, Default)]
-/// #[patch_attribute(skip_serializing_none)]
+/// #[patch(attribute(derive(Serialize, Deserialize, Default)))]
+/// #[patch(attribute(skip_serializing_none))]
 /// struct Item;
 ///
 /// // Generated struct
@@ -48,12 +48,12 @@
 /// // struct ItemPatch {}
 /// ```
 ///
-/// ### `#[patch_name = "..."]`
+/// ### `#[patch(name = "...")]`
 /// Use this attribute to change the name of the generated patch struct
 /// ```rust
 /// # use struct_patch::Patch;
 /// #[derive(Patch)]
-/// #[patch_name = "ItemOverlay"]
+/// #[patch(name = "ItemOverlay")]
 /// struct Item { }
 ///
 /// // Generated struct
@@ -61,13 +61,13 @@
 /// ```
 ///
 /// ## Field attributes
-/// ### `#[patch_skip]`
+/// ### `#[patch(skip)]`
 /// If you want certain fields to be unpatchable, you can let the derive macro skip certain fields when creating the patch struct
 /// ```rust
 /// # use struct_patch::Patch;
 /// #[derive(Patch)]
 /// struct Item {
-///     #[patch_skip]
+///     #[patch(skip)]
 ///     id: String,
 ///     data: String,
 /// }
