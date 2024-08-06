@@ -56,11 +56,13 @@ Also, you can modify the patch structure by defining `#[patch(...)]` attributes 
 Struct attributes:
 - `#[patch(name = "...")]`: change the name of the generated patch struct.
 - `#[patch(attribute(...))]`: add attributes to the generated patch struct.
+- `#[patch(attribute(derive(...)))]`: add derives to the generated patch struct.
 
 Field attributes: 
 - `#[patch(skip)]`: skip the field in the generated patch struct.
-- `#[patch(type = "...")]`: change the type of the field in the generated patch struct.
+- `#[patch(name = "...")]`: change the type of the field in the generated patch struct.
 - `#[patch(attribute(...))]`: add attributes to the field in the generated patch struct.
+- `#[patch(attribute(derive(...)))]`: add derives to the field in the generated patch struct.
 
 Please check the [traits][doc-traits] of document to learn more.
 
