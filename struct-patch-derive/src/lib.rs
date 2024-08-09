@@ -100,29 +100,33 @@ impl Patch {
         #[cfg(not(feature = "status"))]
         let patch_status_impl = quote!();
 
-        #[cfg(feature = "add")]
-        let add_impl = quote! {
-            impl core::ops::Add<#name #generics> for #struct_name #generics #where_clause {
-                type Output = Self;
+        let add_impl = if generics.gt_token.is_none() {
+            #[cfg(feature = "add")]
+            quote! {
+                impl core::ops::Add<#name #generics> for #struct_name #generics #where_clause {
+                    type Output = Self;
 
-                fn add(mut self, rhs: #name #generics) -> Self {
-                    self.apply(rhs);
-                    self
+                    fn add(mut self, rhs: #name #generics) -> Self {
+                        self.apply(rhs);
+                        self
+                    }
+                }
+
+                impl core::ops::Add<#struct_name #generics> for #name #generics #where_clause {
+                    type Output = #struct_name #generics;
+
+                    fn add(mut self, rhs: #struct_name #generics) -> #struct_name  #where_clause {
+                        let mut rhs = rhs;
+                        rhs.apply(self);
+                        rhs
+                    }
                 }
             }
-
-            impl core::ops::Add<#struct_name #generics> for #name #generics #where_clause {
-                type Output = #struct_name #generics;
-
-                fn add(mut self, rhs: #struct_name #generics) -> #struct_name  #where_clause {
-                    let mut rhs = rhs;
-                    rhs.apply(self);
-                    rhs
-                }
-            }
+            #[cfg(not(feature = "add"))]
+            quote!()
+        } else {
+            quote!()
         };
-        #[cfg(not(feature = "add"))]
-        let add_impl = quote!();
 
         let patch_impl = quote! {
             impl #generics struct_patch::traits::Patch< #name #generics > for #struct_name #generics #where_clause  {
