@@ -82,7 +82,6 @@ impl Patch {
                 #(#patch_struct_fields)*
             }
         };
-
         let where_clause = &generics.where_clause;
 
         #[cfg(feature = "status")]
@@ -101,7 +100,7 @@ impl Patch {
         #[cfg(not(feature = "status"))]
         let patch_status_impl = quote!();
 
-        let add_impl = quote!{
+        let add_impl = quote! {
             impl core::ops::Add<#name #generics> for #struct_name #generics #where_clause {
                 type Output = #struct_name;
 
