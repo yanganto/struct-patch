@@ -23,4 +23,7 @@ default = ["status"]
 status = [
     "struct-patch-derive/status"
 ]
+add = [
+    "struct-patch-derive/add"
+]
 

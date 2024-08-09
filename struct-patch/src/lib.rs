@@ -280,4 +280,65 @@ mod tests {
             }
         );
     }
+
+    #[cfg(feature = "add")]
+    #[test]
+    fn test_add() {
+        #[derive(Patch, Debug, PartialEq)]
+        struct Item {
+            field: u32,
+            other: String,
+        }
+
+        let item = Item {
+            field: 1,
+            other: String::from("hello"),
+        };
+        let patch = ItemPatch {
+            field: None,
+            other: Some(String::from("bye")),
+        };
+
+        assert_eq!(
+            item + patch,
+            Item {
+                field: 1,
+                other: String::from("bye")
+            }
+        );
+    }
+
+    #[cfg(feature = "add")]
+    #[test]
+    fn test_add_combined() {
+        #[derive(Patch, Debug, PartialEq)]
+        struct Item {
+            field: u32,
+            other: String,
+        }
+
+        let mut item = Item {
+            field: 1,
+            other: String::from("hello"),
+        };
+        let patch = ItemPatch {
+            field: None,
+            other: Some(String::from("bye")),
+        };
+        let patch2 = ItemPatch {
+            field: Some(2),
+            other: None,
+        };
+
+        let combined_patch = patch + patch2;
+
+        item.apply(combined_patch);
+        assert_eq!(
+            item,
+            Item {
+                field: 2,
+                other: String::from("bye")
+            }
+        );
+    }
 }

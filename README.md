@@ -73,6 +73,10 @@ The [examples][examples] demo following scenarios.
 - check a patch is empty or not
 - add attribute to patch struct
 
+## Features
+- status (default): provide `is_empty` method
+- add (optional): provide `+` operator between instance and patch
+
 
 [crates-badge]: https://img.shields.io/crates/v/struct-patch.svg
 [crate-url]: https://crates.io/crates/struct-patch
