@@ -34,4 +34,18 @@ fn main() {
     assert_eq!(item.field_bool, false);
     assert_eq!(item.field_int, 7);
     assert_eq!(item.field_string, "");
+
+
+    let another_patch =  ItemPatch {
+        field_bool: None,
+        field_int: None,
+        field_string: Some("from another patch".into()),
+    };
+    let new_item = item + another_patch;
+
+    assert_eq!(new_item.field_bool, false);
+    assert_eq!(new_item.field_int, 7);
+    assert_eq!(new_item.field_string, "from another patch");
+
+    println!("instance example run passed")
 }

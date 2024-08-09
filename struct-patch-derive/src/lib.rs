@@ -82,6 +82,7 @@ impl Patch {
                 #(#patch_struct_fields)*
             }
         };
+
         let where_clause = &generics.where_clause;
 
         #[cfg(feature = "status")]
@@ -99,6 +100,27 @@ impl Patch {
         );
         #[cfg(not(feature = "status"))]
         let patch_status_impl = quote!();
+
+        let add_impl = quote!{
+            impl core::ops::Add<#name #generics> for #struct_name #generics #where_clause {
+                type Output = #struct_name;
+
+                fn add(mut self, rhs: #name #generics) -> Self {
+                    self.apply(rhs);
+                    self
+                }
+            }
+
+            impl core::ops::Add<#struct_name #generics> for #name #generics #where_clause {
+                type Output = #struct_name;
+
+                fn add(mut self, rhs: #struct_name #generics) -> #struct_name  #where_clause {
+                    let mut rhs = rhs;
+                    rhs.apply(self);
+                    rhs
+                }
+            }
+        };
 
         let patch_impl = quote! {
             impl #generics struct_patch::traits::Patch< #name #generics > for #struct_name #generics #where_clause  {
@@ -163,6 +185,8 @@ impl Patch {
             #patch_status_impl
 
             #patch_impl
+
+            #add_impl
         })
     }
 
