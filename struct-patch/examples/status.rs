@@ -11,7 +11,7 @@ struct Item {
 }
 
 fn main() {
-    let mut patch = Item::new_empty_patch();
+    let mut patch: ItemPatch = Item::new_empty_patch();
 
     #[cfg(feature = "status")]
     assert!(patch.is_empty()); // provided by PatchStatus
