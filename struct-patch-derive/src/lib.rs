@@ -102,7 +102,7 @@ impl Patch {
 
         #[cfg(feature = "add")]
         let add_impl = quote! {
-            impl core::ops::Add<#name #generics> for #struct_name #generics #where_clause {
+            impl #generics core::ops::Add<#name #generics> for #struct_name #generics #where_clause {
                 type Output = Self;
 
                 fn add(mut self, rhs: #name #generics) -> Self {
@@ -111,10 +111,10 @@ impl Patch {
                 }
             }
 
-            impl core::ops::Add<#struct_name #generics> for #name #generics #where_clause {
+            impl #generics core::ops::Add<#struct_name #generics> for #name #generics #where_clause {
                 type Output = #struct_name #generics;
 
-                fn add(mut self, rhs: #struct_name #generics) -> #struct_name  #where_clause {
+                fn add(mut self, rhs: #struct_name #generics) -> #struct_name #generics {
                     let mut rhs = rhs;
                     rhs.apply(self);
                     rhs

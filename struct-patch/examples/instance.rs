@@ -35,7 +35,8 @@ fn main() {
     assert_eq!(item.field_int, 7);
     assert_eq!(item.field_string, "");
 
-    #[cfg(feature = "add")] {
+    #[cfg(feature = "add")]
+    {
         let another_patch = ItemPatch {
             field_complete: None,
             field_int: None,
