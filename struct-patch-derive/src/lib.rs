@@ -114,7 +114,7 @@ impl Patch {
             impl #generics core::ops::Add<#struct_name #generics> for #name #generics #where_clause {
                 type Output = #struct_name #generics;
 
-                fn add(mut self, rhs: #struct_name #generics) -> #struct_name  #generics {
+                fn add(mut self, rhs: #struct_name #generics) -> #struct_name #generics {
                     let mut rhs = rhs;
                     rhs.apply(self);
                     rhs
