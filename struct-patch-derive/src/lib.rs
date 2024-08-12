@@ -125,45 +125,36 @@ impl Patch {
                 }
             }
 
-            // TODO
-            // We need unstable feature to make sure the type of field for add feature
-            // https://doc.rust-lang.org/std/any/fn.type_name_of_val.html
-            // impl #generics core::ops::Add<Self> for #name #generics #where_clause {
-            //     type Output = Self;
+            impl #generics core::ops::Add<Self> for #name #generics #where_clause {
+                type Output = Self;
 
-            //     fn add(mut self, rhs: Self) -> Self {
-            //         Self {
-            //             #(
-            //                 #renamed_field_names: match (self.#renamed_field_names, rhs.#renamed_field_names) {
-            //                     (Some(a), Some(b)) => {
-            //                         if std::any::type_name_of_val(&a) == "usize" {
-            //                             Some(a + b)
-            //                         } else {
-            //                             Some(b)
-            //                         }
-            //                     },
-            //                     (Some(a), None) => Some(a),
-            //                     (None, Some(b)) => Some(b),
-            //                     (None, None) => None,
-            //                 },
-            //             )*
-            //             #(
-            //                 #original_field_names: match (self.#original_field_names, rhs.#original_field_names) {
-            //                     (Some(a), Some(b)) => {
-            //                         if std::any::type_name_of_val(&a) == "usize" {
-            //                             Some(a + b)
-            //                         } else {
-            //                             Some(b)
-            //                         }
-            //                     },
-            //                     (Some(a), None) => Some(a),
-            //                     (None, Some(b)) => Some(b),
-            //                     (None, None) => None,
-            //                 },
-            //             )*
-            //         }
-            //     }
-            // }
+                fn add(mut self, rhs: Self) -> Self {
+                    Self {
+                        #(
+                            #renamed_field_names: match (self.#renamed_field_names, rhs.#renamed_field_names) {
+                                (Some(a), Some(b)) => {
+                                    // TODO handle #[patch(addable)] fields
+                                    panic!("There are conflict patches in {}", stringify!(#renamed_field_names))
+                                },
+                                (Some(a), None) => Some(a),
+                                (None, Some(b)) => Some(b),
+                                (None, None) => None,
+                            },
+                        )*
+                        #(
+                            #original_field_names: match (self.#original_field_names, rhs.#original_field_names) {
+                                (Some(a), Some(b)) => {
+                                    // TODO handle #[patch(addable)] fields
+                                    panic!("There are conflict patches in {}", stringify!(#original_field_names))
+                                },
+                                (Some(a), None) => Some(a),
+                                (None, Some(b)) => Some(b),
+                                (None, None) => None,
+                            },
+                        )*
+                    }
+                }
+            }
         };
 
         let patch_impl = quote! {

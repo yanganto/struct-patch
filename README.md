@@ -38,6 +38,17 @@ fn patch_json() {
     let patch: ItemPatch = serde_json::from_str(data).unwrap();
 
     item.apply(patch);
+    // You can do 
+    // `let new_item = item << patch;`
+
+    // For multiple patches,
+    // you can do this
+    // `let new_item = item << patch_1 << patch_2;`
+    // or make an aggregated one, but please make sure the patch fields do not conflict, else will panic
+    // ```
+    // let overall_patch = patch_1 + patch_2 + patch_3;
+    // let new_item = item << overall_patch;
+    // ```
 
     assert_eq!(
         item,

@@ -28,6 +28,12 @@ fn main() {
 
     let another_patch = ItemPatch {
         field_complete: None,
+        field_int: None,
+        field_string: Some("from another patch".into()),
+    };
+
+    let _conflict_patch = ItemPatch {
+        field_complete: None,
         field_int: Some(1),
         field_string: Some("from another patch".into()),
     };
@@ -38,11 +44,13 @@ fn main() {
         field_string: None,
     };
 
-    // TODO
-    // We need unstable feature to make sure the type of field for add feature
-    // https://doc.rust-lang.org/std/any/fn.type_name_of_val.html#
-    // let final_item_from_merge = item.clone() << (another_patch.clone() + the_other_patch.clone());
-    // assert_eq!(final_item_from_merge.field_int, 3);
+    // let final_item_from_merge = item.clone() << (_conflict_patch + the_other_patch.clone());
+    // Will get panic `There are conflict patches in field_int`
+    // Will be handdled as the discussion
+    // https://github.com/yanganto/struct-patch/pull/32#issuecomment-2283154990
+
+    let final_item_from_merge = item.clone() << (another_patch.clone() + the_other_patch.clone());
+    assert_eq!(final_item_from_merge.field_int, 2);
 
     let final_item_series_patch = item << another_patch << the_other_patch;
     assert_eq!(final_item_series_patch.field_int, 2);
