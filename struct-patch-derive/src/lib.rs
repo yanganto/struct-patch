@@ -134,8 +134,8 @@ impl Patch {
                         #(
                             #renamed_field_names: match (self.#renamed_field_names, rhs.#renamed_field_names) {
                                 (Some(a), Some(b)) => {
-                                    // TODO handle #[patch(addable)] fields
-                                    panic!("There are conflict patches in {}", stringify!(#renamed_field_names))
+                                    // TODO handle #[patch(add=)] fields
+                                    panic!("There are conflict patches on {}.{}", stringify!(#name), stringify!(#renamed_field_names))
                                 },
                                 (Some(a), None) => Some(a),
                                 (None, Some(b)) => Some(b),
@@ -145,8 +145,8 @@ impl Patch {
                         #(
                             #original_field_names: match (self.#original_field_names, rhs.#original_field_names) {
                                 (Some(a), Some(b)) => {
-                                    // TODO handle #[patch(addable)] fields
-                                    panic!("There are conflict patches in {}", stringify!(#original_field_names))
+                                    // TODO handle #[patch(add=)] fields
+                                    panic!("There are conflict patches on {}.{}", stringify!(#name), stringify!(#original_field_names))
                                 },
                                 (Some(a), None) => Some(a),
                                 (None, Some(b)) => Some(b),

@@ -46,7 +46,7 @@ fn main() {
     };
 
     // let final_item_from_merge = item.clone() << (_conflict_patch + the_other_patch.clone());
-    // Will get panic `There are conflict patches in field_int`
+    // Will get panic `There are conflict patches on ItemPatch.field_int`
     //
     // TODO
     // Will be handdled as the discussion
