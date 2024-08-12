@@ -86,8 +86,7 @@ The [examples][examples] demo following scenarios.
 
 ## Features
 - status (default): provide `is_empty` method
-- add (optional): provide `+` operator between instance and patch
-
+- op (default): provide operators `<<` for instance and patch, and `+` for patches
 
 [crates-badge]: https://img.shields.io/crates/v/struct-patch.svg
 [crate-url]: https://crates.io/crates/struct-patch

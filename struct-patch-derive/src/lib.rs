@@ -100,6 +100,7 @@ impl Patch {
         #[cfg(not(feature = "status"))]
         let patch_status_impl = quote!();
 
+        #[cfg(feature = "op")]
         let op_impl = quote! {
             impl #generics core::ops::Shl<#name #generics> for #struct_name #generics #where_clause {
                 type Output = Self;
@@ -156,6 +157,8 @@ impl Patch {
                 }
             }
         };
+        #[cfg(not(feature = "op"))]
+        let op_impl = quote!();
 
         let patch_impl = quote! {
             impl #generics struct_patch::traits::Patch< #name #generics > for #struct_name #generics #where_clause  {

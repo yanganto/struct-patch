@@ -19,11 +19,11 @@ serde = { version = "1", features = ["derive"] }
 serde_with = "3.9.0"
 
 [features]
-default = ["status"]
+default = ["status", "op"]
 status = [
     "struct-patch-derive/status"
 ]
-add = [
-    "struct-patch-derive/add"
+op = [
+    "struct-patch-derive/op"
 ]
 

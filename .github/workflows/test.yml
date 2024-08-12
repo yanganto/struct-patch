@@ -24,10 +24,10 @@ jobs:
           nix develop -c cargo run --no-default-features --example json
           nix develop -c cargo run --no-default-features --example rename-patch-struct
           nix develop -c cargo run --no-default-features --example patch-attr
-          nix develop -c cargo run --no-default-features --example op
           nix develop -c cargo test --no-default-features
 
       - name: Test with default features
         run: |
           nix develop -c cargo run --example status
+          nix develop -c cargo run --example op
           nix develop -c cargo test

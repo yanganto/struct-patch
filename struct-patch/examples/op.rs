@@ -8,6 +8,7 @@ struct Item {
     field_string: String,
 }
 
+#[cfg(feature = "op")]
 fn main() {
     let mut item = Item::default();
 
@@ -55,3 +56,6 @@ fn main() {
     let final_item_series_patch = item << another_patch << the_other_patch;
     assert_eq!(final_item_series_patch.field_int, 2);
 }
+
+#[cfg(not(feature = "op"))]
+fn main() {}

@@ -35,24 +35,27 @@ fn main() {
     assert_eq!(item.field_int, 7);
     assert_eq!(item.field_string, "");
 
-    let another_patch = ItemPatch {
-        field_complete: None,
-        field_int: None,
-        field_string: Some("from another patch".into()),
-    };
-    let new_item = item << another_patch;
+    #[cfg(feature = "op")]
+    {
+        let another_patch = ItemPatch {
+            field_complete: None,
+            field_int: None,
+            field_string: Some("from another patch".into()),
+        };
+        let new_item = item << another_patch;
 
-    assert_eq!(new_item.field_complete, false);
-    assert_eq!(new_item.field_int, 7);
-    assert_eq!(new_item.field_string, "from another patch");
+        assert_eq!(new_item.field_complete, false);
+        assert_eq!(new_item.field_int, 7);
+        assert_eq!(new_item.field_string, "from another patch");
 
-    let the_other_patch = ItemPatch {
-        field_complete: Some(true),
-        field_int: None,
-        field_string: None,
-    };
-    let final_item = new_item << the_other_patch;
-    assert_eq!(final_item.field_complete, true);
-    assert_eq!(final_item.field_int, 7);
-    assert_eq!(final_item.field_string, "from another patch");
+        let the_other_patch = ItemPatch {
+            field_complete: Some(true),
+            field_int: None,
+            field_string: None,
+        };
+        let final_item = new_item << the_other_patch;
+        assert_eq!(final_item.field_complete, true);
+        assert_eq!(final_item.field_int, 7);
+        assert_eq!(final_item.field_string, "from another patch");
+    }
 }
