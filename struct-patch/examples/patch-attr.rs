@@ -1,5 +1,5 @@
-use struct_patch::Patch;
 use serde_with::skip_serializing_none;
+use struct_patch::Patch;
 
 #[derive(Default, Patch)]
 #[patch(attribute(derive(serde::Serialize, Debug, Default)))]
@@ -21,7 +21,7 @@ struct Item {
 // }
 
 fn main() {
-    let patch = Item::new_empty_patch();
+    let patch: ItemPatch = Item::new_empty_patch();
 
     assert_eq!(
         format!("{patch:?}"),
