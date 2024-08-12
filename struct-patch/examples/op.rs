@@ -47,14 +47,18 @@ fn main() {
 
     // let final_item_from_merge = item.clone() << (_conflict_patch + the_other_patch.clone());
     // Will get panic `There are conflict patches in field_int`
+    //
+    // TODO
     // Will be handdled as the discussion
     // https://github.com/yanganto/struct-patch/pull/32#issuecomment-2283154990
 
     let final_item_from_merge = item.clone() << (another_patch.clone() + the_other_patch.clone());
-    assert_eq!(final_item_from_merge.field_int, 2);
+    assert_eq!(final_item_from_merge.field_string, "from another patch");
+    assert_eq!(final_item_from_merge.field_complete, true);
 
     let final_item_series_patch = item << another_patch << the_other_patch;
-    assert_eq!(final_item_series_patch.field_int, 2);
+    assert_eq!(final_item_series_patch.field_string, "from another patch");
+    assert_eq!(final_item_series_patch.field_complete, true);
 }
 
 #[cfg(not(feature = "op"))]
