@@ -39,7 +39,7 @@ struct Field {
 
 impl Patch {
     /// Generate the token stream for the patch struct and it resulting implementations
-    pub fn to_token_stream(self) -> Result<TokenStream> {
+    pub fn to_token_stream(&self) -> Result<TokenStream> {
         let Patch {
             visibility,
             struct_name,

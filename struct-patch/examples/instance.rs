@@ -20,7 +20,7 @@ struct Item {
 fn main() {
     let mut item = Item::default();
 
-    let mut patch = Item::new_empty_patch();
+    let mut patch: ItemPatch = Item::new_empty_patch();
 
     patch.field_int = Some(7);
 

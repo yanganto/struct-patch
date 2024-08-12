@@ -17,5 +17,8 @@ jobs:
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: fmt
+        run: nix develop -c cargo fmt
+
       - name: Lint
-        run: nix develop -c cargo clippy
+        run: nix develop -c cargo clippy -- -Dwarnings

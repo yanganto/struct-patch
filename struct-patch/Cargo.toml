@@ -27,3 +27,6 @@ op = [
     "struct-patch-derive/op"
 ]
 
+std = ["box", "option"]
+box = []
+option = []

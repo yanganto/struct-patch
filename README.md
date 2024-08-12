@@ -85,8 +85,15 @@ The [examples][examples] demo following scenarios.
 - add attribute to patch struct
 
 ## Features
-- status (default): provide `is_empty` method
-- op (default): provide operators `<<` for instance and patch, and `+` for patches
+This crate also includes the following optional features:
+- `status`(default): implements the `PatchStatus` trait for the patch struct, which provides the `is_empty` method.
+- `op` (default): provide operators `<<` for instance and patch, and `+` for patches
+- `std`(optional):
+  - `box`: implements the `Patch<Box<P>>` trait for `T` where `T` implements `Patch<P>`.
+    This let you patch a boxed (or not) struct with a boxed patch.
+  - `option`: implements the `Patch<Option<P>>` trait for `Option<T>` where `T` implements `Patch<P>`.
+    `T` also needs to implement `From<P>`.
+    This let you patch structs containing fields with optional values.
 
 [crates-badge]: https://img.shields.io/crates/v/struct-patch.svg
 [crate-url]: https://crates.io/crates/struct-patch
