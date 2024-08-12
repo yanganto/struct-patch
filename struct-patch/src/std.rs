@@ -149,8 +149,8 @@ mod tests {
         /// To understand how to manage optional fields in patch with serde
         mod nested {
             use super::*;
-            use serde::Deserializer;
             use serde::Deserialize;
+            use serde::Deserializer;
 
             #[derive(PartialEq, Debug, Patch, Deserialize)]
             #[patch(attribute(derive(PartialEq, Debug, Deserialize)))]
