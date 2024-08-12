@@ -38,6 +38,17 @@ fn patch_json() {
     let patch: ItemPatch = serde_json::from_str(data).unwrap();
 
     item.apply(patch);
+    // You can do 
+    // `let new_item = item << patch;`
+
+    // For multiple patches,
+    // you can do this
+    // `let new_item = item << patch_1 << patch_2;`
+    // or make an aggregated one, but please make sure the patch fields do not conflict, else will panic
+    // ```
+    // let overall_patch = patch_1 + patch_2 + patch_3;
+    // let new_item = item << overall_patch;
+    // ```
 
     assert_eq!(
         item,
@@ -74,12 +85,13 @@ The [examples][examples] demo following scenarios.
 - add attribute to patch struct
 
 ## Features
-
 This crate also includes the following optional features:
-- `status`: implements the `PatchStatus` trait for the patch struct, which provides the `is_empty` method.
-- `box`: implements the `Patch<Box<P>>` trait for `T` where `T` implements `Patch<P>`.
+- `status`(default): implements the `PatchStatus` trait for the patch struct, which provides the `is_empty` method.
+- `op` (default): provide operators `<<` for instance and patch, and `+` for patches
+- `std`(optional):
+  - `box`: implements the `Patch<Box<P>>` trait for `T` where `T` implements `Patch<P>`.
     This let you patch a boxed (or not) struct with a boxed patch.
-- `option`: implements the `Patch<Option<P>>` trait for `Option<T>` where `T` implements `Patch<P>`.
+  - `option`: implements the `Patch<Option<P>>` trait for `Option<T>` where `T` implements `Patch<P>`.
     `T` also needs to implement `From<P>`.
     This let you patch structs containing fields with optional values.
 

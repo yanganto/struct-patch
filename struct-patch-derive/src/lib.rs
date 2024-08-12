@@ -100,6 +100,66 @@ impl Patch {
         #[cfg(not(feature = "status"))]
         let patch_status_impl = quote!();
 
+        #[cfg(feature = "op")]
+        let op_impl = quote! {
+            impl #generics core::ops::Shl<#name #generics> for #struct_name #generics #where_clause {
+                type Output = Self;
+
+                fn shl(mut self, rhs: #name #generics) -> Self {
+                    self.apply(rhs);
+                    self
+                }
+            }
+
+            impl #generics core::ops::Shl<#name #generics> for #name #generics #where_clause {
+                type Output = Self;
+
+                fn shl(mut self, rhs: #name #generics) -> Self {
+                    Self {
+                        #(
+                            #renamed_field_names: rhs.#renamed_field_names.or(self.#renamed_field_names),
+                        )*
+                        #(
+                            #original_field_names: rhs.#original_field_names.or(self.#original_field_names),
+                        )*
+                    }
+                }
+            }
+
+            impl #generics core::ops::Add<Self> for #name #generics #where_clause {
+                type Output = Self;
+
+                fn add(mut self, rhs: Self) -> Self {
+                    Self {
+                        #(
+                            #renamed_field_names: match (self.#renamed_field_names, rhs.#renamed_field_names) {
+                                (Some(a), Some(b)) => {
+                                    // TODO handle #[patch(add=)] fields
+                                    panic!("There are conflict patches on {}.{}", stringify!(#name), stringify!(#renamed_field_names))
+                                },
+                                (Some(a), None) => Some(a),
+                                (None, Some(b)) => Some(b),
+                                (None, None) => None,
+                            },
+                        )*
+                        #(
+                            #original_field_names: match (self.#original_field_names, rhs.#original_field_names) {
+                                (Some(a), Some(b)) => {
+                                    // TODO handle #[patch(add=)] fields
+                                    panic!("There are conflict patches on {}.{}", stringify!(#name), stringify!(#original_field_names))
+                                },
+                                (Some(a), None) => Some(a),
+                                (None, Some(b)) => Some(b),
+                                (None, None) => None,
+                            },
+                        )*
+                    }
+                }
+            }
+        };
+        #[cfg(not(feature = "op"))]
+        let op_impl = quote!();
+
         let patch_impl = quote! {
             impl #generics struct_patch::traits::Patch< #name #generics > for #struct_name #generics #where_clause  {
                 fn apply(&mut self, patch: #name #generics) {
@@ -163,6 +223,8 @@ impl Patch {
             #patch_status_impl
 
             #patch_impl
+
+            #op_impl
         })
     }
 

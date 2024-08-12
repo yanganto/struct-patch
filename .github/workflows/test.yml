@@ -39,4 +39,5 @@ jobs:
       - name: Test with default features
         run: |
           nix develop -c cargo run --example status
+          nix develop -c cargo run --example op
           nix develop -c cargo test

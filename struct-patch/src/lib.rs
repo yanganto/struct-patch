@@ -282,4 +282,107 @@ mod tests {
             }
         );
     }
+
+    #[cfg(feature = "op")]
+    #[test]
+    fn test_shl() {
+        #[derive(Patch, Debug, PartialEq)]
+        struct Item {
+            field: u32,
+            other: String,
+        }
+
+        let item = Item {
+            field: 1,
+            other: String::from("hello"),
+        };
+        let patch = ItemPatch {
+            field: None,
+            other: Some(String::from("bye")),
+        };
+
+        assert_eq!(
+            item << patch,
+            Item {
+                field: 1,
+                other: String::from("bye")
+            }
+        );
+    }
+
+    #[cfg(feature = "op")]
+    #[test]
+    fn test_shl_on_patch() {
+        #[derive(Patch, Debug, PartialEq)]
+        struct Item {
+            field: u32,
+            other: String,
+        }
+
+        let mut item = Item {
+            field: 1,
+            other: String::from("hello"),
+        };
+        let patch = ItemPatch {
+            field: None,
+            other: Some(String::from("bye")),
+        };
+        let patch2 = ItemPatch {
+            field: Some(2),
+            other: None,
+        };
+
+        let new_patch = patch << patch2;
+
+        item.apply(new_patch);
+        assert_eq!(
+            item,
+            Item {
+                field: 2,
+                other: String::from("bye")
+            }
+        );
+    }
+
+    #[cfg(feature = "op")]
+    #[test]
+    fn test_add_patches() {
+        #[derive(Patch)]
+        #[patch(attribute(derive(Debug, PartialEq)))]
+        struct Item {
+            field: u32,
+            other: String,
+        }
+
+        let patch = ItemPatch {
+            field: Some(1),
+            other: None,
+        };
+        let patch2 = ItemPatch {
+            field: None,
+            other: Some(String::from("hello")),
+        };
+        let overall_patch = patch + patch2;
+        assert_eq!(
+            overall_patch,
+            ItemPatch {
+                field: Some(1),
+                other: Some(String::from("hello")),
+            }
+        );
+    }
+
+    #[cfg(feature = "op")]
+    #[test]
+    #[should_panic]
+    fn test_add_conflict_patches_panic() {
+        #[derive(Patch, Debug, PartialEq)]
+        struct Item {
+            field: u32,
+        }
+
+        let patch = ItemPatch { field: Some(1) };
+        let patch2 = ItemPatch { field: Some(2) };
+        let _overall_patch = patch + patch2;
+    }
 }
