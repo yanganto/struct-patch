@@ -100,39 +100,23 @@ impl Patch {
         #[cfg(not(feature = "status"))]
         let patch_status_impl = quote!();
 
-        #[cfg(feature = "add")]
-        let add_impl = quote! {
-            impl #generics core::ops::Add<#name #generics> for #struct_name #generics #where_clause {
+        let op_impl = quote! {
+            impl #generics core::ops::Shl<#name #generics> for #struct_name #generics #where_clause {
                 type Output = Self;
 
-                fn add(mut self, rhs: #name #generics) -> Self {
+                fn shl(mut self, rhs: #name #generics) -> Self {
                     self.apply(rhs);
                     self
                 }
             }
 
-            impl #generics core::ops::Add<#struct_name #generics> for #name #generics #where_clause {
-                type Output = #struct_name #generics;
-
-                fn add(mut self, rhs: #struct_name #generics) -> #struct_name #generics {
-                    let mut rhs = rhs;
-                    rhs.apply(self);
-                    rhs
-                }
-            }
-
-            impl #generics core::ops::Add<Self> for #name #generics #where_clause {
+            impl #generics core::ops::Shl<#name #generics> for #name #generics #where_clause {
                 type Output = Self;
 
-                fn add(mut self, rhs: Self) -> Self {
+                fn shl(mut self, rhs: #name #generics) -> Self {
                     Self {
                         #(
-                            #renamed_field_names: match (self.#renamed_field_names, rhs.#renamed_field_names) {
-                                (Some(a), Some(b)) => Some(a + b),
-                                (Some(a), None) => Some(a),
-                                (None, Some(b)) => Some(b),
-                                (None, None) => None,
-                            },
+                            #renamed_field_names: rhs.#renamed_field_names.or(self.#renamed_field_names),
                         )*
                         #(
                             #original_field_names: rhs.#original_field_names.or(self.#original_field_names),
@@ -140,9 +124,47 @@ impl Patch {
                     }
                 }
             }
+
+            // TODO
+            // We need unstable feature to make sure the type of field for add feature
+            // https://doc.rust-lang.org/std/any/fn.type_name_of_val.html
+            // impl #generics core::ops::Add<Self> for #name #generics #where_clause {
+            //     type Output = Self;
+
+            //     fn add(mut self, rhs: Self) -> Self {
+            //         Self {
+            //             #(
+            //                 #renamed_field_names: match (self.#renamed_field_names, rhs.#renamed_field_names) {
+            //                     (Some(a), Some(b)) => {
+            //                         if std::any::type_name_of_val(&a) == "usize" {
+            //                             Some(a + b)
+            //                         } else {
+            //                             Some(b)
+            //                         }
+            //                     },
+            //                     (Some(a), None) => Some(a),
+            //                     (None, Some(b)) => Some(b),
+            //                     (None, None) => None,
+            //                 },
+            //             )*
+            //             #(
+            //                 #original_field_names: match (self.#original_field_names, rhs.#original_field_names) {
+            //                     (Some(a), Some(b)) => {
+            //                         if std::any::type_name_of_val(&a) == "usize" {
+            //                             Some(a + b)
+            //                         } else {
+            //                             Some(b)
+            //                         }
+            //                     },
+            //                     (Some(a), None) => Some(a),
+            //                     (None, Some(b)) => Some(b),
+            //                     (None, None) => None,
+            //                 },
+            //             )*
+            //         }
+            //     }
+            // }
         };
-        #[cfg(not(feature = "add"))]
-        let add_impl = quote!();
 
         let patch_impl = quote! {
             impl #generics struct_patch::traits::Patch< #name #generics > for #struct_name #generics #where_clause  {
@@ -208,7 +230,7 @@ impl Patch {
 
             #patch_impl
 
-            #add_impl
+            #op_impl
         })
     }
 

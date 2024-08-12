@@ -281,9 +281,8 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "add")]
     #[test]
-    fn test_add() {
+    fn test_shl() {
         #[derive(Patch, Debug, PartialEq)]
         struct Item {
             field: u32,
@@ -300,7 +299,7 @@ mod tests {
         };
 
         assert_eq!(
-            item + patch,
+            item << patch,
             Item {
                 field: 1,
                 other: String::from("bye")
@@ -308,9 +307,8 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "add")]
     #[test]
-    fn test_add_combined() {
+    fn test_shl_on_patch() {
         #[derive(Patch, Debug, PartialEq)]
         struct Item {
             field: u32,
@@ -330,9 +328,9 @@ mod tests {
             other: None,
         };
 
-        let combined_patch = patch + patch2;
+        let new_patch = patch << patch2;
 
-        item.apply(combined_patch);
+        item.apply(new_patch);
         assert_eq!(
             item,
             Item {
