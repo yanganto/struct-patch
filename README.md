@@ -73,6 +73,15 @@ The [examples][examples] demo following scenarios.
 - check a patch is empty or not
 - add attribute to patch struct
 
+## Features
+
+This crate also includes the following optional features:
+- `status`: implements the `PatchStatus` trait for the patch struct, which provides the `is_empty` method.
+- `box`: implements the `Patch<Box<P>>` trait for `T` where `T` implements `Patch<P>`.
+    This let you patch a boxed (or not) struct with a boxed patch.
+- `option`: implements the `Patch<Option<P>>` trait for `Option<T>` where `T` implements `Patch<P>`.
+    `T` also needs to implement `From<P>`.
+    This let you patch structs containing fields with optional values.
 
 [crates-badge]: https://img.shields.io/crates/v/struct-patch.svg
 [crate-url]: https://crates.io/crates/struct-patch
