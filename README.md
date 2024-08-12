@@ -83,6 +83,8 @@ The [examples][examples] demo following scenarios.
 - rename the patch structure
 - check a patch is empty or not
 - add attribute to patch struct
+- show option field behavior
+- show operators about patches
 
 ## Features
 This crate also includes the following optional features:
