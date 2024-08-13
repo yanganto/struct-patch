@@ -154,12 +154,17 @@ fn keep_none_feature() {
 
 #[cfg(feature = "option")]
 fn main() {
+    // NOTE:
+    // The `pure_none_feature` and `none_as_default_feature` are the same logic,
+    // but the former uses `From` trait and the later uses `Default` trait.
+    // You can base on your need to use `option` feature or `none_as_default` feature
     #[cfg(all(not(feature = "keep_none"), not(feature = "none_as_default")))]
     pure_none_feature();
-
     #[cfg(feature = "none_as_default")]
     none_as_default_feature();
 
+    // NOTE:
+    // In the feature, the patch do not allow to apply on None
     #[cfg(feature = "keep_none")]
     keep_none_feature();
 }
