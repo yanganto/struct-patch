@@ -25,7 +25,7 @@ jobs:
           nix develop -c cargo run --no-default-features --example rename-patch-struct
           nix develop -c cargo run --no-default-features --example patch-attr
           nix develop -c cargo test --no-default-features
-          
+
       - name: Test with std features
         run: |
           nix develop -c cargo run --features=std --example instance
@@ -35,6 +35,11 @@ jobs:
           nix develop -c cargo run --features=std --example patch-attr
           nix develop -c cargo run --features=std --example option
           nix develop -c cargo test --features=std
+
+      - name: Test with option features
+        run: |
+          nix develop -c cargo run --features=none_as_default --example option
+          nix develop -c cargo run --features=keep_none --example option
 
       - name: Test with default features
         run: |

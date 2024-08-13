@@ -28,7 +28,12 @@ where
 #[cfg(feature = "option")]
 /// Patch implementation for Option<T>
 /// This implementation is used to apply a patch to an optional field
-/// The `From` trait is used to convert the patch to the struct type
+/// The default behavior when patching on `None`, will use the `From` trait to convert the patch to
+/// the struct type.
+/// Else,
+/// The feature `none_as_default`, will patch on default instance when patching on `None`.
+/// The feature `keep_none` will keep none when patching on none.
+#[cfg(all(not(feature = "keep_none"), not(feature = "none_as_default")))]
 impl<T, P> Patch<Option<P>> for Option<T>
 where
     T: Patch<P> + From<P>,
@@ -39,6 +44,76 @@ where
                 self_.apply(patch);
             } else {
                 *self = Some(patch.into());
+            }
+        } else {
+            *self = None;
+        }
+    }
+
+    fn into_patch(self) -> Option<P> {
+        self.map(|x| x.into_patch())
+    }
+
+    fn into_patch_by_diff(self, previous_struct: Self) -> Option<P> {
+        match (self, previous_struct) {
+            (Some(self_), Some(previous_struct_)) => {
+                Some(self_.into_patch_by_diff(previous_struct_))
+            }
+            (Some(self_), None) => Some(self_.into_patch()),
+            (None, _) => None,
+        }
+    }
+
+    fn new_empty_patch() -> Option<P> {
+        Some(T::new_empty_patch())
+    }
+}
+#[cfg(feature = "keep_none")]
+impl<T, P> Patch<Option<P>> for Option<T>
+where
+    T: Patch<P>,
+{
+    fn apply(&mut self, patch: Option<P>) {
+        if let Some(patch) = patch {
+            if let Some(self_) = self {
+                self_.apply(patch);
+                return;
+            }
+        }
+        *self = None;
+    }
+
+    fn into_patch(self) -> Option<P> {
+        self.map(|x| x.into_patch())
+    }
+
+    fn into_patch_by_diff(self, previous_struct: Self) -> Option<P> {
+        match (self, previous_struct) {
+            (Some(self_), Some(previous_struct_)) => {
+                Some(self_.into_patch_by_diff(previous_struct_))
+            }
+            (Some(self_), None) => Some(self_.into_patch()),
+            (None, _) => None,
+        }
+    }
+
+    fn new_empty_patch() -> Option<P> {
+        Some(T::new_empty_patch())
+    }
+}
+#[cfg(feature = "none_as_default")]
+impl<T, P> Patch<Option<P>> for Option<T>
+where
+    T: Patch<P> + Default,
+{
+    fn apply(&mut self, patch: Option<P>) {
+        if let Some(patch) = patch {
+            if let Some(self_) = self {
+                self_.apply(patch);
+            } else {
+                let mut instance = T::default();
+                instance.apply(patch);
+                *self = Some(instance);
             }
         } else {
             *self = None;

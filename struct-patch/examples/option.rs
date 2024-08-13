@@ -1,26 +1,35 @@
 #[cfg(feature = "option")]
 use struct_patch::Patch;
 
-#[cfg(feature = "option")]
-fn main() {
-    #[derive(Default, Debug, PartialEq, Patch)]
-    #[patch(attribute(derive(Debug, Default)))]
+#[cfg(all(
+    feature = "option",
+    not(feature = "keep_none"),
+    not(feature = "none_as_default")
+))]
+fn pure_none_feature() {
+    #[derive(Debug, PartialEq, Patch)]
+    #[patch(attribute(derive(Debug)))]
     struct User {
         name: String,
         #[patch(name = "Option<AddressPatch>")]
         address: Option<Address>,
     }
 
-    #[derive(Default, Debug, PartialEq, Patch)]
-    #[patch(attribute(derive(Debug, Default)))]
+    #[derive(Debug, PartialEq, Patch)]
+    #[patch(attribute(derive(Debug)))]
     struct Address {
         street: Option<String>,
         country: String,
     }
 
+    // NOTE: we need impl the From trait.
+    // When patch on None, the patch will convert into the instance base on From implementation
     impl From<AddressPatch> for Address {
         fn from(patch: AddressPatch) -> Self {
-            let mut address = Address::default();
+            let mut address = Address {
+                street: None,
+                country: "France".to_string(),
+            };
             address.apply(patch);
             address
         }
@@ -33,8 +42,8 @@ fn main() {
     let mut patch: UserPatch = User::new_empty_patch();
 
     patch.address = Some(Some(AddressPatch {
-        country: Some("France".to_string()),
-        ..Default::default()
+        street: Some(Some("Av. Gustave Eiffel, 75007 Paris".to_string())),
+        country: None,
     }));
 
     user.apply(patch);
@@ -44,11 +53,115 @@ fn main() {
         User {
             name: String::from("Thomas"),
             address: Some(Address {
-                street: None,
+                street: Some(String::from("Av. Gustave Eiffel, 75007 Paris")),
                 country: String::from("France"),
             }),
         }
     );
+}
+
+#[cfg(feature = "none_as_default")]
+fn none_as_default_feature() {
+    #[derive(Debug, PartialEq, Patch)]
+    #[patch(attribute(derive(Debug)))]
+    struct User {
+        name: String,
+        #[patch(name = "Option<AddressPatch>")]
+        address: Option<Address>,
+    }
+
+    #[derive(Debug, PartialEq, Patch)]
+    #[patch(attribute(derive(Debug)))]
+    struct Address {
+        street: Option<String>,
+        country: String,
+    }
+
+    // NOTE: we need impl the Default trait
+    // When patch on None, the patch will patch on a Default instance
+    impl Default for Address {
+        fn default() -> Self {
+            Self {
+                country: "France".to_string(),
+                street: None,
+            }
+        }
+    }
+
+    let mut user = User {
+        name: String::from("Thomas"),
+        address: None,
+    };
+    let mut patch: UserPatch = User::new_empty_patch();
+
+    patch.address = Some(Some(AddressPatch {
+        street: Some(Some("Av. Gustave Eiffel, 75007 Paris".to_string())),
+        country: None,
+    }));
+
+    user.apply(patch);
+
+    assert_eq!(
+        user,
+        User {
+            name: String::from("Thomas"),
+            address: Some(Address {
+                street: Some(String::from("Av. Gustave Eiffel, 75007 Paris")),
+                country: String::from("France"),
+            }),
+        }
+    );
+}
+
+#[cfg(feature = "keep_none")]
+fn keep_none_feature() {
+    #[derive(Debug, PartialEq, Patch)]
+    #[patch(attribute(derive(Debug)))]
+    struct User {
+        name: String,
+        #[patch(name = "Option<AddressPatch>")]
+        address: Option<Address>,
+    }
+
+    #[derive(Debug, PartialEq, Patch)]
+    #[patch(attribute(derive(Debug)))]
+    struct Address {
+        street: Option<String>,
+        country: String,
+    }
+
+    let mut user = User {
+        name: String::from("Thomas"),
+        address: None,
+    };
+    let mut patch: UserPatch = User::new_empty_patch();
+
+    patch.address = Some(Some(AddressPatch {
+        street: Some(Some("Av. Gustave Eiffel, 75007 Paris".to_string())),
+        country: None,
+    }));
+
+    user.apply(patch);
+
+    assert_eq!(
+        user,
+        User {
+            name: String::from("Thomas"),
+            address: None
+        }
+    );
+}
+
+#[cfg(feature = "option")]
+fn main() {
+    #[cfg(all(not(feature = "keep_none"), not(feature = "none_as_default")))]
+    pure_none_feature();
+
+    #[cfg(feature = "none_as_default")]
+    none_as_default_feature();
+
+    #[cfg(feature = "keep_none")]
+    keep_none_feature();
 }
 
 #[cfg(not(feature = "option"))]
