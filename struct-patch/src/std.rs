@@ -64,6 +64,19 @@ where
     }
 }
 
+#[cfg(all(feature = "option", feature = "op"))]
+pub fn add_option<T>(a: Option<T>, b: Option<T>) -> Option<T>
+where
+    T: std::ops::Add<Output = T>,
+{
+    match (a, b) {
+        (Some(a), Some(b)) => Some(a + b),
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        (None, None) => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate as struct_patch;
