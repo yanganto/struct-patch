@@ -3,14 +3,15 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
 use std::str::FromStr;
 use syn::{
-    meta::ParseNestedMeta, parenthesized, spanned::Spanned, DeriveInput, Error, LitStr, Result,
-    Type,
+    meta::ParseNestedMeta, parenthesized, spanned::Spanned, DeriveInput, Error, LitStr, Path,
+    Result, Type,
 };
 
 const PATCH: &str = "patch";
 const NAME: &str = "name";
 const ATTRIBUTE: &str = "attribute";
 const SKIP: &str = "skip";
+const ADD: &str = "add";
 
 #[proc_macro_derive(Patch, attributes(patch))]
 pub fn derive_patch(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -35,6 +36,8 @@ struct Field {
     ty: Type,
     attributes: Vec<TokenStream>,
     retyped: bool,
+    #[cfg(feature = "op")]
+    add: Option<Path>,
 }
 
 impl Patch {
@@ -101,58 +104,88 @@ impl Patch {
         let patch_status_impl = quote!();
 
         #[cfg(feature = "op")]
-        let op_impl = quote! {
-            impl #generics core::ops::Shl<#name #generics> for #struct_name #generics #where_clause {
-                type Output = Self;
+        let op_impl = {
+            let (custom_add_fields, default_add_fields): (_, Vec<_>) =
+                fields.into_iter().partition(|f| f.add.is_some());
+            let (default_add_renamed_field_names, default_add_original_field_names): (_, Vec<_>) =
+                default_add_fields.into_iter().partition(|f| f.retyped);
 
-                fn shl(mut self, rhs: #name #generics) -> Self {
-                    self.apply(rhs);
-                    self
-                }
-            }
+            let custom_add_field_names = custom_add_fields
+                .iter()
+                .map(|f| f.ident.as_ref())
+                .collect::<Vec<_>>();
+            let custom_add_field_adds = custom_add_fields
+                .iter()
+                .map(|f| f.add.clone().unwrap())
+                .collect::<Vec<_>>();
+            let default_add_renamed_field_names = default_add_renamed_field_names
+                .iter()
+                .map(|f| f.ident.as_ref())
+                .collect::<Vec<_>>();
+            let default_add_original_field_names = default_add_original_field_names
+                .iter()
+                .map(|f| f.ident.as_ref())
+                .collect::<Vec<_>>();
 
-            impl #generics core::ops::Shl<#name #generics> for #name #generics #where_clause {
-                type Output = Self;
+            quote! {
 
-                fn shl(mut self, rhs: #name #generics) -> Self {
-                    Self {
-                        #(
-                            #renamed_field_names: rhs.#renamed_field_names.or(self.#renamed_field_names),
-                        )*
-                        #(
-                            #original_field_names: rhs.#original_field_names.or(self.#original_field_names),
-                        )*
+                impl #generics core::ops::Shl<#name #generics> for #struct_name #generics #where_clause {
+                    type Output = Self;
+
+                    fn shl(mut self, rhs: #name #generics) -> Self {
+                        self.apply(rhs);
+                        self
                     }
                 }
-            }
 
-            impl #generics core::ops::Add<Self> for #name #generics #where_clause {
-                type Output = Self;
+                impl #generics core::ops::Shl<#name #generics> for #name #generics #where_clause {
+                    type Output = Self;
 
-                fn add(mut self, rhs: Self) -> Self {
-                    Self {
-                        #(
-                            #renamed_field_names: match (self.#renamed_field_names, rhs.#renamed_field_names) {
-                                (Some(a), Some(b)) => {
-                                    // TODO handle #[patch(add=)] fields
-                                    panic!("There are conflict patches on {}.{}", stringify!(#name), stringify!(#renamed_field_names))
+                    fn shl(mut self, rhs: #name #generics) -> Self {
+                        Self {
+                            #(
+                                #renamed_field_names: rhs.#renamed_field_names.or(self.#renamed_field_names),
+                            )*
+                            #(
+                                #original_field_names: rhs.#original_field_names.or(self.#original_field_names),
+                            )*
+                        }
+                    }
+                }
+
+                impl #generics core::ops::Add<Self> for #name #generics #where_clause {
+                    type Output = Self;
+
+                    fn add(mut self, rhs: Self) -> Self {
+                        Self {
+                            #(
+                                #custom_add_field_names: match (self.#custom_add_field_names, rhs.#custom_add_field_names) {
+                                    (Some(a), Some(b)) => {
+                                        Some(#custom_add_field_adds(a, b))
+                                    },
+                                    (Some(a), None) => Some(a),
+                                    (None, Some(b)) => Some(b),
+                                    (None, None) => None,
                                 },
-                                (Some(a), None) => Some(a),
-                                (None, Some(b)) => Some(b),
-                                (None, None) => None,
-                            },
-                        )*
-                        #(
-                            #original_field_names: match (self.#original_field_names, rhs.#original_field_names) {
-                                (Some(a), Some(b)) => {
-                                    // TODO handle #[patch(add=)] fields
-                                    panic!("There are conflict patches on {}.{}", stringify!(#name), stringify!(#original_field_names))
+                            )*
+                            #(
+                                #default_add_renamed_field_names: match (self.#default_add_renamed_field_names, rhs.#default_add_renamed_field_names) {
+                                    (Some(a), Some(b)) => {
+                                        Some(a + b)
+                                    },
+                                    (Some(a), None) => Some(a),
+                                    (None, Some(b)) => Some(b),
+                                    (None, None) => None,
                                 },
-                                (Some(a), None) => Some(a),
-                                (None, Some(b)) => Some(b),
-                                (None, None) => None,
-                            },
-                        )*
+                            )*
+                            #(
+                                #default_add_original_field_names: match (self.#default_add_original_field_names, rhs.#default_add_original_field_names) {
+                                    (_, Some(b)) => Some(b),
+                                    (Some(a), None) => Some(a),
+                                    (None, None) => None,
+                                },
+                            )*
+                        }
                     }
                 }
             }
@@ -354,6 +387,8 @@ impl Field {
         let mut attributes = vec![];
         let mut field_type = None;
         let mut skip = false;
+        #[cfg(feature = "op")]
+        let mut add = None;
 
         for attr in attrs {
             if attr.path().to_string().as_str() != PATCH {
@@ -385,6 +420,12 @@ impl Field {
                         let expr: LitStr = meta.value()?.parse()?;
                         field_type = Some(expr.parse()?)
                     }
+                    #[cfg(feature = "op")]
+                    ADD => {
+                        // #[patch(add = "add_fn")]
+                        let expr: LitStr = meta.value()?.parse()?;
+                        add = Some(expr.parse()?)
+                    }
                     _ => {
                         return Err(meta.error(format_args!(
                             "unknown patch field attribute `{}`",
@@ -404,6 +445,8 @@ impl Field {
             retyped: field_type.is_some(),
             ty: field_type.unwrap_or(ty),
             attributes,
+            #[cfg(feature = "op")]
+            add,
         }))
     }
 }
@@ -481,6 +524,7 @@ mod tests {
                     .unwrap(),
                 attributes: vec![],
                 retyped: true,
+                add: None,
             }],
         };
         let result = Patch::from_ast(syn::parse2(input).unwrap()).unwrap();

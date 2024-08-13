@@ -374,15 +374,113 @@ mod tests {
 
     #[cfg(feature = "op")]
     #[test]
-    #[should_panic]
-    fn test_add_conflict_patches_panic() {
-        #[derive(Patch, Debug, PartialEq)]
-        struct Item {
-            field: u32,
+    fn test_add_nested() {
+        #[derive(PartialEq, Debug, Patch, Deserialize)]
+        #[patch(attribute(derive(PartialEq, Debug, Deserialize)))]
+        struct B {
+            c: u32,
+            d: u32,
         }
 
-        let patch = ItemPatch { field: Some(1) };
-        let patch2 = ItemPatch { field: Some(2) };
-        let _overall_patch = patch + patch2;
+        #[derive(PartialEq, Debug, Patch, Deserialize)]
+        #[patch(attribute(derive(PartialEq, Debug, Deserialize)))]
+        struct A {
+            a: String,
+            #[patch(name = "BPatch")]
+            b: B,
+        }
+
+        let patch = APatch {
+            a: None,
+            b: Some(BPatch {
+                c: Some(1),
+                d: None,
+            }),
+        };
+        let patch2 = APatch {
+            a: Some(String::from("hello")),
+            b: Some(BPatch {
+                c: Some(3),
+                d: Some(2),
+            }),
+        };
+        let overall_patch = patch + patch2;
+        assert_eq!(
+            overall_patch,
+            APatch {
+                a: Some(String::from("hello")),
+                b: Some(BPatch {
+                    c: Some(3),
+                    d: Some(2)
+                }),
+            }
+        );
+    }
+
+    #[cfg(feature = "op")]
+    #[test]
+    fn test_add_nested_custom() {
+        #[derive(PartialEq, Debug, Patch, Deserialize)]
+        #[patch(attribute(derive(PartialEq, Debug, Deserialize)))]
+        struct B {
+            c: u32,
+            d: u32,
+        }
+
+        #[derive(PartialEq, Debug, Patch, Deserialize)]
+        #[patch(attribute(derive(PartialEq, Debug, Deserialize)))]
+        struct A {
+            #[patch(add = "add_string")]
+            a: String,
+            #[patch(name = "BPatch", add = "add_b")]
+            b: B,
+        }
+
+        fn add_string(a: String, b: String) -> String {
+            a + b.as_str()
+        }
+
+        fn add_b(a: BPatch, b: BPatch) -> BPatch {
+            BPatch {
+                c: match (a.c, b.c) {
+                    (Some(a), Some(b)) => Some(a + b),
+                    (Some(a), None) => Some(a),
+                    (None, Some(b)) => Some(b),
+                    (None, None) => None,
+                },
+                d: match (a.d, b.d) {
+                    (Some(a), Some(b)) => Some(a + b),
+                    (Some(a), None) => Some(a),
+                    (None, Some(b)) => Some(b),
+                    (None, None) => None,
+                },
+            }
+        }
+
+        let patch = APatch {
+            a: Some(String::from("Hello")),
+            b: Some(BPatch {
+                c: Some(1),
+                d: None,
+            }),
+        };
+        let patch2 = APatch {
+            a: Some(String::from("World")),
+            b: Some(BPatch {
+                c: Some(3),
+                d: Some(2),
+            }),
+        };
+        let overall_patch = patch + patch2;
+        assert_eq!(
+            overall_patch,
+            APatch {
+                a: Some(String::from("HelloWorld")),
+                b: Some(BPatch {
+                    c: Some(4),
+                    d: Some(2)
+                }),
+            }
+        );
     }
 }
