@@ -35,7 +35,7 @@ fn pure_none_feature() {
         }
     }
 
-    let mut user = User {
+    let user = User {
         name: String::from("Thomas"),
         address: None,
     };
@@ -46,10 +46,10 @@ fn pure_none_feature() {
         country: None,
     }));
 
-    user.apply(patch);
+    let patched_user = user << patch;
 
     assert_eq!(
-        user,
+        patched_user,
         User {
             name: String::from("Thomas"),
             address: Some(Address {
@@ -88,7 +88,7 @@ fn none_as_default_feature() {
         }
     }
 
-    let mut user = User {
+    let user = User {
         name: String::from("Thomas"),
         address: None,
     };
@@ -99,10 +99,10 @@ fn none_as_default_feature() {
         country: None,
     }));
 
-    user.apply(patch);
+    let patched_user = user << patch;
 
     assert_eq!(
-        user,
+        patched_user,
         User {
             name: String::from("Thomas"),
             address: Some(Address {
