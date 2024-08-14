@@ -46,14 +46,20 @@ fn pure_none_feature() {
         country: None,
     }));
 
-    let patched_user = user << patch;
+    let mut next_patch: UserPatch = User::new_empty_patch();
+    next_patch.address = Some(Some(AddressPatch {
+        street: Some(Some("New Address".to_string())),
+        country: None,
+    }));
+
+    let patched_user = user << patch << next_patch;
 
     assert_eq!(
         patched_user,
         User {
             name: String::from("Thomas"),
             address: Some(Address {
-                street: Some(String::from("Av. Gustave Eiffel, 75007 Paris")),
+                street: Some(String::from("New Address")),
                 country: String::from("France"),
             }),
         }
@@ -99,14 +105,20 @@ fn none_as_default_feature() {
         country: None,
     }));
 
-    let patched_user = user << patch;
+    let mut next_patch: UserPatch = User::new_empty_patch();
+    next_patch.address = Some(Some(AddressPatch {
+        street: Some(Some("New Address".to_string())),
+        country: None,
+    }));
+
+    let patched_user = user << patch << next_patch;
 
     assert_eq!(
         patched_user,
         User {
             name: String::from("Thomas"),
             address: Some(Address {
-                street: Some(String::from("Av. Gustave Eiffel, 75007 Paris")),
+                street: Some(String::from("New Address")),
                 country: String::from("France"),
             }),
         }
