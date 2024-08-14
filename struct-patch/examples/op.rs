@@ -1,6 +1,6 @@
 use struct_patch::Patch;
 
-#[derive(Clone, Default, Patch)]
+#[derive(Clone, Debug, Default, Patch, PartialEq)]
 #[patch(attribute(derive(Clone, Debug, Default)))]
 struct Item {
     field_complete: bool,
@@ -33,7 +33,7 @@ fn main() {
         field_string: Some("from another patch".into()),
     };
 
-    let _conflict_patch = ItemPatch {
+    let conflict_patch = ItemPatch {
         field_complete: None,
         field_int: Some(1),
         field_string: Some("from another patch".into()),
@@ -45,12 +45,18 @@ fn main() {
         field_string: None,
     };
 
-    // let final_item_from_merge = item.clone() << (_conflict_patch + the_other_patch.clone());
+    // let final_item_from_merge = item.clone() << (conflict_patch.clone() + the_other_patch.clone());
     // Will get panic `There are conflict patches on ItemPatch.field_int`
     //
     // TODO
     // Will be handdled as the discussion
     // https://github.com/yanganto/struct-patch/pull/32#issuecomment-2283154990
+
+    let final_item_with_bracket = item.clone() << (conflict_patch.clone() << the_other_patch.clone());
+    let final_item_without_bracket = item.clone() << conflict_patch << the_other_patch.clone();
+    assert_eq!(final_item_with_bracket, final_item_without_bracket);
+    assert_eq!(final_item_with_bracket.field_int, 2);
+    assert_eq!(final_item_without_bracket.field_int, 2);
 
     let final_item_from_merge = item.clone() << (another_patch.clone() + the_other_patch.clone());
     assert_eq!(final_item_from_merge.field_string, "from another patch");
