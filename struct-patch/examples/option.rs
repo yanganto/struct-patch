@@ -28,7 +28,7 @@ fn pure_none_feature() {
         fn from(patch: AddressPatch) -> Self {
             let mut address = Address {
                 street: None,
-                country: "France".to_string(),
+                country: "Italy".to_string(),
             };
             address.apply(patch);
             address
@@ -43,7 +43,7 @@ fn pure_none_feature() {
 
     patch.address = Some(Some(AddressPatch {
         street: Some(Some("Av. Gustave Eiffel, 75007 Paris".to_string())),
-        country: None,
+        country: Some("France".to_string()),
     }));
 
     let mut next_patch: UserPatch = User::new_empty_patch();
@@ -52,7 +52,7 @@ fn pure_none_feature() {
         country: None,
     }));
 
-    let patched_user = user << patch << next_patch;
+    let patched_user = user << (patch << next_patch);
 
     assert_eq!(
         patched_user,
