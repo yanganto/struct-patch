@@ -93,9 +93,10 @@ This crate also includes the following optional features:
 - `std`(optional):
   - `box`: implements the `Patch<Box<P>>` trait for `T` where `T` implements `Patch<P>`.
     This let you patch a boxed (or not) struct with a boxed patch.
-  - `option`: implements the `Patch<Option<P>>` trait for `Option<T>` where `T` implements `Patch<P>`.
-    `T` also needs to implement `From<P>`.
-    This let you patch structs containing fields with optional values.
+  - `option`: implements the `Patch<Option<P>>` trait for `Option<T>` where `T` implements `Patch<P>`, please take a look at the example to learn more.
+    - default: `T` needs to implement `From<P>`.  When patching on None, it will based on `from<P>` to cast T, and this let you patch structs containing fields with optional values.
+    - `none_as_default`: `T` needs to implement `Default`.  When patching on None, it will patch on a default instance, and this also let you patch structs containing fields with optional values.
+    - `keep_none`: When patching on None, it is still None.
 
 [crates-badge]: https://img.shields.io/crates/v/struct-patch.svg
 [crate-url]: https://crates.io/crates/struct-patch
