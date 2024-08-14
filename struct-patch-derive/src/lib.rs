@@ -117,7 +117,12 @@ impl Patch {
                 fn shl(mut self, rhs: #name #generics) -> Self {
                     Self {
                         #(
-                            #renamed_field_names: rhs.#renamed_field_names.or(self.#renamed_field_names),
+                            #renamed_field_names: match (self.#renamed_field_names, rhs.#renamed_field_names) {
+                                (Some(a), Some(b)) => Some(a << b),
+                                (Some(a), None) => Some(a),
+                                (None, Some(b)) => Some(b),
+                                (None, None) => None,
+                            },
                         )*
                         #(
                             #original_field_names: rhs.#original_field_names.or(self.#original_field_names),
