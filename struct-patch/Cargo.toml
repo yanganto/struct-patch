@@ -26,6 +26,9 @@ status = [
 op = [
     "struct-patch-derive/op"
 ]
+merge = [
+    "struct-patch-derive/merge"
+]
 
 std = ["box", "option"]
 box = []

@@ -100,6 +100,29 @@ impl Patch {
         #[cfg(not(feature = "status"))]
         let patch_status_impl = quote!();
 
+        #[cfg(feature = "merge")]
+        let patch_merge_impl = quote!(
+            impl #generics struct_patch::traits::Merge for #name #generics #where_clause {
+                fn merge(self, other: Self) -> Self {
+                    Self {
+                        #(
+                            #renamed_field_names: match (self.#renamed_field_names, other.#renamed_field_names) {
+                                (Some(a), Some(b)) => Some(a.merge(b)),
+                                (Some(a), None) => Some(a),
+                                (None, Some(b)) => Some(b),
+                                (None, None) => None,
+                            },
+                        )*
+                        #(
+                            #original_field_names: other.#original_field_names.or(self.#original_field_names),
+                        )*
+                    }
+                }
+            }
+        );
+        #[cfg(not(feature = "merge"))]
+        let patch_merge_impl = quote!();
+
         #[cfg(feature = "op")]
         let op_impl = quote! {
             impl #generics core::ops::Shl<#name #generics> for #struct_name #generics #where_clause {
@@ -111,18 +134,12 @@ impl Patch {
                 }
             }
 
+            #[cfg(feature = "merge")]
             impl #generics core::ops::Shl<#name #generics> for #name #generics #where_clause {
                 type Output = Self;
 
-                fn shl(mut self, rhs: #name #generics) -> Self {
-                    Self {
-                        #(
-                            #renamed_field_names: rhs.#renamed_field_names.or(self.#renamed_field_names),
-                        )*
-                        #(
-                            #original_field_names: rhs.#original_field_names.or(self.#original_field_names),
-                        )*
-                    }
+                fn shl(mut self, rhs: Self) -> Self {
+                    struct_patch::traits::Merge::merge(self, rhs)
                 }
             }
 
@@ -221,6 +238,8 @@ impl Patch {
             #patch_struct
 
             #patch_status_impl
+
+            #patch_merge_impl
 
             #patch_impl
 

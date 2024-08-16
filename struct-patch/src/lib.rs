@@ -55,6 +55,8 @@ pub use traits::*;
 #[cfg(test)]
 mod tests {
     use serde::Deserialize;
+    #[cfg(feature = "merge")]
+    use struct_patch::Merge;
     use struct_patch::Patch;
     #[cfg(feature = "status")]
     use struct_patch::PatchStatus;
@@ -310,7 +312,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "op")]
+    #[cfg(all(feature = "op", feature = "merge"))]
     #[test]
     fn test_shl_on_patch() {
         #[derive(Patch, Debug, PartialEq)]
@@ -384,5 +386,99 @@ mod tests {
         let patch = ItemPatch { field: Some(1) };
         let patch2 = ItemPatch { field: Some(2) };
         let _overall_patch = patch + patch2;
+    }
+
+    #[cfg(feature = "merge")]
+    #[test]
+    fn test_merge() {
+        #[derive(Patch)]
+        #[patch(attribute(derive(PartialEq, Debug)))]
+        struct Item {
+            a: u32,
+            b: u32,
+            c: u32,
+            d: u32,
+        }
+
+        let patch = ItemPatch {
+            a: None,
+            b: Some(2),
+            c: Some(0),
+            d: None,
+        };
+        let patch2 = ItemPatch {
+            a: Some(1),
+            b: None,
+            c: Some(3),
+            d: None,
+        };
+
+        let merged_patch = patch.merge(patch2);
+        assert_eq!(
+            merged_patch,
+            ItemPatch {
+                a: Some(1),
+                b: Some(2),
+                c: Some(3),
+                d: None,
+            }
+        );
+    }
+
+    #[cfg(feature = "merge")]
+    #[test]
+    fn test_merge_nested() {
+        #[derive(Patch, PartialEq, Debug)]
+        #[patch(attribute(derive(PartialEq, Debug, Clone)))]
+        struct B {
+            c: u32,
+            d: u32,
+            e: u32,
+            f: u32,
+        }
+
+        #[derive(Patch)]
+        #[patch(attribute(derive(PartialEq, Debug)))]
+        struct A {
+            a: u32,
+            #[patch(name = "BPatch")]
+            b: B,
+        }
+
+        let patches = vec![
+            APatch {
+                a: Some(1),
+                b: Some(BPatch {
+                    c: None,
+                    d: Some(2),
+                    e: Some(0),
+                    f: None,
+                }),
+            },
+            APatch {
+                a: Some(0),
+                b: Some(BPatch {
+                    c: Some(1),
+                    d: None,
+                    e: Some(3),
+                    f: None,
+                }),
+            },
+        ];
+
+        let merged_patch = patches.into_iter().reduce(Merge::merge).unwrap();
+
+        assert_eq!(
+            merged_patch,
+            APatch {
+                a: Some(0),
+                b: Some(BPatch {
+                    c: Some(1),
+                    d: Some(2),
+                    e: Some(3),
+                    f: None,
+                }),
+            }
+        );
     }
 }

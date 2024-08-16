@@ -36,6 +36,12 @@ jobs:
           nix develop -c cargo run --features=std --example option
           nix develop -c cargo test --features=std
 
+      - name: Test with merge features
+        run: |
+          nix develop -c cargo run --features=option --features=merge --example option
+          nix develop -c cargo run --features=merge --example op
+          nix develop -c cargo test --features=merge
+
       - name: Test with option features
         run: |
           nix develop -c cargo run --features=none_as_default --example option

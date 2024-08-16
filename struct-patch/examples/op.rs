@@ -52,11 +52,17 @@ fn main() {
     // Will be handdled as the discussion
     // https://github.com/yanganto/struct-patch/pull/32#issuecomment-2283154990
 
-    let final_item_with_bracket = item.clone() << (conflict_patch.clone() << the_other_patch.clone());
-    let final_item_without_bracket = item.clone() << conflict_patch << the_other_patch.clone();
-    assert_eq!(final_item_with_bracket, final_item_without_bracket);
-    assert_eq!(final_item_with_bracket.field_int, 2);
+    let final_item_without_bracket =
+        item.clone() << conflict_patch.clone() << the_other_patch.clone();
     assert_eq!(final_item_without_bracket.field_int, 2);
+
+    #[cfg(feature = "merge")]
+    {
+        let final_item_with_bracket =
+            item.clone() << (conflict_patch.clone() << the_other_patch.clone());
+        assert_eq!(final_item_with_bracket, final_item_without_bracket);
+        assert_eq!(final_item_with_bracket.field_int, 2);
+    }
 
     let final_item_from_merge = item.clone() << (another_patch.clone() + the_other_patch.clone());
     assert_eq!(final_item_from_merge.field_string, "from another patch");
