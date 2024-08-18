@@ -97,3 +97,9 @@ pub trait PatchStatus {
     /// Returns `true` if all fields are `None`, `false` otherwise.
     fn is_empty(&self) -> bool;
 }
+
+#[cfg(feature = "merge")]
+/// A patch struct that can be merged to another one
+pub trait Merge {
+    fn merge(self, other: Self) -> Self;
+}

@@ -1,3 +1,5 @@
+#[cfg(all(feature = "merge", feature = "option"))]
+use crate::Merge;
 #[cfg(any(feature = "box", feature = "option"))]
 use crate::Patch;
 #[cfg(feature = "box")]
@@ -136,6 +138,24 @@ where
 
     fn new_empty_patch() -> Option<P> {
         Some(T::new_empty_patch())
+    }
+}
+
+#[cfg(all(feature = "option", feature = "merge"))]
+impl<T> Merge for Option<T>
+where
+    T: Merge,
+{
+    fn merge(self, other: Self) -> Self {
+        if let Some(other) = other {
+            if self.is_some() {
+                Some(self.unwrap().merge(other))
+            } else {
+                Some(other)
+            }
+        } else {
+            None
+        }
     }
 }
 
