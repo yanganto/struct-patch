@@ -89,8 +89,8 @@ The [examples][examples] demo following scenarios.
 ## Features
 This crate also includes the following optional features:
 - `status`(default): implements the `PatchStatus` trait for the patch struct, which provides the `is_empty` method.
-- `op` (default): provide operators `<<` for instance and patch, and `+` for patches
-- `merge` (optional): implements the `Merge` trait for the patch struct, which provides the `merge` method.
+- `op` (default): provide operators `<<` between instance and patch, and `+` for patches
+  - `merge` (optional): implements the `Merge` trait for the patch struct, which provides the `merge` method, and `<<` between patches.
 - `std`(optional):
   - `box`: implements the `Patch<Box<P>>` trait for `T` where `T` implements `Patch<P>`.
     This let you patch a boxed (or not) struct with a boxed patch.

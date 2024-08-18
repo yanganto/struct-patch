@@ -148,8 +148,9 @@ where
 {
     fn merge(self, other: Self) -> Self {
         if let Some(other) = other {
-            if self.is_some() {
-                Some(self.unwrap().merge(other))
+            let mut self_ = self;
+            if let Some(self_) = self_.take() {
+                Some(self_.merge(other))
             } else {
                 Some(other)
             }
