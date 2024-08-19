@@ -11,6 +11,7 @@ const PATCH: &str = "patch";
 const NAME: &str = "name";
 const ATTRIBUTE: &str = "attribute";
 const SKIP: &str = "skip";
+const ADDABLE: &str = "addable";
 
 #[proc_macro_derive(Patch, attributes(patch))]
 pub fn derive_patch(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -35,6 +36,7 @@ struct Field {
     ty: Type,
     attributes: Vec<TokenStream>,
     retyped: bool,
+    addable: bool,
 }
 
 impl Patch {
@@ -124,6 +126,23 @@ impl Patch {
         let patch_merge_impl = quote!();
 
         #[cfg(feature = "op")]
+        let addable_handles = fields
+            .iter()
+            .map(|f| {
+                if f.addable {
+                    quote!(
+                        Some(a + b)
+                    )
+                } else {
+                    // TODO handle #[patch(add=fn)] fields
+                    quote!(
+                        panic!("There are conflict patches, please use `#[patch(addable)]` if you want to add these values.")
+                    )
+                }
+            })
+            .collect::<Vec<_>>();
+
+        #[cfg(feature = "op")]
         let op_impl = quote! {
             impl #generics core::ops::Shl<#name #generics> for #struct_name #generics #where_clause {
                 type Output = Self;
@@ -151,8 +170,7 @@ impl Patch {
                         #(
                             #renamed_field_names: match (self.#renamed_field_names, rhs.#renamed_field_names) {
                                 (Some(a), Some(b)) => {
-                                    // TODO handle #[patch(add=)] fields
-                                    panic!("There are conflict patches on {}.{}", stringify!(#name), stringify!(#renamed_field_names))
+                                    #addable_handles
                                 },
                                 (Some(a), None) => Some(a),
                                 (None, Some(b)) => Some(b),
@@ -162,8 +180,7 @@ impl Patch {
                         #(
                             #original_field_names: match (self.#original_field_names, rhs.#original_field_names) {
                                 (Some(a), Some(b)) => {
-                                    // TODO handle #[patch(add=)] fields
-                                    panic!("There are conflict patches on {}.{}", stringify!(#name), stringify!(#original_field_names))
+                                    #addable_handles
                                 },
                                 (Some(a), None) => Some(a),
                                 (None, Some(b)) => Some(b),
@@ -373,6 +390,7 @@ impl Field {
         let mut attributes = vec![];
         let mut field_type = None;
         let mut skip = false;
+        let mut addable = false;
 
         for attr in attrs {
             if attr.path().to_string().as_str() != PATCH {
@@ -404,6 +422,10 @@ impl Field {
                         let expr: LitStr = meta.value()?.parse()?;
                         field_type = Some(expr.parse()?)
                     }
+                    ADDABLE => {
+                        // #[patch(addable)]
+                        addable = true;
+                    }
                     _ => {
                         return Err(meta.error(format_args!(
                             "unknown patch field attribute `{}`",
@@ -423,6 +445,7 @@ impl Field {
             retyped: field_type.is_some(),
             ty: field_type.unwrap_or(ty),
             attributes,
+            addable,
         }))
     }
 }
@@ -500,6 +523,7 @@ mod tests {
                     .unwrap(),
                 attributes: vec![],
                 retyped: true,
+                addable: false,
             }],
         };
         let result = Patch::from_ast(syn::parse2(input).unwrap()).unwrap();

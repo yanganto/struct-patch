@@ -4,6 +4,7 @@ use struct_patch::Patch;
 #[patch(attribute(derive(Clone, Debug, Default)))]
 struct Item {
     field_complete: bool,
+    #[patch(addable)]
     field_int: usize,
     field_string: String,
 }
@@ -45,12 +46,10 @@ fn main() {
         field_string: None,
     };
 
-    // let final_item_from_merge = item.clone() << (conflict_patch.clone() + the_other_patch.clone());
-    // Will get panic `There are conflict patches on ItemPatch.field_int`
-    //
-    // TODO
-    // Will be handdled as the discussion
-    // https://github.com/yanganto/struct-patch/pull/32#issuecomment-2283154990
+    // NOTE: The values of #[patch(addable)] can be added together.
+    let final_item_from_conflict =
+        item.clone() << (conflict_patch.clone() + the_other_patch.clone());
+    assert_eq!(final_item_from_conflict.field_int, 3);
 
     let final_item_without_bracket =
         item.clone() << conflict_patch.clone() << the_other_patch.clone();
