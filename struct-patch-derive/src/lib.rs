@@ -12,6 +12,7 @@ const NAME: &str = "name";
 const ATTRIBUTE: &str = "attribute";
 const SKIP: &str = "skip";
 const ADDABLE: &str = "addable";
+const ADD: &str = "add";
 
 #[proc_macro_derive(Patch, attributes(patch))]
 pub fn derive_patch(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -31,12 +32,18 @@ struct Patch {
     fields: Vec<Field>,
 }
 
+enum Addable {
+    Disable,
+    AddTriat,
+    AddFn(Ident),
+}
+
 struct Field {
     ident: Option<Ident>,
     ty: Type,
     attributes: Vec<TokenStream>,
     retyped: bool,
-    addable: bool,
+    addable: Addable,
 }
 
 impl Patch {
@@ -129,13 +136,16 @@ impl Patch {
         let addable_handles = fields
             .iter()
             .map(|f| {
-                if f.addable {
-                    quote!(
+                match &f.addable {
+                    Addable::AddTriat => quote!(
                         Some(a + b)
-                    )
-                } else {
-                    // TODO handle #[patch(add=fn)] fields
-                    quote!(
+                    ),
+                    Addable::AddFn(f) => {
+                        quote!(
+                            Some(#f(a, b))
+                        )
+                    } ,
+                    Addable::Disable => quote!(
                         panic!("There are conflict patches, please use `#[patch(addable)]` if you want to add these values.")
                     )
                 }
@@ -390,7 +400,7 @@ impl Field {
         let mut attributes = vec![];
         let mut field_type = None;
         let mut skip = false;
-        let mut addable = false;
+        let mut addable = Addable::Disable;
 
         for attr in attrs {
             if attr.path().to_string().as_str() != PATCH {
@@ -424,7 +434,12 @@ impl Field {
                     }
                     ADDABLE => {
                         // #[patch(addable)]
-                        addable = true;
+                        addable = Addable::AddTriat;
+                    }
+                    ADD => {
+                        // #[patch(add=fn)]
+                        let f: Ident = meta.value()?.parse()?;
+                        addable = Addable::AddFn(f);
                     }
                     _ => {
                         return Err(meta.error(format_args!(
@@ -523,7 +538,7 @@ mod tests {
                     .unwrap(),
                 attributes: vec![],
                 retyped: true,
-                addable: false,
+                addable: Addable::Disable,
             }],
         };
         let result = Patch::from_ast(syn::parse2(input).unwrap()).unwrap();

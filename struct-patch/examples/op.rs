@@ -1,11 +1,15 @@
 use struct_patch::Patch;
 
+fn str_concat(a: String, b: String) -> String {
+    format!("{}, {}", a, b)
+}
 #[derive(Clone, Debug, Default, Patch, PartialEq)]
 #[patch(attribute(derive(Clone, Debug, Default)))]
 struct Item {
     field_complete: bool,
     #[patch(addable)]
     field_int: usize,
+    #[patch(add=str_concat)]
     field_string: String,
 }
 
@@ -37,19 +41,23 @@ fn main() {
     let conflict_patch = ItemPatch {
         field_complete: None,
         field_int: Some(1),
-        field_string: Some("from another patch".into()),
+        field_string: Some("from conflict patch".into()),
     };
 
     let the_other_patch = ItemPatch {
         field_complete: Some(true),
         field_int: Some(2),
-        field_string: None,
+        field_string: Some("the other patch".into()),
     };
 
     // NOTE: The values of #[patch(addable)] can be added together.
     let final_item_from_conflict =
         item.clone() << (conflict_patch.clone() + the_other_patch.clone());
     assert_eq!(final_item_from_conflict.field_int, 3);
+    assert_eq!(
+        final_item_from_conflict.field_string,
+        "from conflict patch, the other patch"
+    );
 
     let final_item_without_bracket =
         item.clone() << conflict_patch.clone() << the_other_patch.clone();
@@ -64,11 +72,14 @@ fn main() {
     }
 
     let final_item_from_merge = item.clone() << (another_patch.clone() + the_other_patch.clone());
-    assert_eq!(final_item_from_merge.field_string, "from another patch");
+    assert_eq!(
+        final_item_from_merge.field_string,
+        "from another patch, the other patch"
+    );
     assert_eq!(final_item_from_merge.field_complete, true);
 
     let final_item_series_patch = item << another_patch << the_other_patch;
-    assert_eq!(final_item_series_patch.field_string, "from another patch");
+    assert_eq!(final_item_series_patch.field_string, "the other patch");
     assert_eq!(final_item_series_patch.field_complete, true);
 }
 
