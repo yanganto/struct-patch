@@ -158,7 +158,7 @@ impl Patch {
                 type Output = Self;
 
                 fn shl(mut self, rhs: #name #generics) -> Self {
-                    self.apply(rhs);
+                    struct_patch::traits::Patch::apply(&mut self, rhs);
                     self
                 }
             }
