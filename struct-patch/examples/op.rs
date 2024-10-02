@@ -1,20 +1,22 @@
-use struct_patch::Patch;
-
+#[cfg(feature = "op")]
 fn str_concat(a: String, b: String) -> String {
     format!("{}, {}", a, b)
-}
-#[derive(Clone, Debug, Default, Patch, PartialEq)]
-#[patch(attribute(derive(Clone, Debug, Default)))]
-struct Item {
-    field_complete: bool,
-    #[patch(addable)]
-    field_int: usize,
-    #[patch(add=str_concat)]
-    field_string: String,
 }
 
 #[cfg(feature = "op")]
 fn main() {
+    use struct_patch::Patch;
+
+    #[derive(Clone, Debug, Default, Patch, PartialEq)]
+    #[patch(attribute(derive(Clone, Debug, Default)))]
+    struct Item {
+        field_complete: bool,
+        #[patch(addable)]
+        field_int: usize,
+        #[patch(add=str_concat)]
+        field_string: String,
+    }
+
     let mut item = Item::default();
 
     let mut patch: ItemPatch = Item::new_empty_patch();
