@@ -17,6 +17,8 @@ struct-patch-derive = { version = "=0.8.5", path = "../struct-patch-derive" }
 serde_json = "1.0"
 serde = { version = "1", features = ["derive"] }
 serde_with = "3.9.0"
+toml = "0.8.19"
+humantime-serde = "1.1.1"
 
 [features]
 default = ["status", "op"]
