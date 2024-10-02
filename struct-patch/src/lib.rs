@@ -109,6 +109,7 @@ mod tests {
 
     #[test]
     fn test_derive() {
+        #[allow(dead_code)]
         #[derive(Patch)]
         #[patch(attribute(derive(Copy, Clone, PartialEq, Debug)))]
         struct Item;

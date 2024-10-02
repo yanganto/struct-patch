@@ -560,6 +560,7 @@ mod tests {
                     .unwrap(),
                 attributes: vec![],
                 retyped: true,
+                #[cfg(feature = "op")]
                 addable: Addable::Disable,
             }],
         };
