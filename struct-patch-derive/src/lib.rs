@@ -32,9 +32,11 @@ struct Patch {
     fields: Vec<Field>,
 }
 
+#[cfg(feature = "op")]
 enum Addable {
     Disable,
     AddTriat,
+    #[cfg(feature = "op")]
     AddFn(Ident),
 }
 
@@ -43,6 +45,7 @@ struct Field {
     ty: Type,
     attributes: Vec<TokenStream>,
     retyped: bool,
+    #[cfg(feature = "op")]
     addable: Addable,
 }
 
@@ -400,6 +403,8 @@ impl Field {
         let mut attributes = vec![];
         let mut field_type = None;
         let mut skip = false;
+
+        #[cfg(feature = "op")]
         let mut addable = Addable::Disable;
 
         for attr in attrs {
@@ -432,14 +437,30 @@ impl Field {
                         let expr: LitStr = meta.value()?.parse()?;
                         field_type = Some(expr.parse()?)
                     }
+                    #[cfg(feature = "op")]
                     ADDABLE => {
                         // #[patch(addable)]
                         addable = Addable::AddTriat;
                     }
+                    #[cfg(not(feature = "op"))]
+                    ADDABLE => {
+                        return Err(syn::Error::new(
+                            ident.span(),
+                            "`addable` needs `op` feature"
+                        ));
+                    }
+                    #[cfg(feature = "op")]
                     ADD => {
                         // #[patch(add=fn)]
                         let f: Ident = meta.value()?.parse()?;
                         addable = Addable::AddFn(f);
+                    }
+                    #[cfg(not(feature = "op"))]
+                    ADD => {
+                        return Err(syn::Error::new(
+                            ident.span(),
+                            "`add` needs `op` feature"
+                        ));
                     }
                     _ => {
                         return Err(meta.error(format_args!(
@@ -460,6 +481,7 @@ impl Field {
             retyped: field_type.is_some(),
             ty: field_type.unwrap_or(ty),
             attributes,
+            #[cfg(feature = "op")]
             addable,
         }))
     }
