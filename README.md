@@ -85,6 +85,7 @@ The [examples][examples] demo following scenarios.
 - add attribute to patch struct
 - show option field behavior
 - show operators about patches
+- show example with serde crates, ex: `humantime_serde` for duration
 
 ## Features
 This crate also includes the following optional features:
