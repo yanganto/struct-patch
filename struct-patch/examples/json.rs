@@ -21,9 +21,7 @@ fn main() {
         field_bool: true,
         field_int: 42,
         field_string: String::from("hello"),
-        sub: SubItem {
-            inner_int: 0
-        },
+        sub: SubItem { inner_int: 0 },
     };
 
     let data = r#"{
@@ -43,9 +41,7 @@ fn main() {
             field_bool: true,
             field_int: 7,
             field_string: String::from("hello"),
-            sub: SubItem {
-                inner_int: 7,
-            },
+            sub: SubItem { inner_int: 7 },
         }
     );
 }
