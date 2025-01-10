@@ -30,7 +30,7 @@ fn main() {
 
     item.apply(patch);
 
-    assert_eq!(item.field_complete, false);
+    assert!(!item.field_complete);
     assert_eq!(item.field_int, 7);
     assert_eq!(item.field_string, "");
 
@@ -78,11 +78,11 @@ fn main() {
         final_item_from_merge.field_string,
         "from another patch, the other patch"
     );
-    assert_eq!(final_item_from_merge.field_complete, true);
+    assert!(final_item_from_merge.field_complete);
 
     let final_item_series_patch = item << another_patch << the_other_patch;
     assert_eq!(final_item_series_patch.field_string, "the other patch");
-    assert_eq!(final_item_series_patch.field_complete, true);
+    assert!(final_item_series_patch.field_complete);
 }
 
 #[cfg(not(feature = "op"))]

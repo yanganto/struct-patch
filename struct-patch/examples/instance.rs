@@ -31,7 +31,7 @@ fn main() {
 
     item.apply(patch);
 
-    assert_eq!(item.field_complete, false);
+    assert!(!item.field_complete);
     assert_eq!(item.field_int, 7);
     assert_eq!(item.field_string, "");
 
@@ -44,7 +44,7 @@ fn main() {
         };
         let new_item = item << another_patch;
 
-        assert_eq!(new_item.field_complete, false);
+        assert!(!new_item.field_complete);
         assert_eq!(new_item.field_int, 7);
         assert_eq!(new_item.field_string, "from another patch");
 
@@ -54,7 +54,7 @@ fn main() {
             field_string: None,
         };
         let final_item = new_item << the_other_patch;
-        assert_eq!(final_item.field_complete, true);
+        assert!(final_item.field_complete);
         assert_eq!(final_item.field_int, 7);
         assert_eq!(final_item.field_string, "from another patch");
     }
