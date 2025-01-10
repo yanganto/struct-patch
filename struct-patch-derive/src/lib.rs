@@ -155,7 +155,7 @@ impl Patch {
             })
             .collect::<Vec<_>>();
 
-        #[cfg(feature = "op")]
+        #[cfg(all(feature = "op", not(feature = "merge")))]
         let op_impl = quote! {
             impl #generics core::ops::Shl<#name #generics> for #struct_name #generics #where_clause {
                 type Output = Self;
@@ -166,7 +166,47 @@ impl Patch {
                 }
             }
 
-            #[cfg(feature = "merge")]
+            impl #generics core::ops::Add<Self> for #name #generics #where_clause {
+                type Output = Self;
+
+                fn add(mut self, rhs: Self) -> Self {
+                    Self {
+                        #(
+                            #renamed_field_names: match (self.#renamed_field_names, rhs.#renamed_field_names) {
+                                (Some(a), Some(b)) => {
+                                    #addable_handles
+                                },
+                                (Some(a), None) => Some(a),
+                                (None, Some(b)) => Some(b),
+                                (None, None) => None,
+                            },
+                        )*
+                        #(
+                            #original_field_names: match (self.#original_field_names, rhs.#original_field_names) {
+                                (Some(a), Some(b)) => {
+                                    #addable_handles
+                                },
+                                (Some(a), None) => Some(a),
+                                (None, Some(b)) => Some(b),
+                                (None, None) => None,
+                            },
+                        )*
+                    }
+                }
+            }
+        };
+
+        #[cfg(feature = "merge")]
+        let op_impl = quote! {
+            impl #generics core::ops::Shl<#name #generics> for #struct_name #generics #where_clause {
+                type Output = Self;
+
+                fn shl(mut self, rhs: #name #generics) -> Self {
+                    struct_patch::traits::Patch::apply(&mut self, rhs);
+                    self
+                }
+            }
+
             impl #generics core::ops::Shl<#name #generics> for #name #generics #where_clause {
                 type Output = Self;
 
@@ -204,6 +244,7 @@ impl Patch {
                 }
             }
         };
+
         #[cfg(not(feature = "op"))]
         let op_impl = quote!();
 
@@ -446,7 +487,7 @@ impl Field {
                     ADDABLE => {
                         return Err(syn::Error::new(
                             ident.span(),
-                            "`addable` needs `op` feature"
+                            "`addable` needs `op` feature",
                         ));
                     }
                     #[cfg(feature = "op")]
@@ -457,10 +498,7 @@ impl Field {
                     }
                     #[cfg(not(feature = "op"))]
                     ADD => {
-                        return Err(syn::Error::new(
-                            ident.span(),
-                            "`add` needs `op` feature"
-                        ));
+                        return Err(syn::Error::new(ident.span(), "`add` needs `op` feature"));
                     }
                     _ => {
                         return Err(meta.error(format_args!(
