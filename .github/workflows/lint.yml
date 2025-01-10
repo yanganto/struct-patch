@@ -21,4 +21,11 @@ jobs:
         run: nix develop -c cargo fmt
 
       - name: Lint
-        run: nix develop -c cargo clippy -- -Dwarnings
+        run: |
+          nix develop -c cargo clippy -- -Dwarnings
+          nix develop -c cargo clippy --no-default-features  -- -Dwarnings
+          nix develop -c cargo clippy --features=std -- -Dwarnings
+          nix develop -c cargo clippy --features=merge -- -Dwarnings
+          nix develop -c cargo clippy --features=option -- -Dwarnings
+          nix develop -c cargo clippy --features=none_as_default -- -Dwarnings
+          nix develop -c cargo clippy --features=keep_none -- -Dwarnings
