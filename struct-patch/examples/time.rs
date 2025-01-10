@@ -1,4 +1,4 @@
-use serde::{Deserialize};
+use serde::Deserialize;
 use std::time::Duration;
 use struct_patch::Patch;
 
