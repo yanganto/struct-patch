@@ -16,4 +16,4 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Ignore implicit configuration file
-      uses: crate-ci/typos@v1.29.5
+      uses: crate-ci/typos@v1.29.7
