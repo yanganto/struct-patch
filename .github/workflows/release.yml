@@ -19,7 +19,7 @@ jobs:
         with:
           submodules: recursive
 
-      - uses: cachix/install-nix-action@v30
+      - uses: cachix/install-nix-action@v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
