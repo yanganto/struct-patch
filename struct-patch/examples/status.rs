@@ -1,6 +1,6 @@
 use struct_patch::Patch;
 #[cfg(feature = "status")]
-use struct_patch::PatchStatus;
+use struct_patch::Status;
 
 #[derive(Default, Patch)]
 #[patch(attribute(derive(Debug, Default)))]
@@ -14,7 +14,7 @@ fn main() {
     let mut patch: ItemPatch = Item::new_empty_patch();
 
     #[cfg(feature = "status")]
-    assert!(patch.is_empty()); // provided by PatchStatus
+    assert!(patch.is_empty()); // provided by Status
     patch.field_int = Some(7);
 
     #[cfg(feature = "status")]

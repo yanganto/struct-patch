@@ -91,9 +91,17 @@ pub trait Patch<P> {
     fn new_empty_patch() -> P;
 }
 
+pub trait Filler<F> {
+    /// Apply a filler
+    fn apply(&mut self, filler: F);
+
+    /// Get an empty filler instance
+    fn new_empty_filler() -> F;
+}
+
 #[cfg(feature = "status")]
 /// A patch struct with extra status information
-pub trait PatchStatus {
+pub trait Status {
     /// Returns `true` if all fields are `None`, `false` otherwise.
     fn is_empty(&self) -> bool;
 }

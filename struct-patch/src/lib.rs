@@ -1,4 +1,4 @@
-//! This crate provides the [`Patch`] trait and an accompanying derive macro.
+//! This crate provides the [`Patch`] and [`Filler`] traits and accompanying derive macro.
 //!
 //! Deriving [`Patch`] on a struct will generate a struct similar to the original one, but with all fields wrapped in an `Option`.
 //! An instance of such a patch struct can be applied onto the original struct, replacing values only if they are set to `Some`, leaving them unchanged otherwise.
@@ -43,8 +43,35 @@
 //! ```
 //!
 //! More details on how to use the the derive macro, including what attributes are available, are available under [`Patch`]
+//!
+//! Deriving [`Filler`] on a struct will generate a struct similar to the original one with the field with `Option`.
+//! Unlike [`Patch`], the [`Filler`] only work on the empty fields of instance.
+//!
+//! ```rust
+//! use struct_patch::Filler;
+//!
+//! #[derive(Filler)]
+//! struct Item {
+//!     field_int: usize,
+//!     maybe_field_int: Option<usize>,
+//! }
+//! let mut item = Item {
+//!     field_int: 0,
+//!     maybe_field_int: None,
+//! };
+//!
+//! let filler_1 = ItemFiller{ maybe_field_int: Some(7), };
+//! item.apply(filler_1);
+//! assert_eq!(item.maybe_field_int, Some(7));
+//!
+//! let filler_2 = ItemFiller{ maybe_field_int: Some(100), };
+//! item.apply(filler_2);
+//! assert_eq!(item.maybe_field_int, Some(7));
+//! ```
 #![cfg_attr(not(any(test, feature = "box", feature = "option")), no_std)]
 
+#[doc(hidden)]
+pub use struct_patch_derive::Filler;
 #[doc(hidden)]
 pub use struct_patch_derive::Patch;
 #[cfg(any(feature = "box", feature = "option"))]
@@ -59,7 +86,7 @@ mod tests {
     use struct_patch::Merge;
     use struct_patch::Patch;
     #[cfg(feature = "status")]
-    use struct_patch::PatchStatus;
+    use struct_patch::Status;
 
     use crate as struct_patch;
 

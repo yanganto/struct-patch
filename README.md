@@ -6,12 +6,15 @@
 A lib help you patch Rust instance, and easy to partial update configures.
 
 ## Introduction
-This crate provides the `Patch` trait and an accompanying derive macro.
-
-Deriving `Patch` on a struct will generate a struct similar to the original one, but with all fields wrapped in an `Option`.  
-An instance of such a patch struct can be applied onto the original struct, replacing values only if they are set to `Some`, leaving them unchanged otherwise.
+This crate provides the `Patch`, `Filler` traits and accompanying derive macro.
+If the any field in `Patch` is some then it will overwrite the field of instance when apply.
+If the any field in the instance is none then it will try to fill the field with the `Filler`.
+Currently, `Filler` only support `Option` field, and the `Vec` and other field will implement later.
+The detail discussion is in [issue #81](https://github.com/yanganto/struct-patch/issues/81)
 
 ## Quick Example
+Deriving `Patch` on a struct will generate a struct similar to the original one, but with all fields wrapped in an `Option`.  
+An instance of such a patch struct can be applied onto the original struct, replacing values only if they are set to `Some`, leaving them unchanged otherwise.
 ```rust
 use struct_patch::Patch;
 use serde::{Deserialize, Serialize};
@@ -61,6 +64,32 @@ fn patch_json() {
 }
 ```
 
+Deriving `Filler` on a struct will generate a struct similar to the original one with the field with `Option`. Unlike `Patch`, the `Filler` only work on the empty fields of instance.
+
+```rust
+use struct_patch::Filler;
+
+#[derive(Filler)]
+struct Item {
+    field_int: usize,
+    maybe_field_int: Option<usize>,
+}
+let mut item = Item {
+    field_int: 0,
+    maybe_field_int: None,
+};
+
+let filler_1 = ItemFiller{ maybe_field_int: Some(7), };
+item.apply(filler_1);
+assert_eq!(item.maybe_field_int, Some(7));
+
+let filler_2 = ItemFiller{ maybe_field_int: Some(100), };
+
+// The field is not empty, so the filler has not effect.
+item.apply(filler_2);
+assert_eq!(item.maybe_field_int, Some(7));
+```
+
 ## Documentation and Examples
 Also, you can modify the patch structure by defining `#[patch(...)]` attributes on the original struct or fields.
 
@@ -89,7 +118,7 @@ The [examples][examples] demo following scenarios.
 
 ## Features
 This crate also includes the following optional features:
-- `status`(default): implements the `PatchStatus` trait for the patch struct, which provides the `is_empty` method.
+- `status`(default): implements the `Status` trait for the patch struct, which provides the `is_empty` method.
 - `op` (default): provide operators `<<` between instance and patch, and `+` for patches
   - default: when there is a field conflict between patches, `+` will add together if the `#[patch(addable)]` or `#[patch(add=fn)]` is provided, else it will panic.
   - `merge` (optional): implements the `Merge` trait for the patch struct, which provides the `merge` method, and `<<` between patches.
