@@ -36,7 +36,7 @@ fn main() {
 
     assert_eq!(
         format!("{filler:?}"),
-        "ItemFiller { maybe_field_int: Some(7), maybe_field_string: None }"
+        "ItemFiller { maybe_field_int: Some(7), maybe_field_string: None, list: [] }"
     );
 
     item.apply(filler);

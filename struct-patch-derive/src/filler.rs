@@ -1,10 +1,7 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
 use std::str::FromStr;
-use syn::{
-    meta::ParseNestedMeta, parenthesized, spanned::Spanned, DeriveInput, Error, LitStr, Result,
-    Type,
-};
+use syn::{parenthesized, DeriveInput, LitStr, Result, Type};
 
 const FILLER: &str = "filler";
 const ATTRIBUTE: &str = "attribute";
@@ -18,10 +15,17 @@ pub(crate) struct Filler {
     fields: Vec<Field>,
 }
 
+#[derive(Debug, PartialEq)]
+enum FillerType {
+    Option,
+    Vec,
+}
+
 struct Field {
     ident: Option<Ident>,
     ty: Type,
     attributes: Vec<TokenStream>,
+    fty: FillerType,
 }
 
 impl Filler {
@@ -40,10 +44,16 @@ impl Filler {
             .iter()
             .map(|f| f.to_token_stream())
             .collect::<Result<Vec<_>>>()?;
-        let field_names = fields.iter().map(|f| f.ident.as_ref()).collect::<Vec<_>>();
 
-        let original_field_names = fields
+        let vector_field_names = fields
             .iter()
+            .filter(|f| f.fty == FillerType::Vec)
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+
+        let option_field_names = fields
+            .iter()
+            .filter(|f| f.fty == FillerType::Option)
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
 
@@ -69,7 +79,12 @@ impl Filler {
             impl #generics struct_patch::traits::Status for #name #generics #where_clause {
                 fn is_empty(&self) -> bool {
                     #(
-                        if self.#field_names.is_some() {
+                        if self.#option_field_names.is_some() {
+                            return false
+                        }
+                    )*
+                    #(
+                        if !self.#vector_field_names.is_empty() {
                             return false
                         }
                     )*
@@ -84,9 +99,12 @@ impl Filler {
             impl #generics struct_patch::traits::Filler< #name #generics > for #struct_name #generics #where_clause  {
                 fn apply(&mut self, filler: #name #generics) {
                     #(
-                        if let Some(v) = filler.#original_field_names {
-                            if self.#original_field_names.is_none() {
-                                self.#original_field_names = Some(v);
+                        self.#vector_field_names.extend(filler.#vector_field_names.iter());
+                    )*
+                    #(
+                        if let Some(v) = filler.#option_field_names {
+                            if self.#option_field_names.is_none() {
+                                self.#option_field_names = Some(v);
                             }
                         }
                     )*
@@ -94,9 +112,8 @@ impl Filler {
 
                 fn new_empty_filler() -> #name #generics {
                     #name {
-                        #(
-                            #field_names: None,
-                        )*
+                        #(#option_field_names: None,)*
+                        #(#vector_field_names: Vec::new(),)*
                     }
                 }
             }
@@ -128,7 +145,6 @@ impl Filler {
             ));
         };
 
-        let mut name = None;
         let mut attributes = vec![];
         let mut fields = vec![];
 
@@ -170,14 +186,13 @@ impl Filler {
                 fields.push(f);
             }
         }
+        let ts = TokenStream::from_str(&format!("{}Filler", &ident,)).unwrap();
+        let lit = LitStr::new(&ts.to_string(), Span::call_site());
+        let filler_struct_name = lit.parse()?;
 
         Ok(Filler {
             visibility: vis,
-            filler_struct_name: name.unwrap_or({
-                let ts = TokenStream::from_str(&format!("{}Filler", &ident,)).unwrap();
-                let lit = LitStr::new(&ts.to_string(), Span::call_site());
-                lit.parse()?
-            }),
+            filler_struct_name,
             struct_name: ident,
             generics,
             attributes,
@@ -222,12 +237,13 @@ impl Field {
             ident, ty, attrs, ..
         }: syn::Field,
     ) -> Result<Option<Field>> {
-        if !is_option(&ty) {
+        let fty = if let Some(fty) = filler_type(&ty) {
+            fty
+        } else {
             return Ok(None);
-        }
+        };
 
         let mut attributes = vec![];
-        let mut field_type = None;
 
         for attr in attrs {
             if attr.path().to_string().as_str() != FILLER {
@@ -263,8 +279,9 @@ impl Field {
 
         Ok(Some(Field {
             ident,
-            ty: field_type.unwrap_or(ty),
+            ty,
             attributes,
+            fty,
         }))
     }
 }
@@ -279,46 +296,22 @@ impl ToStr for syn::Path {
     }
 }
 
-fn get_lit_str(attr_name: String, meta: &ParseNestedMeta) -> syn::Result<Option<syn::LitStr>> {
-    let expr: syn::Expr = meta.value()?.parse()?;
-    let mut value = &expr;
-    while let syn::Expr::Group(e) = value {
-        value = &e.expr;
-    }
-    if let syn::Expr::Lit(syn::ExprLit {
-        lit: syn::Lit::Str(lit),
-        ..
-    }) = value
-    {
-        let suffix = lit.suffix();
-        if !suffix.is_empty() {
-            return Err(Error::new(
-                lit.span(),
-                format!("unexpected suffix `{}` on string literal", suffix),
-            ));
-        }
-        Ok(Some(lit.clone()))
-    } else {
-        Err(Error::new(
-            expr.span(),
-            format!(
-                "expected serde {} attribute to be a string: `{} = \"...\"`",
-                attr_name, attr_name
-            ),
-        ))
-    }
-}
-
-fn is_option(ty: &Type) -> bool {
+fn filler_type(ty: &Type) -> Option<FillerType> {
     if let Type::Path(type_path) = ty {
         let segments = &type_path.path.segments;
         if segments.len() == 1 && segments[0].ident == "Option" {
             if let syn::PathArguments::AngleBracketed(args) = &segments[0].arguments {
                 if args.args.len() == 1 {
-                    return true;
+                    return Some(FillerType::Option);
+                }
+            }
+        } else if segments.len() == 1 && segments[0].ident == "Vec" {
+            if let syn::PathArguments::AngleBracketed(args) = &segments[0].arguments {
+                if args.args.len() == 1 {
+                    return Some(FillerType::Vec);
                 }
             }
         }
     }
-    false
+    None
 }
