@@ -9,7 +9,8 @@ A lib help you patch Rust instance, and easy to partial update configures.
 This crate provides the `Patch`, `Filler` traits and accompanying derive macro.
 If the any field in `Patch` is some then it will overwrite the field of instance when apply.
 If the any field in the instance is none then it will try to fill the field with the `Filler`.
-Currently, `Filler` only support `Option` field, and the `Vec` and other field will implement later.
+Currently, `Filler` only support `Option` field and the `Vec`.
+The other fields and operator for Filler will implement later.
 The detail discussion is in [issue #81](https://github.com/yanganto/struct-patch/issues/81)
 
 ## Quick Example
@@ -73,21 +74,29 @@ use struct_patch::Filler;
 struct Item {
     field_int: usize,
     maybe_field_int: Option<usize>,
+    list: Vec<uszie>,
 }
 let mut item = Item {
     field_int: 0,
     maybe_field_int: None,
+    list: Vec::new(),
 };
 
-let filler_1 = ItemFiller{ maybe_field_int: Some(7), };
+let filler_1 = ItemFiller{ maybe_field_int: Some(7), list: Vec::new() };
 item.apply(filler_1);
 assert_eq!(item.maybe_field_int, Some(7));
 
-let filler_2 = ItemFiller{ maybe_field_int: Some(100), };
+let filler_2 = ItemFiller{ maybe_field_int: Some(100), list: Vec::new() };
 
 // The field is not empty, so the filler has not effect.
 item.apply(filler_2);
 assert_eq!(item.maybe_field_int, Some(7));
+
+let filler_3 = ItemFiller{ maybe_field_int: Some(100), list: vec![7] };
+
+item.apply(filler_3);
+assert_eq!(item.maybe_field_int, Some(7));
+assert_eq!(item.list, vec![7]);
 ```
 
 ## Documentation and Examples
