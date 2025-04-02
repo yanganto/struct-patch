@@ -7,7 +7,6 @@ use syn::{
 };
 
 const FILLER: &str = "filler";
-const NAME: &str = "name";
 const ATTRIBUTE: &str = "attribute";
 
 pub(crate) struct Filler {
@@ -23,7 +22,6 @@ struct Field {
     ident: Option<Ident>,
     ty: Type,
     attributes: Vec<TokenStream>,
-    retyped: bool,
 }
 
 impl Filler {
@@ -44,15 +42,8 @@ impl Filler {
             .collect::<Result<Vec<_>>>()?;
         let field_names = fields.iter().map(|f| f.ident.as_ref()).collect::<Vec<_>>();
 
-        let renamed_field_names = fields
-            .iter()
-            .filter(|f| f.retyped)
-            .map(|f| f.ident.as_ref())
-            .collect::<Vec<_>>();
-
         let original_field_names = fields
             .iter()
-            .filter(|f| !f.retyped)
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
 
@@ -92,13 +83,6 @@ impl Filler {
         let filler_impl = quote! {
             impl #generics struct_patch::traits::Filler< #name #generics > for #struct_name #generics #where_clause  {
                 fn apply(&mut self, filler: #name #generics) {
-                    #(
-                        if let Some(v) = filler.#renamed_field_names {
-                            if self.#renamed_field_names.is_none() {
-                                self.#renamed_field_names.apply(v);
-                            }
-                        }
-                    )*
                     #(
                         if let Some(v) = filler.#original_field_names {
                             if self.#original_field_names.is_none() {
@@ -162,16 +146,6 @@ impl Filler {
             attr.parse_nested_meta(|meta| {
                 let path = meta.path.to_string();
                 match path.as_str() {
-                    NAME => {
-                        // #[filler(name = "FillerStruct")]
-                        if let Some(lit) = get_lit_str(path, &meta)? {
-                            if name.is_some() {
-                                return Err(meta
-                                    .error("The name attribute can't be defined more than once"));
-                            }
-                            name = Some(lit.parse()?);
-                        }
-                    }
                     ATTRIBUTE => {
                         // #[filler(attribute(derive(Deserialize)))]
                         // #[filler(attribute(derive(Deserialize, Debug), serde(rename = "foo"))]
@@ -276,11 +250,6 @@ impl Field {
                         let attribute: TokenStream = content.parse()?;
                         attributes.push(attribute);
                     }
-                    NAME => {
-                        // #[filler(name = "ItemFiller")]
-                        let expr: LitStr = meta.value()?.parse()?;
-                        field_type = Some(expr.parse()?)
-                    }
                     _ => {
                         return Err(meta.error(format_args!(
                             "unknown filler field attribute `{}`",
@@ -294,7 +263,6 @@ impl Field {
 
         Ok(Some(Field {
             ident,
-            retyped: field_type.is_some(),
             ty: field_type.unwrap_or(ty),
             attributes,
         }))
