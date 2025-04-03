@@ -74,7 +74,7 @@ use struct_patch::Filler;
 struct Item {
     field_int: usize,
     maybe_field_int: Option<usize>,
-    list: Vec<uszie>,
+    list: Vec<usize>,
 }
 let mut item = Item {
     field_int: 0,
@@ -97,7 +97,7 @@ let filler_3 = ItemFiller{ maybe_field_int: Some(100), list: vec![7] };
 item.apply(filler_3);
 assert_eq!(item.maybe_field_int, Some(7));
 assert_eq!(item.list, vec![7]);
-```
+``` 
 
 ## Documentation and Examples
 Also, you can modify the patch structure by defining `#[patch(...)]` attributes on the original struct or fields.
