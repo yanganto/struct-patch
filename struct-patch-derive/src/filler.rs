@@ -69,7 +69,7 @@ impl Filler {
             .collect::<Vec<_>>();
 
         let extendable_field_types = fields
-            .into_iter()
+            .iter()
             .filter(|f| matches!(f.fty, FillerType::Extendable(_)))
             .map(|f| f.fty.inner())
             .collect::<Vec<_>>();
