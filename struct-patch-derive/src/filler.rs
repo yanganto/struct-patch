@@ -5,6 +5,7 @@ use syn::{parenthesized, DeriveInput, LitStr, Result, Type};
 
 const FILLER: &str = "filler";
 const ATTRIBUTE: &str = "attribute";
+const EXTENDABLE: &str = "extendable";
 
 pub(crate) struct Filler {
     visibility: syn::Visibility,
@@ -255,12 +256,7 @@ impl Field {
             ident, ty, attrs, ..
         }: syn::Field,
     ) -> Result<Option<Field>> {
-        let fty = if let Some(fty) = filler_type(&ty) {
-            fty
-        } else {
-            return Ok(None);
-        };
-
+        let mut fty = filler_type(&ty);
         let mut attributes = vec![];
 
         for attr in attrs {
@@ -284,6 +280,10 @@ impl Field {
                         let attribute: TokenStream = content.parse()?;
                         attributes.push(attribute);
                     }
+                    EXTENDABLE => {
+                        // #[filler(extendable)]
+                        fty = Some(FillerType::Extendable(extendable_filler_type(&ty)));
+                    }
                     _ => {
                         return Err(meta.error(format_args!(
                             "unknown filler field attribute `{}`",
@@ -295,7 +295,7 @@ impl Field {
             })?;
         }
 
-        Ok(Some(Field {
+        Ok(fty.map(|fty| Field {
             ident,
             ty,
             attributes,
@@ -340,4 +340,12 @@ fn filler_type(ty: &Type) -> Option<FillerType> {
         }
     }
     None
+}
+
+fn extendable_filler_type(ty: &Type) -> Ident {
+    if let Type::Path(type_path) = ty {
+        type_path.path.segments[0].ident.clone()
+    } else {
+        panic!("#[filler(extendable)] should use on a type")
+    }
 }
