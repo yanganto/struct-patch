@@ -125,6 +125,7 @@ The [examples][examples] demo following scenarios.
 - show option field behavior
 - show operators about patches
 - show example with serde crates, ex: `humantime_serde` for duration
+- show filler with all possible types
 
 ## Features
 This crate also includes the following optional features:
