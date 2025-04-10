@@ -42,9 +42,14 @@
 //! }
 //! ```
 //!
-//! More details on how to use the the derive macro, including what attributes are available, are available under [`Patch`]
+//! More details on how to use the the derive macro, including what attributes are available, are
+//! available under [`Patch`]
 //!
-//! Deriving [`Filler`] on a struct will generate a struct similar to the original one with the field with `Option`.
+//! Deriving [`Filler`] on a struct will generate a struct similar to the original one with the
+//! field with `Option`, `BTreeMap`, `BTreeSet`, `BinaryHeap`,`HashMap`, `HashSet`, `LinkedList`,
+//! `VecDeque `or `Vec`.
+//! Any struct implement `Default`, `Extend`, `IntoIterator`, `is_empty` can be used with
+//! `#[filler(extenable)]`.
 //! Unlike [`Patch`], the [`Filler`] only work on the empty fields of instance.
 //!
 //! ```rust

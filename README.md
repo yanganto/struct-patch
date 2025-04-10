@@ -100,7 +100,7 @@ assert_eq!(item.list, vec![7]);
 ``` 
 
 ## Documentation and Examples
-Also, you can modify the patch structure by defining `#[patch(...)]` attributes on the original struct or fields.
+Also, you can modify the patch structure by defining `#[patch(...)]` or `#[filler(...)]` attributes on the original struct or fields.
 
 Struct attributes:
 - `#[patch(name = "...")]`: change the name of the generated patch struct.
@@ -112,6 +112,7 @@ Field attributes:
 - `#[patch(name = "...")]`: change the type of the field in the generated patch struct.
 - `#[patch(attribute(...))]`: add attributes to the field in the generated patch struct.
 - `#[patch(attribute(derive(...)))]`: add derives to the field in the generated patch struct.
+- `#[filler(extendable)]`: use the struct of field for Filler, the struct needs implement `Default`, `Extend`, `IntoIterator` and `is_empty`.
 
 Please check the [traits][doc-traits] of document to learn more.
 
@@ -124,6 +125,7 @@ The [examples][examples] demo following scenarios.
 - show option field behavior
 - show operators about patches
 - show example with serde crates, ex: `humantime_serde` for duration
+- show filler with all possible types
 
 ## Features
 This crate also includes the following optional features:
