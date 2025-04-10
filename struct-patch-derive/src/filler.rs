@@ -18,7 +18,17 @@ pub(crate) struct Filler {
 #[derive(Debug, PartialEq)]
 enum FillerType {
     Option,
-    Vec,
+    Extendable(Ident),
+}
+
+impl FillerType {
+    fn inner(&self) -> &Ident {
+        if let FillerType::Extendable(ident) = self {
+            &ident
+        } else {
+            panic!("FillerType::Option has no inner indent")
+        }
+    }
 }
 
 struct Field {
@@ -45,16 +55,22 @@ impl Filler {
             .map(|f| f.to_token_stream())
             .collect::<Result<Vec<_>>>()?;
 
-        let vector_field_names = fields
-            .iter()
-            .filter(|f| f.fty == FillerType::Vec)
-            .map(|f| f.ident.as_ref())
-            .collect::<Vec<_>>();
-
         let option_field_names = fields
             .iter()
             .filter(|f| f.fty == FillerType::Option)
             .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+
+        let extendable_field_names = fields
+            .iter()
+            .filter(|f| matches!(f.fty, FillerType::Extendable(_)))
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+
+        let extendable_field_types = fields
+            .into_iter()
+            .filter(|f| matches!(f.fty, FillerType::Extendable(_)))
+            .map(|f| f.fty.inner())
             .collect::<Vec<_>>();
 
         let mapped_attributes = attributes
@@ -84,7 +100,7 @@ impl Filler {
                         }
                     )*
                     #(
-                        if !self.#vector_field_names.is_empty() {
+                        if !self.#extendable_field_names.is_empty() {
                             return false
                         }
                     )*
@@ -99,7 +115,9 @@ impl Filler {
             impl #generics struct_patch::traits::Filler< #name #generics > for #struct_name #generics #where_clause  {
                 fn apply(&mut self, filler: #name #generics) {
                     #(
-                        self.#vector_field_names.extend(filler.#vector_field_names.iter());
+                        if self.#extendable_field_names.is_empty() {
+                            self.#extendable_field_names.extend(filler.#extendable_field_names.into_iter());
+                        }
                     )*
                     #(
                         if let Some(v) = filler.#option_field_names {
@@ -113,7 +131,7 @@ impl Filler {
                 fn new_empty_filler() -> #name #generics {
                     #name {
                         #(#option_field_names: None,)*
-                        #(#vector_field_names: Vec::new(),)*
+                        #(#extendable_field_names: #extendable_field_types::default(),)*
                     }
                 }
             }
@@ -305,10 +323,18 @@ fn filler_type(ty: &Type) -> Option<FillerType> {
                     return Some(FillerType::Option);
                 }
             }
-        } else if segments.len() == 1 && segments[0].ident == "Vec" {
+        } else if segments.len() == 1 && segments[0].ident == "Vec"
+            || segments[0].ident == "VecDeque"
+            || segments[0].ident == "LinkedList"
+            || segments[0].ident == "HashMap"
+            || segments[0].ident == "BTreeMap"
+            || segments[0].ident == "HashSet"
+            || segments[0].ident == "BTreeSet"
+            || segments[0].ident == "BinaryHeap"
+        {
             if let syn::PathArguments::AngleBracketed(args) = &segments[0].arguments {
                 if args.args.len() == 1 {
-                    return Some(FillerType::Vec);
+                    return Some(FillerType::Extendable(segments[0].ident.clone()));
                 }
             }
         }
