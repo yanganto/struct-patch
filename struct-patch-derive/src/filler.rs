@@ -25,7 +25,7 @@ enum FillerType {
 impl FillerType {
     fn inner(&self) -> &Ident {
         if let FillerType::Extendable(ident) = self {
-            &ident
+            ident
         } else {
             panic!("FillerType::Option has no inner indent")
         }
