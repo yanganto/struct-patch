@@ -34,7 +34,11 @@ impl WrapVec {
 #[filler(attribute(derive(Debug, Default)))]
 struct Item {
     field_complete: bool,
+    // Will check the field is equal to the value to define the field is empty or not
+    #[filler(empty_value = 0)]
     field_int: usize,
+    // Will check the field is equal to String::default() to define the field is empty or not
+    // #[filler(empty=default)]
     field_string: String,
     maybe_field_int: Option<usize>,
     maybe_field_string: Option<String>,
@@ -81,7 +85,7 @@ fn main() {
 
     assert_eq!(
         format!("{filler:?}"),
-        "ItemFiller { maybe_field_int: Some(7), maybe_field_string: None, list: [], _deque: [], _linked_list: [], _set: {}, _bset: {}, _heap: [], _wrap: WrapVec { inner: [] } }"
+        "ItemFiller { field_int: 0, maybe_field_int: Some(7), maybe_field_string: None, list: [], _deque: [], _linked_list: [], _set: {}, _bset: {}, _heap: [], _wrap: WrapVec { inner: [] } }"
     );
 
     item.apply(filler);
@@ -115,4 +119,14 @@ fn main() {
     filler.list = vec![3, 4];
     item.apply(filler);
     assert_eq!(item.list, vec![1, 2]);
+
+    let mut filler: ItemFiller = Item::new_empty_filler();
+    filler.field_int = 7;
+    item.apply(filler);
+    assert_eq!(item.field_int, 7);
+
+    let mut filler: ItemFiller = Item::new_empty_filler();
+    filler.field_int = 5;
+    item.apply(filler);
+    assert_eq!(item.field_int, 7);
 }
