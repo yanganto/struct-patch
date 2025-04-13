@@ -1,11 +1,14 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
 use std::str::FromStr;
-use syn::{parenthesized, DeriveInput, LitStr, Result, Type};
+use syn::meta::ParseNestedMeta;
+use syn::spanned::Spanned;
+use syn::{parenthesized, DeriveInput, Error, Lit, LitStr, Result, Type};
 
 const FILLER: &str = "filler";
 const ATTRIBUTE: &str = "attribute";
 const EXTENDABLE: &str = "extendable";
+const EMPTY_VALUE: &str = "empty_value";
 
 pub(crate) struct Filler {
     visibility: syn::Visibility,
@@ -16,10 +19,12 @@ pub(crate) struct Filler {
     fields: Vec<Field>,
 }
 
-#[derive(Debug, PartialEq)]
 enum FillerType {
     Option,
+    /// The type with `Default`, `Extend`, `IntoIterator` and `is_empty` implementations
     Extendable(Ident),
+    /// The type defined a value for empty
+    NativeValue(Lit),
 }
 
 impl FillerType {
@@ -27,7 +32,14 @@ impl FillerType {
         if let FillerType::Extendable(ident) = self {
             ident
         } else {
-            panic!("FillerType::Option has no inner indent")
+            panic!("Only FillerType::Extendable has inner indent")
+        }
+    }
+    fn value(&self) -> &Lit {
+        if let FillerType::NativeValue(lit) = self {
+            lit
+        } else {
+            panic!("Only FillerType::NativeValue has value")
         }
     }
 }
@@ -58,7 +70,7 @@ impl Filler {
 
         let option_field_names = fields
             .iter()
-            .filter(|f| f.fty == FillerType::Option)
+            .filter(|f| matches!(f.fty, FillerType::Option))
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
 
@@ -72,6 +84,18 @@ impl Filler {
             .iter()
             .filter(|f| matches!(f.fty, FillerType::Extendable(_)))
             .map(|f| f.fty.inner())
+            .collect::<Vec<_>>();
+
+        let native_value_field_names = fields
+            .iter()
+            .filter(|f| matches!(f.fty, FillerType::NativeValue(_)))
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+
+        let native_value_field_values = fields
+            .iter()
+            .filter(|f| matches!(f.fty, FillerType::NativeValue(_)))
+            .map(|f| f.fty.value())
             .collect::<Vec<_>>();
 
         let mapped_attributes = attributes
@@ -105,6 +129,11 @@ impl Filler {
                             return false
                         }
                     )*
+                    #(
+                        if self.#native_value_field_names != #native_value_field_values {
+                            return false
+                        }
+                    )*
                     true
                 }
             }
@@ -115,6 +144,11 @@ impl Filler {
         let filler_impl = quote! {
             impl #generics struct_patch::traits::Filler< #name #generics > for #struct_name #generics #where_clause  {
                 fn apply(&mut self, filler: #name #generics) {
+                    #(
+                        if self.#native_value_field_names == #native_value_field_values {
+                            self.#native_value_field_names = filler.#native_value_field_names;
+                        }
+                    )*
                     #(
                         if self.#extendable_field_names.is_empty() {
                             self.#extendable_field_names.extend(filler.#extendable_field_names.into_iter());
@@ -133,6 +167,7 @@ impl Filler {
                     #name {
                         #(#option_field_names: None,)*
                         #(#extendable_field_names: #extendable_field_types::default(),)*
+                        #(#native_value_field_names: #native_value_field_values,)*
                     }
                 }
             }
@@ -282,7 +317,24 @@ impl Field {
                     }
                     EXTENDABLE => {
                         // #[filler(extendable)]
-                        fty = Some(FillerType::Extendable(extendable_filler_type(&ty)));
+                        if fty.is_some() {
+                            return Err(meta
+                                .error("The field is already the field of filler, we can't defined more than once"));
+                        }
+                        fty = Some(FillerType::Extendable(none_option_filler_type(&ty)));
+                    }
+                    EMPTY_VALUE => {
+                        // #[filler(empty_value=some value)]
+                        if fty.is_some() {
+                            return Err(meta
+                                .error("The field is already the field of filler, we can't defined more than once"));
+                        }
+                        if let Some(lit) = get_lit(path, &meta)? {
+                            fty = Some(FillerType::NativeValue(lit));
+                        } else {
+                            return Err(meta
+                                .error("empty_value needs a clear value to define empty"));
+                        }
                     }
                     _ => {
                         return Err(meta.error(format_args!(
@@ -342,10 +394,29 @@ fn filler_type(ty: &Type) -> Option<FillerType> {
     None
 }
 
-fn extendable_filler_type(ty: &Type) -> Ident {
+fn none_option_filler_type(ty: &Type) -> Ident {
     if let Type::Path(type_path) = ty {
         type_path.path.segments[0].ident.clone()
     } else {
         panic!("#[filler(extendable)] should use on a type")
+    }
+}
+
+fn get_lit(attr_name: String, meta: &ParseNestedMeta) -> syn::Result<Option<syn::Lit>> {
+    let expr: syn::Expr = meta.value()?.parse()?;
+    let mut value = &expr;
+    while let syn::Expr::Group(e) = value {
+        value = &e.expr;
+    }
+    if let syn::Expr::Lit(syn::ExprLit { lit, .. }) = value {
+        Ok(Some(lit.clone()))
+    } else {
+        Err(Error::new(
+            expr.span(),
+            format!(
+                "expected serde {} attribute to be lit: `{} = \"...\"`",
+                attr_name, attr_name
+            ),
+        ))
     }
 }
