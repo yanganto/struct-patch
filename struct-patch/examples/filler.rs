@@ -37,8 +37,6 @@ struct Item {
     // Will check the field is equal to the value to define the field is empty or not
     #[filler(empty_value = 0)]
     field_int: usize,
-    // Will check the field is equal to String::default() to define the field is empty or not
-    // #[filler(empty=default)]
     field_string: String,
     maybe_field_int: Option<usize>,
     maybe_field_string: Option<String>,

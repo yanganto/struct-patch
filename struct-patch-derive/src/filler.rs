@@ -23,7 +23,7 @@ enum FillerType {
     Option,
     /// The type with `Default`, `Extend`, `IntoIterator` and `is_empty` implementations
     Extendable(Ident),
-    /// The type defined a value for empty
+    /// The type with a value defined for empty
     NativeValue(Lit),
 }
 
