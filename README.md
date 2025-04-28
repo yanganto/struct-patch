@@ -112,7 +112,8 @@ Field attributes:
 - `#[patch(name = "...")]`: change the type of the field in the generated patch struct.
 - `#[patch(attribute(...))]`: add attributes to the field in the generated patch struct.
 - `#[patch(attribute(derive(...)))]`: add derives to the field in the generated patch struct.
-- `#[filler(extendable)]`: use the struct of field for Filler, the struct needs implement `Default`, `Extend`, `IntoIterator` and `is_empty`.
+- `#[filler(extendable)]`: use the struct of field for filler, the struct needs implement `Default`, `Extend`, `IntoIterator` and `is_empty`.
+- `#[filler(empty_value)]`: define a value as empty, so the corresponding field of Filler will be applied, even the field is not `Option` or `Extendable`.
 
 Please check the [traits][doc-traits] of document to learn more.
 
