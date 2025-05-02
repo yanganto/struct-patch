@@ -187,7 +187,7 @@ impl Patch {
             }
         };
 
-        #[cfg(feature = "merge")]
+        #[cfg(all(feature = "op", feature = "merge"))]
         let op_impl = quote! {
             impl #generics core::ops::Shl<#name #generics> for #struct_name #generics #where_clause {
                 type Output = Self;
