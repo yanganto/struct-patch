@@ -29,3 +29,4 @@ jobs:
           nix develop -c cargo clippy --features=option -- -Dwarnings
           nix develop -c cargo clippy --features=none_as_default -- -Dwarnings
           nix develop -c cargo clippy --features=keep_none -- -Dwarnings
+          nix develop -c cargo clippy --features=nesting -- -Dwarnings

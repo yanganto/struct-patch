@@ -22,6 +22,7 @@ syn = { version =  "2.0", features = ["parsing"] }
 status = []
 op = []
 merge = []
+nesting = []
 
 [dev-dependencies]
 pretty_assertions_sorted = "1.2.3"
