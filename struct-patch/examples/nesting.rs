@@ -1,7 +1,6 @@
 use serde::Deserialize;
 use struct_patch::Patch;
 
-#[allow(dead_code)]
 #[cfg(feature = "nesting")]
 #[derive(Clone, Debug, Default, Patch, PartialEq)]
 #[patch(attribute(derive(Debug, Deserialize, PartialEq)))]
@@ -13,7 +12,6 @@ struct Item {
     inner: Nesting,
 }
 
-#[allow(dead_code)]
 #[derive(Clone, Debug, Default, Patch, PartialEq)]
 #[patch(attribute(derive(Debug, Deserialize, PartialEq)))]
 struct Nesting {
