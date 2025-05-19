@@ -126,6 +126,7 @@ The [examples][examples] demo following scenarios.
 - show option field behavior
 - show operators about patches
 - show example with serde crates, ex: `humantime_serde` for duration
+- show a patch nesting other patch
 - show filler with all possible types
 
 ## Features
@@ -141,6 +142,7 @@ This crate also includes the following optional features:
     - default: `T` needs to implement `From<P>`.  When patching on None, it will based on `from<P>` to cast T, and this let you patch structs containing fields with optional values.
     - `none_as_default`: `T` needs to implement `Default`.  When patching on None, it will patch on a default instance, and this also let you patch structs containing fields with optional values.
     - `keep_none`: When patching on None, it is still None.
+- `nesting`(optional): allow a inner field with `Patch` derive and `#[patch(nesting)]` attribute
 
 [crates-badge]: https://img.shields.io/crates/v/struct-patch.svg
 [crate-url]: https://crates.io/crates/struct-patch
