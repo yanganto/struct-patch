@@ -11,7 +11,7 @@ license.workspace = true
 readme.workspace = true
 
 [dependencies]
-struct-patch-derive = { version = "=0.10.0", path = "../struct-patch-derive" }
+struct-patch-derive = { version = "=0.10.1", path = "../struct-patch-derive" }
 
 [dev-dependencies]
 serde_json = "1.0"
@@ -35,6 +35,8 @@ merge = [
 std = ["box", "option"]
 box = []
 option = []
-nesting = []
+nesting = [
+    "struct-patch-derive/nesting"
+]
 none_as_default = ["option"]
 keep_none = ["option"]
