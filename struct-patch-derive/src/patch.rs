@@ -13,6 +13,7 @@ const ATTRIBUTE: &str = "attribute";
 const SKIP: &str = "skip";
 const ADDABLE: &str = "addable";
 const ADD: &str = "add";
+const NESTING: &str = "nesting";
 
 pub(crate) struct Patch {
     visibility: syn::Visibility,
@@ -38,6 +39,8 @@ struct Field {
     retyped: bool,
     #[cfg(feature = "op")]
     addable: Addable,
+    #[cfg(feature = "nesting")]
+    nesting: bool,
 }
 
 impl Patch {
@@ -56,18 +59,58 @@ impl Patch {
             .iter()
             .map(|f| f.to_token_stream())
             .collect::<Result<Vec<_>>>()?;
-        let field_names = fields.iter().map(|f| f.ident.as_ref()).collect::<Vec<_>>();
 
+        #[cfg(not(feature = "nesting"))]
+        let field_names = fields.iter().map(|f| f.ident.as_ref()).collect::<Vec<_>>();
+        #[cfg(feature = "nesting")]
+        let field_names = fields
+            .iter()
+            .filter(|f| !f.nesting)
+            .map(|f| f.ident.as_ref()).collect::<Vec<_>>();
+
+        #[cfg(not(feature = "nesting"))]
         let renamed_field_names = fields
             .iter()
             .filter(|f| f.retyped)
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
+        #[cfg(feature = "nesting")]
+        let renamed_field_names = fields
+            .iter()
+            .filter(|f| f.retyped && !f.nesting)
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
 
+        #[cfg(not(feature = "nesting"))]
         let original_field_names = fields
             .iter()
             .filter(|f| !f.retyped)
             .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+
+        #[cfg(feature = "nesting")]
+        let original_field_names = fields
+            .iter()
+            .filter(|f| !f.retyped && !f.nesting)
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+
+        #[cfg(not(feature = "nesting"))]
+        let nesting_field_names: Vec<String> = Vec::new();
+        #[cfg(not(feature = "nesting"))]
+        let nesting_field_types: Vec<Type> = Vec::new();
+
+        #[cfg(feature = "nesting")]
+        let nesting_field_names = fields
+            .iter()
+            .filter(|f| f.nesting)
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+        #[cfg(feature = "nesting")]
+        let nesting_field_types = fields
+            .iter()
+            .filter(|f| f.nesting)
+            .map(|f| f.ty.clone())
             .collect::<Vec<_>>();
 
         let mapped_attributes = attributes
@@ -118,6 +161,9 @@ impl Patch {
                         )*
                         #(
                             #original_field_names: other.#original_field_names.or(self.#original_field_names),
+                        )*
+                        #(
+                            #nesting_field_names: other.#nesting_field_names.apply(self.#nesting_field_names),
                         )*
                     }
                 }
@@ -252,6 +298,9 @@ impl Patch {
                             self.#original_field_names = v;
                         }
                     )*
+                    #(
+                        self.#nesting_field_names.apply(patch.#nesting_field_names);
+                    )*
                 }
 
                 fn into_patch(self) -> #name #generics {
@@ -261,6 +310,9 @@ impl Patch {
                         )*
                         #(
                             #original_field_names: Some(self.#original_field_names),
+                        )*
+                        #(
+                            #nesting_field_names: self.#nesting_field_names.into_patch(),
                         )*
                     }
                 }
@@ -283,6 +335,9 @@ impl Patch {
                                 None
                             },
                         )*
+                        #(
+                            #nesting_field_names: self.#nesting_field_names.into_patch_by_diff(previous_struct.#nesting_field_names),
+                        )*
                     }
                 }
 
@@ -290,6 +345,9 @@ impl Patch {
                     #name {
                         #(
                             #field_names: None,
+                        )*
+                        #(
+                            #nesting_field_names: #nesting_field_types::new_empty_patch(),
                         )*
                     }
                 }
@@ -403,6 +461,8 @@ impl Field {
             ident,
             ty,
             attributes,
+            #[cfg(feature = "nesting")]
+            nesting,
             ..
         } = self;
 
@@ -415,14 +475,48 @@ impl Field {
             })
             .collect::<Vec<_>>();
         match ident {
+            #[cfg(not(feature = "nesting"))]
             Some(ident) => Ok(quote! {
                 #(#attributes)*
                 pub #ident: Option<#ty>,
             }),
+            #[cfg(feature = "nesting")]
+            Some(ident) => {
+                if *nesting {
+                    // TODO handle rename
+                    let patch_type = syn::Ident::new(&format!("{}Patch", &ty.to_token_stream()), Span::call_site());
+                    Ok(quote! {
+                        #(#attributes)*
+                        pub #ident: #patch_type,
+                    })
+                } else {
+                    Ok(quote! {
+                        #(#attributes)*
+                        pub #ident: Option<#ty>,
+                    })
+                }
+            },
+            #[cfg(not(feature = "nesting"))]
             None => Ok(quote! {
                 #(#attributes)*
                 pub Option<#ty>,
             }),
+            #[cfg(feature = "nesting")]
+            None => {
+                if *nesting {
+                    // TODO handle rename
+                    let patch_type = syn::Ident::new(&format!("{}Patch", &ty.to_token_stream()), Span::call_site());
+                    Ok(quote! {
+                        #(#attributes)*
+                        pub #patch_type,
+                    })
+                } else {
+                    Ok(quote! {
+                        #(#attributes)*
+                        pub Option<#ty>,
+                    })
+                }
+            },
         }
     }
 
@@ -438,6 +532,8 @@ impl Field {
 
         #[cfg(feature = "op")]
         let mut addable = Addable::Disable;
+        #[cfg(feature = "nesting")]
+        let mut nesting = false;
 
         for attr in attrs {
             if attr.path().to_string().as_str() != PATCH {
@@ -491,6 +587,16 @@ impl Field {
                     ADD => {
                         return Err(syn::Error::new(ident.span(), "`add` needs `op` feature"));
                     }
+                    #[cfg(feature = "nesting")]
+                    NESTING => {
+                        // #[patch(nesting)]
+                        nesting = true;
+                    }
+                    #[cfg(not(feature = "nesting"))]
+                    NESTING => {
+                        return Err(
+                            meta.error("#[patch(nesting)] only work with `nesting` feature"));
+                    }
                     _ => {
                         return Err(meta.error(format_args!(
                             "unknown patch field attribute `{}`",
@@ -512,6 +618,8 @@ impl Field {
             attributes,
             #[cfg(feature = "op")]
             addable,
+            #[cfg(feature = "nesting")]
+            nesting,
         }))
     }
 }

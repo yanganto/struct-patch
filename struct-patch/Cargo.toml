@@ -35,5 +35,6 @@ merge = [
 std = ["box", "option"]
 box = []
 option = []
+nesting = []
 none_as_default = ["option"]
 keep_none = ["option"]
