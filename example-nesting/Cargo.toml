@@ -1,0 +1,13 @@
+[workspace]
+
+[package]
+name = "example-nesting"
+publish = false
+edition = "2021"
+
+
+[dependencies]
+
+struct-patch = { path = "../struct-patch", features = ["nesting"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
