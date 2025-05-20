@@ -1,4 +1,4 @@
-use struct_patch::Patch;
+use struct_patch::{Patch, Status};
 
 #[derive(Clone, Debug, Patch)]
 pub struct TopItem {
@@ -35,5 +35,6 @@ mod tests {
 
         assert!(diff.id.is_none());
         assert_eq!(diff.child_item.id, Some(30));
+        assert!(!diff.is_empty());
     }
 }
