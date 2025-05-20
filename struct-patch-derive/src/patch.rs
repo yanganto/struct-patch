@@ -163,7 +163,7 @@ impl Patch {
                             #original_field_names: other.#original_field_names.or(self.#original_field_names),
                         )*
                         #(
-                            #nesting_field_names: other.#nesting_field_names.apply(self.#nesting_field_names),
+                            #nesting_field_names: other.#nesting_field_names.merge(self.#nesting_field_names),
                         )*
                     }
                 }
@@ -228,6 +228,9 @@ impl Patch {
                                 (None, None) => None,
                             },
                         )*
+                        #(
+                            #nesting_field_names: self.#nesting_field_names + rhs.#nesting_field_names,
+                        )*
                     }
                 }
             }
@@ -276,6 +279,9 @@ impl Patch {
                                 (None, Some(b)) => Some(b),
                                 (None, None) => None,
                             },
+                        )*
+                        #(
+                            #nesting_field_names: self.#nesting_field_names + rhs.#nesting_field_names,
                         )*
                     }
                 }
