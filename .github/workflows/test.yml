@@ -38,22 +38,27 @@ jobs:
           nix develop -c cargo run --features=std --example rename-patch-struct
           nix develop -c cargo run --features=std --example patch-attr
           nix develop -c cargo run --features=std --example option
+          nix develop -c cargo run --features=std,nesting --example nesting
           nix develop -c cargo test --features=std
 
       - name: Test with merge features
         run: |
           nix develop -c cargo run --features=option --features=merge --example option
           nix develop -c cargo run --features=merge --example op
+          nix develop -c cargo run --features=merge,nesting --example nesting
           nix develop -c cargo test --features=merge --no-default-features
           nix develop -c cargo test --features=merge
 
       - name: Test with option features
         run: |
           nix develop -c cargo run --features=none_as_default --example option
+          nix develop -c cargo run --features=none_as_default,nesting --example nesting
           nix develop -c cargo run --features=keep_none --example option
+          nix develop -c cargo run --features=keep_none,nesting --example nesting
 
       - name: Test with default features
         run: |
           nix develop -c cargo run --example status
           nix develop -c cargo run --example op
+          nix develop -c cargo run --features=nesting --example nesting
           nix develop -c cargo test

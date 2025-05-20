@@ -34,7 +34,7 @@ fn main() {
         ..Default::default()
     };
 
-    let patch = item_b.clone().into_patch_by_diff(item_a);
+    let patch: ItemPatch = item_b.clone().into_patch_by_diff(item_a);
     assert_eq!(
         format!("{patch:?}"),
         "ItemPatch { field_complete: None, field_int: Some(7), field_string: None, inner: NestingPatch { inner_int: Some(100), inner_string: None } }"
