@@ -139,6 +139,11 @@ impl Patch {
                             return false
                         }
                     )*
+                    #(
+                        if !self.#nesting_field_names.is_empty() {
+                            return false
+                        }
+                     )*
                     true
                 }
             }

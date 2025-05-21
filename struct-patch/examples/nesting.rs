@@ -1,5 +1,7 @@
 use serde::Deserialize;
 use struct_patch::Patch;
+#[cfg(feature = "status")]
+use struct_patch::Status;
 
 #[cfg(feature = "nesting")]
 #[derive(Clone, Debug, Default, Patch, PartialEq)]
@@ -47,6 +49,9 @@ fn main() {
         }
     }"#;
     assert_eq!(patch, serde_json::from_str(data).unwrap());
+
+    #[cfg(feature = "status")]
+    assert!(!patch.is_empty());
 
     let mut item = Item::default();
     item.apply(patch);
