@@ -18,15 +18,15 @@ jobs:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: fmt
-        run: nix develop -c cargo fmt
+        run: nix develop .#ci -c cargo fmt
 
       - name: Lint
         run: |
-          nix develop -c cargo clippy -- -Dwarnings
-          nix develop -c cargo clippy --no-default-features  -- -Dwarnings
-          nix develop -c cargo clippy --features=std -- -Dwarnings
-          nix develop -c cargo clippy --features=merge -- -Dwarnings
-          nix develop -c cargo clippy --features=option -- -Dwarnings
-          nix develop -c cargo clippy --features=none_as_default -- -Dwarnings
-          nix develop -c cargo clippy --features=keep_none -- -Dwarnings
-          nix develop -c cargo clippy --features=nesting -- -Dwarnings
+          nix develop .#ci -c cargo clippy -- -Dwarnings
+          nix develop .#ci -c cargo clippy --no-default-features  -- -Dwarnings
+          nix develop .#ci -c cargo clippy --features=std -- -Dwarnings
+          nix develop .#ci -c cargo clippy --features=merge -- -Dwarnings
+          nix develop .#ci -c cargo clippy --features=option -- -Dwarnings
+          nix develop .#ci -c cargo clippy --features=none_as_default -- -Dwarnings
+          nix develop .#ci -c cargo clippy --features=keep_none -- -Dwarnings
+          nix develop .#ci -c cargo clippy --features=nesting -- -Dwarnings

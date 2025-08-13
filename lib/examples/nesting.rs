@@ -3,6 +3,7 @@ use struct_patch::Patch;
 #[cfg(feature = "status")]
 use struct_patch::Status;
 
+#[allow(dead_code)]
 #[cfg(feature = "nesting")]
 #[derive(Clone, Debug, Default, Patch, PartialEq)]
 #[patch(attribute(derive(Debug, Deserialize, PartialEq)))]

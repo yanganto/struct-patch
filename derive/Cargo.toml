@@ -9,6 +9,7 @@ repository.workspace = true
 description.workspace = true
 license.workspace = true
 readme.workspace = true
+rust-version.workspace = true
 
 [lib]
 proc-macro = true

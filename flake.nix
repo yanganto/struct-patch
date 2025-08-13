@@ -14,7 +14,6 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
-        rust = pkgs.rust-bin.stable.latest.default;
         dr = dependency-refresh.defaultPackage.${system};
 
         publishScript = pkgs.writeShellScriptBin "crate-publish" ''
@@ -33,16 +32,26 @@
       in
       with pkgs;
       {
-        devShell = mkShell {
-          buildInputs = [
-            rust
-            openssl
-            pkg-config
+        devShells = {
+          default = mkShell {
+            buildInputs = [
+              rust-bin.stable.latest.minimal
+              openssl
+              pkg-config
+            ];
+          };
 
-            dr
-            publishScript
-            updateDependencyScript
-          ];
+          ci = mkShell {
+            buildInputs = [
+              rust-bin.stable.latest.default
+              openssl
+              pkg-config
+
+              dr
+              publishScript
+              updateDependencyScript
+            ];
+          };
         };
       }
     );

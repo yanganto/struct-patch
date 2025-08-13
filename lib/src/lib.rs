@@ -424,6 +424,7 @@ mod tests {
     #[cfg(feature = "merge")]
     #[test]
     fn test_merge() {
+        #[allow(dead_code)]
         #[derive(Patch)]
         #[patch(attribute(derive(PartialEq, Debug)))]
         struct Item {
@@ -461,6 +462,7 @@ mod tests {
     #[cfg(feature = "merge")]
     #[test]
     fn test_merge_nested() {
+        #[allow(dead_code)]
         #[derive(Patch, PartialEq, Debug)]
         #[patch(attribute(derive(PartialEq, Debug, Clone)))]
         struct B {
@@ -470,6 +472,7 @@ mod tests {
             f: u32,
         }
 
+        #[allow(dead_code)]
         #[derive(Patch)]
         #[patch(attribute(derive(PartialEq, Debug)))]
         struct A {
