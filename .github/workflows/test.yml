@@ -19,46 +19,46 @@ jobs:
 
       - name: Test no default features
         run: |
-          nix develop -c cargo run --no-default-features --example instance
-          nix develop -c cargo run --no-default-features --example filler
-          nix develop -c cargo run --no-default-features --example diff
-          nix develop -c cargo run --no-default-features --example json
-          nix develop -c cargo run --no-default-features --example rename-patch-struct
-          nix develop -c cargo run --no-default-features --example patch-attr
-          nix develop -c cargo run --no-default-features --example time
-          nix develop -c cargo run --no-default-features --features=nesting --example nesting
-          nix develop -c cargo test --no-default-features
+          nix develop .#ci -c cargo run --no-default-features --example instance
+          nix develop .#ci -c cargo run --no-default-features --example filler
+          nix develop .#ci -c cargo run --no-default-features --example diff
+          nix develop .#ci -c cargo run --no-default-features --example json
+          nix develop .#ci -c cargo run --no-default-features --example rename-patch-struct
+          nix develop .#ci -c cargo run --no-default-features --example patch-attr
+          nix develop .#ci -c cargo run --no-default-features --example time
+          nix develop .#ci -c cargo run --no-default-features --features=nesting --example nesting
+          nix develop .#ci -c cargo test --no-default-features
 
       - name: Test with std features
         run: |
-          nix develop -c cargo run --features=std --example instance
-          nix develop -c cargo run --features=std --example filler
-          nix develop -c cargo run --features=std --example diff
-          nix develop -c cargo run --features=std --example json
-          nix develop -c cargo run --features=std --example rename-patch-struct
-          nix develop -c cargo run --features=std --example patch-attr
-          nix develop -c cargo run --features=std --example option
-          nix develop -c cargo run --features=std,nesting --example nesting
-          nix develop -c cargo test --features=std
+          nix develop .#ci -c cargo run --features=std --example instance
+          nix develop .#ci -c cargo run --features=std --example filler
+          nix develop .#ci -c cargo run --features=std --example diff
+          nix develop .#ci -c cargo run --features=std --example json
+          nix develop .#ci -c cargo run --features=std --example rename-patch-struct
+          nix develop .#ci -c cargo run --features=std --example patch-attr
+          nix develop .#ci -c cargo run --features=std --example option
+          nix develop .#ci -c cargo run --features=std,nesting --example nesting
+          nix develop .#ci -c cargo test --features=std
 
       - name: Test with merge features
         run: |
-          nix develop -c cargo run --features=option --features=merge --example option
-          nix develop -c cargo run --features=merge --example op
-          nix develop -c cargo run --features=merge,nesting --example nesting
-          nix develop -c cargo test --features=merge --no-default-features
-          nix develop -c cargo test --features=merge
+          nix develop .#ci -c cargo run --features=option --features=merge --example option
+          nix develop .#ci -c cargo run --features=merge --example op
+          nix develop .#ci -c cargo run --features=merge,nesting --example nesting
+          nix develop .#ci -c cargo test --features=merge --no-default-features
+          nix develop .#ci -c cargo test --features=merge
 
       - name: Test with option features
         run: |
-          nix develop -c cargo run --features=none_as_default --example option
-          nix develop -c cargo run --features=none_as_default,nesting --example nesting
-          nix develop -c cargo run --features=keep_none --example option
-          nix develop -c cargo run --features=keep_none,nesting --example nesting
+          nix develop .#ci -c cargo run --features=none_as_default --example option
+          nix develop .#ci -c cargo run --features=none_as_default,nesting --example nesting
+          nix develop .#ci -c cargo run --features=keep_none --example option
+          nix develop .#ci -c cargo run --features=keep_none,nesting --example nesting
 
       - name: Test with default features
         run: |
-          nix develop -c cargo run --example status
-          nix develop -c cargo run --example op
-          nix develop -c cargo run --features=nesting --example nesting
-          nix develop -c cargo test
+          nix develop .#ci -c cargo run --example status
+          nix develop .#ci -c cargo run --example op
+          nix develop .#ci -c cargo run --features=nesting --example nesting
+          nix develop .#ci -c cargo test
