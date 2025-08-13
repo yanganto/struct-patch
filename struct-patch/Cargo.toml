@@ -9,6 +9,7 @@ repository.workspace = true
 description.workspace = true
 license.workspace = true
 readme.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 struct-patch-derive = { version = "=0.10.3", path = "../struct-patch-derive" }
