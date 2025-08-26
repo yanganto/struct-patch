@@ -7,6 +7,9 @@ use syn::{
     Type,
 };
 
+#[cfg(feature = "op")]
+use crate::Addable;
+
 const PATCH: &str = "patch";
 const NAME: &str = "name";
 const ATTRIBUTE: &str = "attribute";
@@ -22,14 +25,6 @@ pub(crate) struct Patch {
     generics: syn::Generics,
     attributes: Vec<TokenStream>,
     fields: Vec<Field>,
-}
-
-#[cfg(feature = "op")]
-pub(crate) enum Addable {
-    Disable,
-    AddTriat,
-    #[cfg(feature = "op")]
-    AddFn(Ident),
 }
 
 struct Field {
@@ -66,7 +61,8 @@ impl Patch {
         let field_names = fields
             .iter()
             .filter(|f| !f.nesting)
-            .map(|f| f.ident.as_ref()).collect::<Vec<_>>();
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
 
         #[cfg(not(feature = "nesting"))]
         let renamed_field_names = fields
@@ -182,8 +178,8 @@ impl Patch {
             .iter()
             .map(|f| {
                 match &f.addable {
-                    Addable::AddTriat => quote!(
-                        Some(a + b)
+                    Addable::AddTrait => quote!(
+                        Some(a + &b)
                     ),
                     Addable::AddFn(f) => {
                         quote!(
@@ -495,7 +491,10 @@ impl Field {
             Some(ident) => {
                 if *nesting {
                     // TODO handle rename
-                    let patch_type = syn::Ident::new(&format!("{}Patch", &ty.to_token_stream()), Span::call_site());
+                    let patch_type = syn::Ident::new(
+                        &format!("{}Patch", &ty.to_token_stream()),
+                        Span::call_site(),
+                    );
                     Ok(quote! {
                         #(#attributes)*
                         pub #ident: #patch_type,
@@ -506,7 +505,7 @@ impl Field {
                         pub #ident: Option<#ty>,
                     })
                 }
-            },
+            }
             #[cfg(not(feature = "nesting"))]
             None => Ok(quote! {
                 #(#attributes)*
@@ -516,7 +515,10 @@ impl Field {
             None => {
                 if *nesting {
                     // TODO handle rename
-                    let patch_type = syn::Ident::new(&format!("{}Patch", &ty.to_token_stream()), Span::call_site());
+                    let patch_type = syn::Ident::new(
+                        &format!("{}Patch", &ty.to_token_stream()),
+                        Span::call_site(),
+                    );
                     Ok(quote! {
                         #(#attributes)*
                         pub #patch_type,
@@ -527,7 +529,7 @@ impl Field {
                         pub Option<#ty>,
                     })
                 }
-            },
+            }
         }
     }
 
@@ -579,7 +581,7 @@ impl Field {
                     #[cfg(feature = "op")]
                     ADDABLE => {
                         // #[patch(addable)]
-                        addable = Addable::AddTriat;
+                        addable = Addable::AddTrait;
                     }
                     #[cfg(not(feature = "op"))]
                     ADDABLE => {
@@ -606,7 +608,8 @@ impl Field {
                     #[cfg(not(feature = "nesting"))]
                     NESTING => {
                         return Err(
-                            meta.error("#[patch(nesting)] only work with `nesting` feature"));
+                            meta.error("#[patch(nesting)] only work with `nesting` feature")
+                        );
                     }
                     _ => {
                         return Err(meta.error(format_args!(

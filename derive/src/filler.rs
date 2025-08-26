@@ -5,10 +5,14 @@ use syn::meta::ParseNestedMeta;
 use syn::spanned::Spanned;
 use syn::{parenthesized, DeriveInput, Error, Lit, LitStr, Result, Type};
 
+#[cfg(feature = "op")]
+use crate::Addable;
+
 const FILLER: &str = "filler";
 const ATTRIBUTE: &str = "attribute";
 const EXTENDABLE: &str = "extendable";
 const EMPTY_VALUE: &str = "empty_value";
+const ADDABLE: &str = "addable";
 
 pub(crate) struct Filler {
     visibility: syn::Visibility,
@@ -49,6 +53,8 @@ struct Field {
     ty: Type,
     attributes: Vec<TokenStream>,
     fty: FillerType,
+    #[cfg(feature = "op")]
+    addable: Addable,
 }
 
 impl Filler {
@@ -74,6 +80,13 @@ impl Filler {
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
 
+        #[cfg(feature = "op")]
+        let option_field_names_addable = fields
+            .iter()
+            .filter(|f| matches!(f.fty, FillerType::Option))
+            .map(|f| !matches!(f.addable, Addable::Disable))
+            .collect::<Vec<_>>();
+
         let extendable_field_names = fields
             .iter()
             .filter(|f| matches!(f.fty, FillerType::Extendable(_)))
@@ -86,16 +99,30 @@ impl Filler {
             .map(|f| f.fty.inner())
             .collect::<Vec<_>>();
 
+        #[cfg(feature = "op")]
+        let extendable_field_addable = fields
+            .iter()
+            .filter(|f| matches!(f.fty, FillerType::Extendable(_)))
+            .map(|f| !matches!(f.addable, Addable::Disable))
+            .collect::<Vec<_>>();
+
         let native_value_field_names = fields
             .iter()
             .filter(|f| matches!(f.fty, FillerType::NativeValue(_)))
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
 
-        let native_value_field_values = fields
+        let native_value_field_empty_values = fields
             .iter()
             .filter(|f| matches!(f.fty, FillerType::NativeValue(_)))
             .map(|f| f.fty.value())
+            .collect::<Vec<_>>();
+
+        #[cfg(feature = "op")]
+        let native_value_field_addable = fields
+            .iter()
+            .filter(|f| matches!(f.fty, FillerType::NativeValue(_)))
+            .map(|f| !matches!(f.addable, Addable::Disable))
             .collect::<Vec<_>>();
 
         let mapped_attributes = attributes
@@ -130,7 +157,7 @@ impl Filler {
                         }
                     )*
                     #(
-                        if self.#native_value_field_names != #native_value_field_values {
+                        if self.#native_value_field_names != #native_value_field_empty_values {
                             return false
                         }
                     )*
@@ -141,11 +168,67 @@ impl Filler {
         #[cfg(not(feature = "status"))]
         let status_impl = quote!();
 
+        #[cfg(feature = "op")]
+        let op_impl = quote! {
+            impl #generics core::ops::Shl<#name #generics> for #struct_name #generics #where_clause {
+                type Output = Self;
+
+                fn shl(mut self, rhs: #name #generics) -> Self {
+                    struct_patch::traits::Filler::apply(&mut self, rhs);
+                    self
+                }
+            }
+
+            impl #generics core::ops::Add<Self> for #name #generics #where_clause {
+                type Output = Self;
+
+                fn add(mut self, rhs: Self) -> Self {
+                    #(
+                        if self.#native_value_field_names == #native_value_field_empty_values {
+                            self.#native_value_field_names = rhs.#native_value_field_names;
+                        } else if #native_value_field_addable {
+                            self.#native_value_field_names = self.#native_value_field_names + rhs.#native_value_field_names;
+                        } else if rhs.#native_value_field_names != #native_value_field_empty_values {
+                            panic!("`{}` conflict in fillers, please use `#[filler(addable)]`", stringify!(#native_value_field_names))
+                        }
+                    )*
+                    #(
+                        if self.#extendable_field_names.is_empty() {
+                            self.#extendable_field_names = rhs.#extendable_field_names;
+                        } else if #extendable_field_addable {
+                            self.#extendable_field_names.extend(rhs.#extendable_field_names.into_iter());
+                        } else if !rhs.#extendable_field_names.is_empty() {
+                            panic!("`{}` conflict in fillers, please use `#[filler(addable)]`", stringify!(#extendable_field_names))
+                        }
+                    )*
+                    #(
+                        if let Some(b) = self.#option_field_names {
+                            if let Some(a) = rhs.#option_field_names {
+                                if #option_field_names_addable {
+                                    self.#option_field_names = Some(a + &b);
+                                } else {
+                                    panic!("`{}` conflict in fillers, please use `#[filler(addable)]`", stringify!(#option_field_names))
+                                }
+                            } else {
+                                self.#option_field_names = Some(b);
+                            }
+                        } else {
+                            self.#option_field_names = rhs.#option_field_names;
+                        }
+                    )*
+                    self
+                }
+            }
+        };
+
+        #[cfg(not(feature = "op"))]
+        let op_impl = quote!();
+
         let filler_impl = quote! {
             impl #generics struct_patch::traits::Filler< #name #generics > for #struct_name #generics #where_clause  {
                 fn apply(&mut self, filler: #name #generics) {
                     #(
-                        if self.#native_value_field_names == #native_value_field_values {
+                        if self.#native_value_field_names == #native_value_field_empty_values {
                             self.#native_value_field_names = filler.#native_value_field_names;
                         }
                     )*
@@ -167,7 +250,7 @@ impl Filler {
                     #name {
                         #(#option_field_names: None,)*
                         #(#extendable_field_names: #extendable_field_types::default(),)*
-                        #(#native_value_field_names: #native_value_field_values,)*
+                        #(#native_value_field_names: #native_value_field_empty_values,)*
                     }
                 }
             }
@@ -177,6 +260,7 @@ impl Filler {
             #filler_struct
             #status_impl
             #filler_impl
+            #op_impl
         })
     }
 
@@ -293,6 +377,8 @@ impl Field {
     ) -> Result<Option<Field>> {
         let mut fty = filler_type(&ty);
         let mut attributes = vec![];
+        #[cfg(feature = "op")]
+        let mut addable = Addable::Disable;
 
         for attr in attrs {
             if attr.path().to_string().as_str() != FILLER {
@@ -336,9 +422,21 @@ impl Field {
                                 .error("empty_value needs a clear value to define empty"));
                         }
                     }
+                    #[cfg(feature = "op")]
+                    ADDABLE => {
+                        // #[filler(addable)]
+                        addable = Addable::AddTrait;
+                    }
+                    #[cfg(not(feature = "op"))]
+                    ADDABLE => {
+                        return Err(syn::Error::new(
+                            ident.span(),
+                            "`addable` needs `op` feature",
+                        ));
+                    },
                     _ => {
                         return Err(meta.error(format_args!(
-                            "unknown filler field attribute `{}`",
+                            "unknown patch field attribute `{}`",
                             path.replace(' ', "")
                         )));
                     }
@@ -352,6 +450,8 @@ impl Field {
             ty,
             attributes,
             fty,
+            #[cfg(feature = "op")]
+            addable,
         }))
     }
 }
