@@ -7,6 +7,9 @@ use syn::{
     Type,
 };
 
+#[cfg(feature = "op")]
+use crate::Addable;
+
 const PATCH: &str = "patch";
 const NAME: &str = "name";
 const ATTRIBUTE: &str = "attribute";
@@ -21,14 +24,6 @@ pub(crate) struct Patch {
     generics: syn::Generics,
     attributes: Vec<TokenStream>,
     fields: Vec<Field>,
-}
-
-#[cfg(feature = "op")]
-pub(crate) enum Addable {
-    Disable,
-    AddTriat,
-    #[cfg(feature = "op")]
-    AddFn(Ident),
 }
 
 struct Field {
@@ -131,8 +126,8 @@ impl Patch {
             .iter()
             .map(|f| {
                 match &f.addable {
-                    Addable::AddTriat => quote!(
-                        Some(a + b)
+                    Addable::AddTrait => quote!(
+                        Some(a + &b)
                     ),
                     Addable::AddFn(f) => {
                         quote!(
@@ -472,7 +467,7 @@ impl Field {
                     #[cfg(feature = "op")]
                     ADDABLE => {
                         // #[patch(addable)]
-                        addable = Addable::AddTriat;
+                        addable = Addable::AddTrait;
                     }
                     #[cfg(not(feature = "op"))]
                     ADDABLE => {

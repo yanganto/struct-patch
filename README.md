@@ -131,8 +131,8 @@ The [examples][examples] demo following scenarios.
 ## Features
 This crate also includes the following optional features:
 - `status`(default): implements the `Status` trait for the patch struct, which provides the `is_empty` method.
-- `op` (default): provide operators `<<` between instance and patch, and `+` for patches
-  - default: when there is a field conflict between patches, `+` will add together if the `#[patch(addable)]` or `#[patch(add=fn)]` is provided, else it will panic.
+- `op` (default): provide operators `<<` between instance and patch/filler, and `+` for patches/fillers
+  - default: when there is a field conflict between patches/fillers, `+` will add together if the `#[patch(addable)]`, `#[patch(add=fn)]` or `#[filler(addable)]` is provided, else it will panic.
 - `merge` (optional): implements the `Merge` trait for the patch struct, which provides the `merge` method, and `<<` (if `op` feature enabled) between patches.
 - `std`(optional):
   - `box`: implements the `Patch<Box<P>>` trait for `T` where `T` implements `Patch<P>`.

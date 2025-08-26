@@ -5,6 +5,13 @@ mod patch;
 use filler::Filler;
 use patch::Patch;
 
+#[cfg(feature = "op")]
+pub(crate) enum Addable {
+    Disable,
+    AddTrait,
+    AddFn(proc_macro2::Ident),
+}
+
 #[proc_macro_derive(Patch, attributes(patch))]
 pub fn derive_patch(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     Patch::from_ast(syn::parse_macro_input!(item as syn::DeriveInput))
