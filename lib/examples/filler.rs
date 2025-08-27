@@ -5,7 +5,7 @@ use struct_patch::Filler;
 use struct_patch::Status;
 
 // NOTE: Default, Extend, IntoIterator, is_empty are required for extendable type
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 struct WrapVec {
     inner: Vec<usize>,
 }
@@ -30,8 +30,8 @@ impl WrapVec {
     }
 }
 
-#[derive(Default, Filler)]
-#[filler(attribute(derive(Debug, Default)))]
+#[derive(Clone, Default, Filler)]
+#[filler(attribute(derive(Clone, Debug, Default)))]
 struct Item {
     field_complete: bool,
     // Will check the field is equal to the value to define the field is empty or not

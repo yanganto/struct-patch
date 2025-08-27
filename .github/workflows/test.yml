@@ -33,6 +33,7 @@ jobs:
         run: |
           nix develop .#ci -c cargo run --features=std --example instance
           nix develop .#ci -c cargo run --features=std --example filler
+          nix develop .#ci -c cargo run --features=std --example filler-op
           nix develop .#ci -c cargo run --features=std --example diff
           nix develop .#ci -c cargo run --features=std --example json
           nix develop .#ci -c cargo run --features=std --example rename-patch-struct
