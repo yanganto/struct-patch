@@ -12,7 +12,7 @@ readme.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-struct-patch-derive = { version = "=0.10.3", path = "../derive" }
+struct-patch-derive = { version = "=0.10.4", path = "../derive" }
 
 [dev-dependencies]
 serde_json = "1.0"
