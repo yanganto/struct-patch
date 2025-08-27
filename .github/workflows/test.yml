@@ -6,6 +6,13 @@ concurrency:
 
 on:
   pull_request:
+    branches:
+      - main
+      - v0.9
+  push:
+    branches:
+      - main
+      - v0.9
 
 jobs:
   test:
