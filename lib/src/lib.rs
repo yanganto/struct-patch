@@ -210,7 +210,7 @@ mod tests {
 
     #[test]
     fn test_nested() {
-        #[derive(PartialEq, Debug, Patch, Deserialize)]
+        #[derive(PartialEq, Debug, Default, Patch, Deserialize)]
         #[patch(attribute(derive(PartialEq, Debug, Deserialize)))]
         struct B {
             c: u32,
@@ -223,10 +223,12 @@ mod tests {
             #[patch(name = "BPatch")]
             b: B,
         }
+        let mut b = B::default();
+        let b_patch: BPatch = serde_json::from_str(r#"{ "d": 1 }"#).unwrap();
+        b.apply(b_patch);
+        assert_eq!(b, B { c: 0, d: 1 });
 
-        let mut a = A {
-            b: B { c: 0, d: 0 },
-        };
+        let mut a = A { b };
         let data = r#"{ "b": { "c": 1 } }"#;
         let patch: APatch = serde_json::from_str(data).unwrap();
         // assert_eq!(
@@ -239,7 +241,7 @@ mod tests {
         assert_eq!(
             a,
             A {
-                b: B { c: 1, d: 0 }
+                b: B { c: 1, d: 1 }
             }
         );
     }
@@ -286,7 +288,7 @@ mod tests {
 
     #[test]
     fn test_nested_generic() {
-        #[derive(PartialEq, Debug, Patch, Deserialize)]
+        #[derive(PartialEq, Debug, Default, Patch, Deserialize)]
         #[patch(attribute(derive(PartialEq, Debug, Deserialize)))]
         struct B<T>
         where
@@ -303,9 +305,12 @@ mod tests {
             b: B<u32>,
         }
 
-        let mut a = A {
-            b: B { c: 0, d: 0 },
-        };
+        let mut b = B::default();
+        let b_patch: BPatch<u32> = serde_json::from_str(r#"{ "d": 1 }"#).unwrap();
+        b.apply(b_patch);
+        assert_eq!(b, B { c: 0, d: 1 });
+
+        let mut a = A { b };
         let data = r#"{ "b": { "c": 1 } }"#;
         let patch: APatch = serde_json::from_str(data).unwrap();
 
@@ -313,7 +318,7 @@ mod tests {
         assert_eq!(
             a,
             A {
-                b: B { c: 1, d: 0 }
+                b: B { c: 1, d: 1 }
             }
         );
     }
