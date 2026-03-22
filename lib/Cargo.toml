@@ -20,6 +20,7 @@ serde = { version = "1", features = ["derive"] }
 serde_with = "3.9.0"
 toml = "0.8.19"
 humantime-serde = "1.1.1"
+clap = { version = "4.4.7", features = ["derive"] }
 
 [features]
 default = ["status", "op"]
