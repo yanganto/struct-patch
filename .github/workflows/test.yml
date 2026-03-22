@@ -26,6 +26,7 @@ jobs:
           nix develop .#ci -c cargo run --no-default-features --example rename-patch-struct
           nix develop .#ci -c cargo run --no-default-features --example patch-attr
           nix develop .#ci -c cargo run --no-default-features --example time
+          nix develop .#ci -c cargo run --no-default-features --example clap
           nix develop .#ci -c cargo run --no-default-features --features=nesting --example nesting
           nix develop .#ci -c cargo test --no-default-features
 
@@ -44,7 +45,7 @@ jobs:
 
       - name: Test with merge features
         run: |
-          nix develop .#ci -c cargo run --features=option --features=merge --example option
+          nix develop .#ci -c cargo run --features=option,merge --example option
           nix develop .#ci -c cargo run --features=merge --example op
           nix develop .#ci -c cargo run --features=merge,nesting --example nesting
           nix develop .#ci -c cargo test --features=merge --no-default-features
