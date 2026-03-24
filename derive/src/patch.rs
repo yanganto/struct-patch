@@ -1,6 +1,7 @@
 extern crate proc_macro;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
+use std::collections::HashSet;
 use std::str::FromStr;
 use syn::{
     meta::ParseNestedMeta, parenthesized, spanned::Spanned, DeriveInput, Error, LitStr, Result,
@@ -56,58 +57,61 @@ impl Patch {
             .collect::<Result<Vec<_>>>()?;
 
         #[cfg(not(feature = "nesting"))]
-        let field_names = fields.iter().map(|f| f.ident.as_ref()).collect::<Vec<_>>();
+        let field_names = fields
+            .iter()
+            .map(|f| f.ident.as_ref())
+            .collect::<HashSet<_>>();
         #[cfg(feature = "nesting")]
         let field_names = fields
             .iter()
             .filter(|f| !f.nesting)
             .map(|f| f.ident.as_ref())
-            .collect::<Vec<_>>();
+            .collect::<HashSet<_>>();
 
         #[cfg(not(feature = "nesting"))]
         let renamed_field_names = fields
             .iter()
             .filter(|f| f.retyped)
             .map(|f| f.ident.as_ref())
-            .collect::<Vec<_>>();
+            .collect::<HashSet<_>>();
         #[cfg(feature = "nesting")]
         let renamed_field_names = fields
             .iter()
             .filter(|f| f.retyped && !f.nesting)
             .map(|f| f.ident.as_ref())
-            .collect::<Vec<_>>();
+            .collect::<HashSet<_>>();
 
         #[cfg(not(feature = "nesting"))]
         let original_field_names = fields
             .iter()
             .filter(|f| !f.retyped)
             .map(|f| f.ident.as_ref())
-            .collect::<Vec<_>>();
+            .collect::<HashSet<_>>();
 
         #[cfg(feature = "nesting")]
         let original_field_names = fields
             .iter()
             .filter(|f| !f.retyped && !f.nesting)
             .map(|f| f.ident.as_ref())
-            .collect::<Vec<_>>();
+            .collect::<HashSet<_>>();
 
         #[cfg(not(feature = "nesting"))]
-        let nesting_field_names: Vec<String> = Vec::new();
+        let nesting_field_names: HashSet<String> = HashSet::new();
         #[cfg(not(feature = "nesting"))]
-        let nesting_field_types: Vec<Type> = Vec::new();
+        let nesting_field_types: HashSet<Type> = HashSet::new();
 
         #[cfg(feature = "nesting")]
         let nesting_field_names = fields
             .iter()
             .filter(|f| f.nesting)
             .map(|f| f.ident.as_ref())
-            .collect::<Vec<_>>();
+            .collect::<HashSet<_>>();
         #[cfg(feature = "nesting")]
         let nesting_field_types = fields
             .iter()
             .filter(|f| f.nesting)
             .map(|f| f.ty.clone())
-            .collect::<Vec<_>>();
+            .collect::<HashSet<_>>();
 
         let mapped_attributes = attributes
             .iter()
