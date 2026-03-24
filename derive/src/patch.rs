@@ -17,6 +17,7 @@ const SKIP: &str = "skip";
 const ADDABLE: &str = "addable";
 const ADD: &str = "add";
 const NESTING: &str = "nesting";
+const BY_IS_EMPTY: &str = "by_is_empty";
 
 pub(crate) struct Patch {
     visibility: syn::Visibility,
@@ -36,6 +37,7 @@ struct Field {
     addable: Addable,
     #[cfg(feature = "nesting")]
     nesting: bool,
+    by_is_empty: bool,
 }
 
 impl Patch {
@@ -55,42 +57,85 @@ impl Patch {
             .map(|f| f.to_token_stream())
             .collect::<Result<Vec<_>>>()?;
 
+        // Field names
         #[cfg(not(feature = "nesting"))]
-        let field_names = fields.iter().map(|f| f.ident.as_ref()).collect::<Vec<_>>();
+        let field_names = fields
+            .iter()
+            .filter(|f| !f.by_is_empty)
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+        #[cfg(not(feature = "nesting"))]
+        let field_names_by_is_empty = fields
+            .iter()
+            .filter(|f| f.by_is_empty)
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let field_names = fields
             .iter()
-            .filter(|f| !f.nesting)
+            .filter(|f| !f.nesting && !f.by_is_empty)
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+        #[cfg(feature = "nesting")]
+        let field_names_by_is_empty = fields
+            .iter()
+            .filter(|f| !f.nesting && f.by_is_empty)
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
 
+        // Rename fields
         #[cfg(not(feature = "nesting"))]
         let renamed_field_names = fields
             .iter()
-            .filter(|f| f.retyped)
+            .filter(|f| f.retyped && !f.by_is_empty)
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+        #[cfg(not(feature = "nesting"))]
+        let renamed_field_names_by_is_empty = fields
+            .iter()
+            .filter(|f| f.retyped && f.by_is_empty)
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let renamed_field_names = fields
             .iter()
-            .filter(|f| f.retyped && !f.nesting)
+            .filter(|f| f.retyped && !f.nesting && !f.by_is_empty)
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+        #[cfg(feature = "nesting")]
+        let renamed_field_names_by_is_empty = fields
+            .iter()
+            .filter(|f| f.retyped && !f.nesting && f.by_is_empty)
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
 
+        // Original fields
         #[cfg(not(feature = "nesting"))]
         let original_field_names = fields
             .iter()
-            .filter(|f| !f.retyped)
+            .filter(|f| !f.retyped && !f.by_is_empty)
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
-
+        #[cfg(not(feature = "nesting"))]
+        let original_field_names_by_is_empty = fields
+            .iter()
+            .filter(|f| !f.retyped && f.by_is_empty)
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let original_field_names = fields
             .iter()
-            .filter(|f| !f.retyped && !f.nesting)
+            .filter(|f| !f.retyped && !f.nesting && !f.by_is_empty)
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+        #[cfg(feature = "nesting")]
+        let original_field_names_by_is_empty = fields
+            .iter()
+            .filter(|f| !f.retyped && !f.nesting && f.by_is_empty)
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
 
+        // Nesting fields
         #[cfg(not(feature = "nesting"))]
         let nesting_field_names: Vec<String> = Vec::new();
         #[cfg(not(feature = "nesting"))]
@@ -136,6 +181,11 @@ impl Patch {
                         }
                     )*
                     #(
+                        if !self.#field_names_by_is_empty.is_empty() {
+                            return false
+                        }
+                    )*
+                    #(
                         if !self.#nesting_field_names.is_empty() {
                             return false
                         }
@@ -161,7 +211,23 @@ impl Patch {
                             },
                         )*
                         #(
+                            #renamed_field_names_by_is_empty: match (self.#renamed_field_names_by_is_empty.is_empty(), other.#renamed_field_names_by_is_empty.is_empty()) {
+                                (false, false) => self.#renamed_field_names_by_is_empty.merge(other.#renamed_field_names_by_is_empty),
+                                (false, true) => self.#renamed_field_names_by_is_empty,
+                                (true, false) => other.#renamed_field_names_by_is_empty,
+                                (true, true) => self.#renamed_field_names_by_is_empty,
+                            },
+                        )*
+                        #(
                             #original_field_names: other.#original_field_names.or(self.#original_field_names),
+                        )*
+                        #(
+                            #original_field_names_by_is_empty: match (self.#original_field_names_by_is_empty.is_empty(), other.#original_field_names_by_is_empty.is_empty()) {
+                                (false, false) => self.#original_field_names_by_is_empty.merge(other.#original_field_names_by_is_empty),
+                                (false, true) => self.#original_field_names_by_is_empty,
+                                (true, false) => other.#original_field_names_by_is_empty,
+                                (true, true) => self.#original_field_names_by_is_empty,
+                            },
                         )*
                         #(
                             #nesting_field_names: other.#nesting_field_names.merge(self.#nesting_field_names),
@@ -177,16 +243,24 @@ impl Patch {
         let addable_handles = fields
             .iter()
             .map(|f| {
-                match &f.addable {
-                    Addable::AddTrait => quote!(
+                match (&f.addable, f.by_is_empty) {
+                    (Addable::AddTrait, true) => quote!(
+                        a + &b
+                    ),
+                    (Addable::AddTrait, false) => quote!(
                         Some(a + &b)
                     ),
-                    Addable::AddFn(f) => {
+                    (Addable::AddFn(f), true) => {
+                        quote!(
+                            #f(a, b)
+                        )
+                    },
+                    (Addable::AddFn(f), false) => {
                         quote!(
                             Some(#f(a, b))
                         )
-                    } ,
-                    Addable::Disable => quote!(
+                    },
+                    (Addable::Disable, _) => quote!(
                         panic!("There are conflict patches, please use `#[patch(addable)]` if you want to add these values.")
                     )
                 }
@@ -220,6 +294,18 @@ impl Patch {
                             },
                         )*
                         #(
+                            #renamed_field_names_by_is_empty: match (self.#renamed_field_names_by_is_empty.is_empty(), rhs.#renamed_field_names_by_is_empty.is_empty()) {
+                                (false, false) => {
+                                    let a = self.#renamed_field_names_by_is_empty;
+                                    let b = rhs.#renamed_field_names_by_is_empty;
+                                    #addable_handles
+                                },
+                                (false, true) => self.#renamed_field_names_by_is_empty,
+                                (true, false) => rhs.#renamed_field_names_by_is_empty,
+                                (true, true) => self.#renamed_field_names_by_is_empty,
+                            },
+                        )*
+                        #(
                             #original_field_names: match (self.#original_field_names, rhs.#original_field_names) {
                                 (Some(a), Some(b)) => {
                                     #addable_handles
@@ -227,6 +313,18 @@ impl Patch {
                                 (Some(a), None) => Some(a),
                                 (None, Some(b)) => Some(b),
                                 (None, None) => None,
+                            },
+                        )*
+                        #(
+                            #original_field_names_by_is_empty: match (self.#original_field_names_by_is_empty.is_empty(), rhs.#original_field_names_by_is_empty.is_empty()) {
+                                (false, false) => {
+                                    let a = self.#original_field_names_by_is_empty;
+                                    let b = rhs.#original_field_names_by_is_empty;
+                                    #addable_handles
+                                },
+                                (false, true) => self.#original_field_names_by_is_empty,
+                                (true, false) => rhs.#original_field_names_by_is_empty,
+                                (true, true) => self.#original_field_names_by_is_empty,
                             },
                         )*
                         #(
@@ -272,6 +370,18 @@ impl Patch {
                             },
                         )*
                         #(
+                            #renamed_field_names_by_is_empty: match (self.#renamed_field_names_by_is_empty.is_empty(), rhs.#renamed_field_names_by_is_empty.is_empty()) {
+                                (false, false) => {
+                                    let a = self.#renamed_field_names_by_is_empty;
+                                    let b = rhs.#renamed_field_names_by_is_empty;
+                                    #addable_handles
+                                },
+                                (false, true) => self.#renamed_field_names_by_is_empty,
+                                (true, false) => rhs.#renamed_field_names_by_is_empty,
+                                (true, true) => self.#renamed_field_names_by_is_empty,
+                            },
+                        )*
+                        #(
                             #original_field_names: match (self.#original_field_names, rhs.#original_field_names) {
                                 (Some(a), Some(b)) => {
                                     #addable_handles
@@ -279,6 +389,18 @@ impl Patch {
                                 (Some(a), None) => Some(a),
                                 (None, Some(b)) => Some(b),
                                 (None, None) => None,
+                            },
+                        )*
+                        #(
+                            #original_field_names_by_is_empty: match (self.#original_field_names_by_is_empty.is_empty(), rhs.#original_field_names_by_is_empty.by_is_empty()) {
+                                (false, false) => {
+                                    let a = self.#original_field_names_by_is_empty;
+                                    let b = rhs.#original_field_names_by_is_empty;
+                                    #addable_handles
+                                },
+                                (false, true) => self.#original_field_names_by_is_empty,
+                                (true, false) => rhs.#original_field_names_by_is_empty,
+                                (true, true) => self.#original_field_names_by_is_empty,
                             },
                         )*
                         #(
@@ -301,8 +423,18 @@ impl Patch {
                         }
                     )*
                     #(
+                        if !patch.#renamed_field_names_by_is_empty.is_empty() {
+                            self.#renamed_field_names.apply(patch.#renamed_field_names_by_is_empty);
+                        }
+                    )*
+                    #(
                         if let Some(v) = patch.#original_field_names {
                             self.#original_field_names = v;
+                        }
+                    )*
+                    #(
+                        if !patch.#original_field_names_by_is_empty.is_empty() {
+                            self.#original_field_names = patch.#original_field_names;
                         }
                     )*
                     #(
@@ -316,7 +448,13 @@ impl Patch {
                             #renamed_field_names: Some(self.#renamed_field_names.into_patch()),
                         )*
                         #(
+                            #renamed_field_names_by_is_empty: self.#renamed_field_names_by_is_empty.into_patch(),
+                        )*
+                        #(
                             #original_field_names: Some(self.#original_field_names),
+                        )*
+                        #(
+                            #original_field_names_by_is_empty: self.#original_field_names_by_is_empty,
                         )*
                         #(
                             #nesting_field_names: self.#nesting_field_names.into_patch(),
@@ -335,11 +473,27 @@ impl Patch {
                             },
                         )*
                         #(
+                            #renamed_field_names_by_is_empty: if self.#renamed_field_names_by_is_empty != previous_struct.#renamed_field_names_by_is_empty {
+                                self.#renamed_field_names_by_is_empty.into_patch_by_diff(previous_struct.#renamed_field_names_by_is_empty)
+                            }
+                            else {
+                                Default::default()
+                            },
+                        )*
+                        #(
                             #original_field_names: if self.#original_field_names != previous_struct.#original_field_names {
                                 Some(self.#original_field_names)
                             }
                             else {
                                 None
+                            },
+                        )*
+                        #(
+                            #original_field_names_by_is_empty: if self.#original_field_names_by_is_empty != previous_struct.#original_field_names_by_is_empty {
+                                self.#original_field_names_by_is_empty
+                            }
+                            else {
+                                Default::default()
                             },
                         )*
                         #(
@@ -352,6 +506,9 @@ impl Patch {
                     #name {
                         #(
                             #field_names: None,
+                        )*
+                        #(
+                            #field_names_by_is_empty: Default::default(),
                         )*
                         #(
                             #nesting_field_names: #nesting_field_types::new_empty_patch(),
@@ -470,6 +627,7 @@ impl Field {
             attributes,
             #[cfg(feature = "nesting")]
             nesting,
+            by_is_empty,
             ..
         } = self;
 
@@ -483,10 +641,19 @@ impl Field {
             .collect::<Vec<_>>();
         match ident {
             #[cfg(not(feature = "nesting"))]
-            Some(ident) => Ok(quote! {
-                #(#attributes)*
-                pub #ident: Option<#ty>,
-            }),
+            Some(ident) => {
+                if *by_is_empty {
+                    Ok(quote! {
+                        #(#attributes)*
+                        pub #ident: #ty,
+                    })
+                } else {
+                    Ok(quote! {
+                        #(#attributes)*
+                        pub #ident: Option<#ty>,
+                    })
+                }
+            }
             #[cfg(feature = "nesting")]
             Some(ident) => {
                 if *nesting {
@@ -499,6 +666,11 @@ impl Field {
                         #(#attributes)*
                         pub #ident: #patch_type,
                     })
+                } else if *by_is_empty {
+                    Ok(quote! {
+                        #(#attributes)*
+                        pub #ident: #ty,
+                    })
                 } else {
                     Ok(quote! {
                         #(#attributes)*
@@ -507,10 +679,19 @@ impl Field {
                 }
             }
             #[cfg(not(feature = "nesting"))]
-            None => Ok(quote! {
-                #(#attributes)*
-                pub Option<#ty>,
-            }),
+            None => {
+                if *by_is_empty {
+                    Ok(quote! {
+                        #(#attributes)*
+                        pub #ty,
+                    })
+                } else {
+                    Ok(quote! {
+                        #(#attributes)*
+                        pub Option<#ty>,
+                    })
+                }
+            }
             #[cfg(feature = "nesting")]
             None => {
                 if *nesting {
@@ -522,6 +703,11 @@ impl Field {
                     Ok(quote! {
                         #(#attributes)*
                         pub #patch_type,
+                    })
+                } else if *by_is_empty {
+                    Ok(quote! {
+                        #(#attributes)*
+                        pub #ty,
                     })
                 } else {
                     Ok(quote! {
@@ -542,6 +728,7 @@ impl Field {
         let mut attributes = vec![];
         let mut field_type = None;
         let mut skip = false;
+        let mut by_is_empty = false;
 
         #[cfg(feature = "op")]
         let mut addable = Addable::Disable;
@@ -611,6 +798,17 @@ impl Field {
                             meta.error("#[patch(nesting)] only work with `nesting` feature")
                         );
                     }
+                    #[cfg(not(feature = "op"))]
+                    BY_IS_EMPTY => {
+                        // #[patch(by_is_empty)]
+                        by_is_empty = true;
+                    }
+                    #[cfg(feature = "op")]
+                    BY_IS_EMPTY => {
+                        return Err(
+                            meta.error("#[patch(by_is_empty)] only work without `op` feature now")
+                        );
+                    }
                     _ => {
                         return Err(meta.error(format_args!(
                             "unknown patch field attribute `{}`",
@@ -634,6 +832,7 @@ impl Field {
             addable,
             #[cfg(feature = "nesting")]
             nesting,
+            by_is_empty,
         }))
     }
 }
@@ -696,6 +895,8 @@ mod tests {
                 pub field1: SubItem,
                 #[patch(skip)]
                 pub field2: Option<String>,
+                #[patch(by_is_empty)]
+                pub field3: bool,
             }
         };
         let expected = Patch {
@@ -704,16 +905,28 @@ mod tests {
             patch_struct_name: syn::Ident::new("MyPatch", Span::call_site()),
             generics: syn::Generics::default(),
             attributes: vec![quote! { derive(Debug, PartialEq, Clone, Serialize, Deserialize) }],
-            fields: vec![Field {
-                ident: Some(syn::Ident::new("field1", Span::call_site())),
-                ty: LitStr::new("SubItemPatch", Span::call_site())
-                    .parse()
-                    .unwrap(),
-                attributes: vec![],
-                retyped: true,
-                #[cfg(feature = "op")]
-                addable: Addable::Disable,
-            }],
+            fields: vec![
+                Field {
+                    ident: Some(syn::Ident::new("field1", Span::call_site())),
+                    ty: LitStr::new("SubItemPatch", Span::call_site())
+                        .parse()
+                        .unwrap(),
+                    attributes: vec![],
+                    retyped: true,
+                    #[cfg(feature = "op")]
+                    addable: Addable::Disable,
+                    by_is_empty: false,
+                },
+                Field {
+                    ident: Some(syn::Ident::new("field3", Span::call_site())),
+                    ty: LitStr::new("bool", Span::call_site()).parse().unwrap(),
+                    attributes: vec![],
+                    retyped: false,
+                    #[cfg(feature = "op")]
+                    addable: Addable::Disable,
+                    by_is_empty: true,
+                },
+            ],
         };
         let result = Patch::from_ast(syn::parse2(input).unwrap()).unwrap();
         assert_eq_sorted!(
