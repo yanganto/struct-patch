@@ -1,9 +1,7 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
 use std::str::FromStr;
-use syn::meta::ParseNestedMeta;
-use syn::spanned::Spanned;
-use syn::{parenthesized, DeriveInput, Error, Lit, LitStr, Result, Type};
+use syn::{parenthesized, DeriveInput, Lit, LitStr, Result, Type};
 
 #[cfg(feature = "op")]
 use crate::Addable;
@@ -415,7 +413,7 @@ impl Field {
                             return Err(meta
                                 .error("The field is already the field of filler, we can't defined more than once"));
                         }
-                        if let Some(lit) = get_lit(path, &meta)? {
+                        if let Some(lit) = crate::get_lit(path, &meta)? {
                             fty = Some(FillerType::NativeValue(lit));
                         } else {
                             return Err(meta
@@ -429,6 +427,7 @@ impl Field {
                     }
                     #[cfg(not(feature = "op"))]
                     ADDABLE => {
+                        use syn::spanned::Spanned;
                         return Err(syn::Error::new(
                             ident.span(),
                             "`addable` needs `op` feature",
@@ -499,24 +498,5 @@ fn none_option_filler_type(ty: &Type) -> Ident {
         type_path.path.segments[0].ident.clone()
     } else {
         panic!("#[filler(extendable)] should use on a type")
-    }
-}
-
-fn get_lit(attr_name: String, meta: &ParseNestedMeta) -> syn::Result<Option<syn::Lit>> {
-    let expr: syn::Expr = meta.value()?.parse()?;
-    let mut value = &expr;
-    while let syn::Expr::Group(e) = value {
-        value = &e.expr;
-    }
-    if let syn::Expr::Lit(syn::ExprLit { lit, .. }) = value {
-        Ok(Some(lit.clone()))
-    } else {
-        Err(Error::new(
-            expr.span(),
-            format!(
-                "expected serde {} attribute to be lit: `{} = \"...\"`",
-                attr_name, attr_name
-            ),
-        ))
     }
 }

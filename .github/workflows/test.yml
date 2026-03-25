@@ -62,5 +62,7 @@ jobs:
         run: |
           nix develop .#ci -c cargo run --example status
           nix develop .#ci -c cargo run --example op
+          nix develop .#ci -c cargo run --example clap
           nix develop .#ci -c cargo run --features=nesting --example nesting
+          nix develop .#ci -c cargo run --features=nesting --example clap
           nix develop .#ci -c cargo test
