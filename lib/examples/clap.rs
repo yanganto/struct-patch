@@ -8,9 +8,10 @@ struct Config {
     log_level: u8,
 
     // NOTE:
-    // with by_is_empty, the debug will keep in bool in ConfigPath
-    // such that we can pass `--debug` not `--debug=true` as cli convention
-    #[patch(by_is_empty)]
+    // with `empty_value`, the debug will keep in bool without Option wrapper
+    // in ConfigPath, such that we can pass `--debug` not `--debug=true` which
+    // is the same as cli convention
+    #[patch(empty_value = false)]
     #[patch(attribute(arg(short, long)))]
     debug: bool,
 }

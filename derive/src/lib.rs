@@ -5,6 +5,10 @@ mod patch;
 use filler::Filler;
 use patch::Patch;
 
+use syn::meta::ParseNestedMeta;
+use syn::spanned::Spanned;
+use syn::Error;
+
 #[cfg(feature = "op")]
 pub(crate) enum Addable {
     Disable,
@@ -29,3 +33,23 @@ pub fn derive_filler(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
         .unwrap()
         .into()
 }
+
+fn get_lit(attr_name: String, meta: &ParseNestedMeta) -> syn::Result<Option<syn::Lit>> {
+    let expr: syn::Expr = meta.value()?.parse()?;
+    let mut value = &expr;
+    while let syn::Expr::Group(e) = value {
+        value = &e.expr;
+    }
+    if let syn::Expr::Lit(syn::ExprLit { lit, .. }) = value {
+        Ok(Some(lit.clone()))
+    } else {
+        Err(Error::new(
+            expr.span(),
+            format!(
+                "expected serde {} attribute to be lit: `{} = \"...\"`",
+                attr_name, attr_name
+            ),
+        ))
+    }
+}
+
