@@ -13,6 +13,7 @@ struct Config {
     // is the same as cli convention
     #[patch(empty_value = false)]
     #[patch(attribute(arg(short, long)))]
+    #[cfg(not(feature = "merge"))]
     debug: bool,
 }
 
@@ -20,6 +21,7 @@ impl Default for Config {
     fn default() -> Config {
         Config {
             log_level: 10,
+            #[cfg(not(feature = "merge"))]
             debug: false,
         }
     }
