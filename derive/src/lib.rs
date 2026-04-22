@@ -52,4 +52,3 @@ fn get_lit(attr_name: String, meta: &ParseNestedMeta) -> syn::Result<Option<syn:
         ))
     }
 }
-

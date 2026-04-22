@@ -1,0 +1,26 @@
+[package]
+name = "no-std-examples"
+authors = ["Antonio Yang <yanganto@gmail.com>"]
+version = "0.10.5"
+edition = "2021"
+license = "MIT"
+
+[dependencies]
+struct-patch = { path = "../lib" }
+linked_list_allocator = "0.10"
+cortex-m-rt = "0.7"
+cortex-m-semihosting = "0.5"
+panic-semihosting = "0.5"
+
+[features]
+default = []
+box = ["struct-patch/box"]
+option = ["struct-patch/option"]
+
+[[bin]]
+name = "no-std-box"
+path = "src/box.rs"
+
+[[bin]]
+name = "no-std-option"
+path = "src/option.rs"

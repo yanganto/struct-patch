@@ -32,7 +32,15 @@
       in
       with pkgs;
       {
-        devShells = {
+        devShells = let
+          noStdRust = rust-bin.stable.latest.default.override {
+            targets = [
+              "thumbv7m-none-eabi"
+            ];
+            extensions = [ "rust-src" "llvm-tools-preview" ];
+          };
+        in
+        {
           default = mkShell {
             buildInputs = [
               rust-bin.stable.latest.minimal
@@ -50,6 +58,13 @@
               dr
               publishScript
               updateDependencyScript
+            ];
+          };
+
+          no-std = mkShell {
+            buildInputs = [
+              noStdRust 
+              qemu
             ];
           };
         };

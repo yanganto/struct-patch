@@ -4,6 +4,7 @@ members = [
     "lib",
     "derive",
 ]
+exclude = [ "no-std-examples" ]
 
 [workspace.package]
 authors = ["Antonio Yang <yanganto@gmail.com>"]

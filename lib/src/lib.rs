@@ -73,14 +73,14 @@
 //! item.apply(filler_2);
 //! assert_eq!(item.maybe_field_int, Some(7));
 //! ```
-#![cfg_attr(not(any(test, feature = "box", feature = "option")), no_std)]
+#![cfg_attr(not(any(test, feature = "std")), no_std)]
 
 #[doc(hidden)]
 pub use struct_patch_derive::Filler;
 #[doc(hidden)]
 pub use struct_patch_derive::Patch;
-#[cfg(any(feature = "box", feature = "option"))]
-pub mod std;
+pub mod r#box;
+pub mod option;
 pub mod traits;
 pub use traits::*;
 
