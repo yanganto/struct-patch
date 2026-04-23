@@ -24,15 +24,28 @@
         '';
         updateDependencyScript = pkgs.writeShellScriptBin "update-dependency" ''
           dr ./Cargo.toml
-          if [ -f "Cargo.toml.old" ]; then
-            rm Cargo.toml.old
+
+          cd no-std-examples
+          dr ./Cargo.toml
+
+          if [[ -f "Cargo.toml.old" || -f "no-std-examples/Cargo.toml.old" ]]; then
+            rm -f Cargo.toml.old
+            rm -f no-std-examples/Cargo.toml.old
             exit 1
           fi
         '';
       in
       with pkgs;
       {
-        devShells = {
+        devShells = let
+          noStdRust = rust-bin.stable.latest.default.override {
+            targets = [
+              "thumbv7m-none-eabi"
+            ];
+            extensions = [ "rust-src" "llvm-tools-preview" ];
+          };
+        in
+        {
           default = mkShell {
             buildInputs = [
               rust-bin.stable.latest.minimal
@@ -50,6 +63,13 @@
               dr
               publishScript
               updateDependencyScript
+            ];
+          };
+
+          no-std = mkShell {
+            buildInputs = [
+              noStdRust 
+              qemu
             ];
           };
         };

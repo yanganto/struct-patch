@@ -3,9 +3,8 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
 use std::str::FromStr;
 use syn::{
-    Lit,
-    meta::ParseNestedMeta, parenthesized, spanned::Spanned, DeriveInput, Error, LitStr, Result,
-    Type,
+    meta::ParseNestedMeta, parenthesized, spanned::Spanned, DeriveInput, Error, Lit, LitStr,
+    Result, Type,
 };
 
 #[cfg(feature = "op")]
@@ -148,13 +147,13 @@ impl Patch {
         #[cfg(not(feature = "nesting"))]
         let original_field_name_empty_values = fields
             .iter()
-            .filter(|f| !f.retyped )
+            .filter(|f| !f.retyped)
             .filter_map(|f| f.empty_value.as_ref())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let original_field_name_empty_values = fields
             .iter()
-            .filter(|f| !f.retyped && !f.nesting )
+            .filter(|f| !f.retyped && !f.nesting)
             .filter_map(|f| f.empty_value.as_ref())
             .collect::<Vec<_>>();
 
@@ -824,11 +823,12 @@ impl Field {
                     EMPTY_VALUE => {
                         // #[patch(empty_value = ...)]
                         if empty_value.is_some() {
-                            return Err(meta
-                                .error("The empty value is already set, we can't defined more than once"));
+                            return Err(meta.error(
+                                "The empty value is already set, we can't defined more than once",
+                            ));
                         }
                         if let Some(lit) = crate::get_lit(path, &meta)? {
-                           empty_value= Some(lit);
+                            empty_value = Some(lit);
                         } else {
                             return Err(meta
                                 .error("empty_value needs a clear value to define what is empty"));

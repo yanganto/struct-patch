@@ -28,6 +28,7 @@ jobs:
           nix develop .#ci -c cargo run --no-default-features --example time
           nix develop .#ci -c cargo run --no-default-features --example clap
           nix develop .#ci -c cargo run --no-default-features --features=nesting --example nesting
+          nix develop .#ci -c cargo run --no-default-features --features=option --example option
           nix develop .#ci -c cargo test --no-default-features
 
       - name: Test with std features
@@ -66,3 +67,9 @@ jobs:
           nix develop .#ci -c cargo run --features=nesting --example nesting
           nix develop .#ci -c cargo run --features=nesting --example clap
           nix develop .#ci -c cargo test
+
+      - name: Test in no std
+        run: |
+          cd no-std-examples
+          nix develop .#no-std -c cargo run --features=box --bin no-std-box
+          nix develop .#no-std -c cargo run --features=option --bin no-std-option
