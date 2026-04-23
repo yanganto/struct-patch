@@ -8,7 +8,7 @@ exclude = [ "no-std-examples" ]
 
 [workspace.package]
 authors = ["Antonio Yang <yanganto@gmail.com>"]
-version = "0.10.5"
+version = "0.11.0"
 edition = "2021"
 categories = ["development-tools"]
 keywords = ["struct", "patch", "macro", "derive", "overlay"]
