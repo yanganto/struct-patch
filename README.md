@@ -9,7 +9,9 @@ A lib help you patch Rust instance, and easy to partial update configures.
 This crate provides the `Patch`, `Filler` traits and accompanying derive macro.
 If the any field in `Patch` is some then it will overwrite the field of instance when apply.
 If the any field in the instance is none then it will try to fill the field with the `Filler`.
-Currently, `Filler` only support `Option` and `Vec` fields, and also you can check this [template](https://github.com/yanganto/ConfigTemplate) if you already work on a big project with a lot of configs.
+Currently, `Filler` only support `Option` and `Vec` fields, and also you can check this [template](https://github.com/yanganto/ConfigTemplate)
+if you already work on a big project with a lot of configs.
+This crate support `no_std`, please check [no-std-examples](./no-std-examples).
 
 ## Quick Example
 Deriving `Patch` on a struct will generate a struct similar to the original one, but with all fields wrapped in an `Option`.  
