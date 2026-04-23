@@ -491,7 +491,7 @@ mod tests {
             b: B,
         }
 
-        let patches = vec![
+        let patches = alloc::vec![
             APatch {
                 a: Some(1),
                 b: Some(BPatch {
