@@ -10,7 +10,7 @@ struct-patch = { path = "../lib" }
 linked_list_allocator = "0.10"
 cortex-m-rt = "0.7"
 cortex-m-semihosting = "0.5"
-panic-semihosting = "0.5"
+panic-semihosting = "0.6"
 
 [features]
 default = []

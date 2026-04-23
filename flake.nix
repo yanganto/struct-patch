@@ -24,8 +24,13 @@
         '';
         updateDependencyScript = pkgs.writeShellScriptBin "update-dependency" ''
           dr ./Cargo.toml
-          if [ -f "Cargo.toml.old" ]; then
-            rm Cargo.toml.old
+
+          cd no-std-examples
+          dr ./Cargo.toml
+
+          if [[ -f "Cargo.toml.old" || -f "no-std-examples/Cargo.toml.old" ]]; then
+            rm -f Cargo.toml.old
+            rm -f no-std-examples/Cargo.toml.old
             exit 1
           fi
         '';
