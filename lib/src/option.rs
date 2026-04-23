@@ -140,8 +140,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    extern crate alloc;
     use crate as struct_patch;
     use crate::Patch;
+    use alloc::string::String;
 
     #[test]
     fn test_patch_option() {

@@ -1,13 +1,8 @@
 #![cfg(feature = "box")]
 use crate::Patch;
 
-#[cfg(not(feature = "std"))]
 extern crate alloc;
-#[cfg(not(feature = "std"))]
 use alloc::boxed::Box;
-
-#[cfg(feature = "std")]
-use std::boxed::Box;
 
 impl<T, P> Patch<Box<P>> for T
 where
@@ -35,6 +30,7 @@ mod tests {
     use super::*;
     use crate as struct_patch;
     use crate::Patch;
+    use alloc::string::String;
 
     #[test]
     fn test_patch_box_simple() {

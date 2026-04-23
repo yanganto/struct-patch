@@ -34,8 +34,9 @@ merge = [
     "struct-patch-derive/merge"
 ]
 
+alloc = []
 std = ["box", "option"]
-box = []
+box = ["alloc"]
 option = []
 nesting = [
     "struct-patch-derive/nesting"
