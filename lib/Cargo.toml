@@ -21,6 +21,7 @@ serde_with = "3.9.0"
 toml = "0.9"
 humantime-serde = "1.1.1"
 clap = { version = "4.4.7", features = ["derive"] }
+linear-map = "1.2.0"
 
 [features]
 default = ["status", "op"]
