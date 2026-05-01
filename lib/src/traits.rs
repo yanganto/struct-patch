@@ -111,3 +111,8 @@ pub trait Status {
 pub trait Merge {
     fn merge(self, other: Self) -> Self;
 }
+
+/// A substrate struct that can expose the fields information thereof
+pub trait Substrate {
+    fn expose() -> &'static str;
+}

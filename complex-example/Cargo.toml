@@ -1,13 +1,10 @@
 [workspace]
 resolver = "2"
 members = [
-    "lib",
-    "derive",
+    "substrate",
 ]
-exclude = [
-    "no-std-examples",
-    "complex-example",
-]
+[workspace.dependencies]
+struct-patch = { path = "../lib", features = ["catalyst"] }
 
 [workspace.package]
 authors = ["Antonio Yang <yanganto@gmail.com>"]

@@ -82,6 +82,9 @@ extern crate alloc;
 pub use struct_patch_derive::Filler;
 #[doc(hidden)]
 pub use struct_patch_derive::Patch;
+#[cfg(feature = "catalyst")]
+#[doc(hidden)]
+pub use struct_patch_derive::Substrate;
 pub mod r#box;
 pub mod option;
 pub mod traits;

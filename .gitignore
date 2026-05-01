@@ -4,3 +4,4 @@ Cargo.lock
 .direnv/
 struct-patch/examples
 no-std-examples/target
+complex-example/target

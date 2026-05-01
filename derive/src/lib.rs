@@ -1,9 +1,13 @@
 extern crate proc_macro;
 mod filler;
 mod patch;
+#[cfg(feature = "catalyst")]
+mod substrate;
 
 use filler::Filler;
 use patch::Patch;
+#[cfg(feature = "catalyst")]
+use substrate::Substrate;
 
 use syn::meta::ParseNestedMeta;
 use syn::spanned::Spanned;
@@ -28,6 +32,16 @@ pub fn derive_patch(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
 #[proc_macro_derive(Filler, attributes(filler))]
 pub fn derive_filler(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     Filler::from_ast(syn::parse_macro_input!(item as syn::DeriveInput))
+        .unwrap()
+        .to_token_stream()
+        .unwrap()
+        .into()
+}
+
+#[cfg(feature = "catalyst")]
+#[proc_macro_derive(Substrate, attributes(substrate))]
+pub fn derive_substrate(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    Substrate::from_ast(syn::parse_macro_input!(item as syn::DeriveInput))
         .unwrap()
         .to_token_stream()
         .unwrap()
