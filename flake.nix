@@ -26,6 +26,7 @@
           cd $(git rev-parse --show-toplevel 2>/dev/null)
           cd complex-example
           cargo test -p substrate
+          cargo test -p catalyst
         '';
         updateDependencyScript = pkgs.writeShellScriptBin "update-dependency" ''
           dr ./Cargo.toml

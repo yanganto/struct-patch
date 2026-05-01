@@ -21,12 +21,12 @@ impl Substrate {
         Ok(quote! {
             impl struct_patch::traits::Substrate for #struct_name   {
                 fn expose() -> &'static str {
-                    stringify!(#active_site)            
+                    stringify!(#active_site)
                 }
             }
         })
     }
-    /// Parse the filler struct
+    /// Parse the substrate struct
     pub fn from_ast(DeriveInput { ident, data, .. }: syn::DeriveInput) -> Result<Substrate> {
         let fields = if let syn::Data::Struct(syn::DataStruct { fields, .. }) = data {
             fields

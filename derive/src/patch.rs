@@ -592,7 +592,7 @@ impl Patch {
                 match path.as_str() {
                     NAME => {
                         // #[patch(name = "PatchStruct")]
-                        if let Some(lit) = get_lit_str(path, &meta)? {
+                        if let Some(lit) = crate::get_lit_str(path, &meta)? {
                             if name.is_some() {
                                 return Err(meta
                                     .error("The name attribute can't be defined more than once"));
@@ -869,36 +869,6 @@ trait ToStr {
 impl ToStr for syn::Path {
     fn to_string(&self) -> String {
         self.to_token_stream().to_string()
-    }
-}
-
-fn get_lit_str(attr_name: String, meta: &ParseNestedMeta) -> syn::Result<Option<syn::LitStr>> {
-    let expr: syn::Expr = meta.value()?.parse()?;
-    let mut value = &expr;
-    while let syn::Expr::Group(e) = value {
-        value = &e.expr;
-    }
-    if let syn::Expr::Lit(syn::ExprLit {
-        lit: syn::Lit::Str(lit),
-        ..
-    }) = value
-    {
-        let suffix = lit.suffix();
-        if !suffix.is_empty() {
-            return Err(Error::new(
-                lit.span(),
-                format!("unexpected suffix `{}` on string literal", suffix),
-            ));
-        }
-        Ok(Some(lit.clone()))
-    } else {
-        Err(Error::new(
-            expr.span(),
-            format!(
-                "expected serde {} attribute to be a string: `{} = \"...\"`",
-                attr_name, attr_name
-            ),
-        ))
     }
 }
 

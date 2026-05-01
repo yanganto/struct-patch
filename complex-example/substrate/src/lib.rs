@@ -1,7 +1,7 @@
 use struct_patch::Substrate;
 
 #[derive(Substrate)]
-struct Base {
+pub struct Base {
     field_bool: bool,
     field_string: String,
     field_option: Option<usize>,
