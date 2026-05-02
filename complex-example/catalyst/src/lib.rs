@@ -17,6 +17,10 @@ mod tests {
 
     #[test]
     fn complex_works() {
-        let complex = AmyloidComplex { };
+        let complex = AmyloidComplex { 
+            extra_bool: false,
+            extra_string: String::new(),
+            extra_option: None,
+        };
     }
 }

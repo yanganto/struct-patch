@@ -18,6 +18,11 @@ pub(crate) struct Catalyst {
     bind: String,
 }
 
+struct Field {
+    ident: Option<Ident>,
+    ty: Type,
+}
+
 const CATALYST: &str = "patch";
 const COMPLEX: &str = "complex";
 const BIND: &str = "bind";
@@ -33,11 +38,22 @@ impl Catalyst {
             complex_struct_name,
             generics,
             attributes,
-            fields: _fields,
+            fields,
             bind: _bind,
         } = self;
 
-        // let active_site = json::to_string(fields);
+        let mut complex_fields: Vec<Field> = Vec::new();
+
+        // TODO: get fields from substrate
+        // let active_site = json::load(fields);
+
+        for field in fields.into_iter() {
+            complex_fields.push(Field::from_ast(field.clone()));
+        }
+        let complex_fields = complex_fields
+            .iter()
+            .map(|f| f.to_token_stream())
+            .collect::<Result<Vec<_>>>()?;
 
         let mapped_attributes = attributes
             .iter()
@@ -51,6 +67,7 @@ impl Catalyst {
         Ok(quote! {
             #(#mapped_attributes)*
             #visibility struct #complex_struct_name #generics {
+                #(#complex_fields)*
             }
         })
     }
@@ -138,6 +155,28 @@ impl Catalyst {
             fields,
             bind,
         })
+    }
+}
+
+impl Field {
+    /// Generate the token stream for the Complex struct fields
+    pub fn to_token_stream(&self) -> Result<TokenStream> {
+        let Field { ident, ty } = self;
+        let attributes: Vec<TokenStream> = Vec::new();
+
+        Ok(quote! {
+            #(#attributes)*
+            pub #ident: #ty,
+        })
+    }
+
+    /// Parse the Catalyst struct field
+    pub fn from_ast(
+        syn::Field {
+            ident, ty, attrs, ..
+        }: syn::Field,
+    ) -> Field {
+        Field { ident, ty }
     }
 }
 
