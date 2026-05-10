@@ -53,7 +53,7 @@ pub fn derive_substrate(item: proc_macro::TokenStream) -> proc_macro::TokenStrea
 }
 
 #[cfg(feature = "catalyst")]
-#[proc_macro_derive(Catalyst, attributes(catalyst))]
+#[proc_macro_derive(Catalyst, attributes(catalyst, complex))]
 pub fn derive_catalyst(item: proc_macro::TokenStream) -> proc_macro::TokenStream {
     Catalyst::from_ast(syn::parse_macro_input!(item as syn::DeriveInput))
         .unwrap()

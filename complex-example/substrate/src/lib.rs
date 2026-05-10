@@ -1,3 +1,4 @@
+#![allow(unused)]
 use struct_patch::Substrate;
 
 #[derive(Substrate)]
