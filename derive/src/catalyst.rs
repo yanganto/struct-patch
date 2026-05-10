@@ -23,7 +23,7 @@ struct Field {
     ty: Type,
 }
 
-const CATALYST: &str = "patch";
+const CATALYST: &str = "catalyst";
 const COMPLEX: &str = "complex";
 const BIND: &str = "bind";
 const NAME: &str = "name";
@@ -39,15 +39,13 @@ impl Catalyst {
             generics,
             attributes,
             fields,
-            bind: _bind,
+            bind,
         } = self;
 
         let mut complex_fields: Vec<Field> = Vec::new();
 
-        // TODO: get fields from substrate
-        let substrate_fields: syn::Fields = syn_serde::json::from_str(
-            r#"{"named":[{"ident":"field_bool","colon_token":true,"ty":{"path":{"segments":[{"ident":"bool"}]}}},{"ident":"field_string","colon_token":true,"ty":{"path":{"segments":[{"ident":"String"}]}}},{"ident":"field_option","colon_token":true,"ty":{"path":{"segments":[{"ident":"Option","arguments":{"angle_bracketed":{"args":[{"type":{"path":{"segments":[{"ident":"usize"}]}}}]}}}]}}}]}"#
-        ).unwrap();
+        let substrate_str = std::env::var(bind).expect("not found");
+        let substrate_fields: syn::Fields = syn_serde::json::from_str(&substrate_str).unwrap();
 
         for field in substrate_fields.into_iter() {
             complex_fields.push(Field::from_ast(field.clone()));
@@ -101,13 +99,8 @@ impl Catalyst {
         let mut bind = String::new();
 
         for attr in attrs {
-            // TODO
-            // Fix not cross
-            // O complex(name = ..);  X catalyst(name = ..)
-            // O catalyst(bind = ..); X complex(bind = ..)
-            if attr.path().to_string().as_str() != CATALYST
-                || attr.path().to_string().as_str() != COMPLEX
-            {
+            let attr_str = attr.path().to_string();
+            if attr_str != CATALYST && attr_str != COMPLEX {
                 continue;
             }
 
@@ -120,7 +113,8 @@ impl Catalyst {
             attr.parse_nested_meta(|meta| {
                 let path = meta.path.to_string();
                 match path.as_str() {
-                    NAME => {
+                    NAME if attr_str == COMPLEX => {
+                        // #[complex(name = "PatchStruct")]
                         if let Some(lit) = crate::get_lit_str(path, &meta)? {
                             if name.is_some() {
                                 return Err(meta
@@ -129,24 +123,34 @@ impl Catalyst {
                             name = Some(lit.parse()?);
                         }
                     }
-                    ATTRIBUTE => {
+                    ATTRIBUTE if attr_str == COMPLEX => {
+                        // #[complex(attribute(derive(Deserialize)))]
                         let content;
                         parenthesized!(content in meta.input);
                         let attribute: TokenStream = content.parse()?;
                         attributes.push(attribute);
                     }
-                    BIND => {
-                        // TODO
+                    BIND if attr_str == CATALYST => {
+                        // #[catalyst(bind = SubstrateStruct)]
+                        if let Some(lit) = get_struct(path, &meta)? {
+                            if bind.is_empty() {
+                                bind = lit;
+                            }
+                        }
                     }
                     _ => {
                         return Err(meta.error(format_args!(
-                            "unknown catalyst container attribute `{}`",
+                            "unknown complex attribute `{}`",
                             path.replace(' ', "")
                         )));
                     }
                 }
                 Ok(())
             })?;
+        }
+
+        if bind.is_empty() {
+            return Err(syn::Error::new(ident.span(), "No substrate for Catalyst"));
         }
 
         Ok(Catalyst {
@@ -194,5 +198,18 @@ trait ToStr {
 impl ToStr for syn::Path {
     fn to_string(&self) -> String {
         self.to_token_stream().to_string()
+    }
+}
+
+fn get_struct(attr_name: String, meta: &ParseNestedMeta) -> syn::Result<Option<String>> {
+    let expr: syn::Expr = meta.value()?.parse()?;
+    let mut value = &expr;
+    while let syn::Expr::Group(e) = value {
+        value = &e.expr;
+    }
+    if let syn::Expr::Path(syn::ExprPath { path, .. }) = value {
+        Ok(path.segments.last().map(|seg| seg.ident.to_string()))
+    } else {
+        Ok(None)
     }
 }

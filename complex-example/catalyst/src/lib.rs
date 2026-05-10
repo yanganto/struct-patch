@@ -1,8 +1,7 @@
 use struct_patch::Catalyst;
-use substrate::Base;
 
 #[derive(Catalyst)]
-// #[catalyst(bind = Base)]
+#[catalyst(bind = substrate::Base)]
 // #[complex(name = Complex)]
 // #[complex(attribute(derive(Default)))]
 struct Amyloid {
@@ -17,7 +16,7 @@ mod tests {
 
     #[test]
     fn complex_works() {
-        let complex = AmyloidComplex { 
+        let _complex = AmyloidComplex {
             field_bool: false,
             field_string: String::new(),
             field_option: None,

@@ -114,5 +114,6 @@ pub trait Merge {
 
 /// A substrate struct that can expose the fields information thereof
 pub trait Substrate {
-    fn expose() -> &'static str;
+    fn expose_content() -> &'static str;
+    fn expose();
 }

@@ -14,3 +14,7 @@ rust-version.workspace = true
 [dependencies]
 struct-patch.workspace = true
 substrate = { path = "../substrate" }
+
+[build-dependencies]
+struct-patch.workspace = true
+substrate = { path = "../substrate" }

@@ -20,8 +20,11 @@ impl Substrate {
 
         Ok(quote! {
             impl struct_patch::traits::Substrate for #struct_name   {
-                fn expose() -> &'static str {
+                fn expose_content() -> &'static str {
                     #active_site
+                }
+                fn expose() {
+                    println!("cargo:rustc-env={}={}", stringify!(#struct_name), Self::expose_content());
                 }
             }
         })
