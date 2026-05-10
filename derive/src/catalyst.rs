@@ -2,15 +2,10 @@ extern crate proc_macro;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
 use std::str::FromStr;
-use syn::{
-    meta::ParseNestedMeta, parenthesized, spanned::Spanned, DeriveInput, Error, Lit, LitStr,
-    Result, Type,
-};
-use syn_serde::json;
+use syn::{meta::ParseNestedMeta, parenthesized, DeriveInput, LitStr, Result, Type};
 
 pub(crate) struct Catalyst {
     visibility: syn::Visibility,
-    struct_name: Ident,
     complex_struct_name: Ident,
     generics: syn::Generics,
     attributes: Vec<TokenStream>,
@@ -34,7 +29,6 @@ impl Catalyst {
     pub fn to_token_stream(&self) -> Result<TokenStream> {
         let Catalyst {
             visibility,
-            struct_name,
             complex_struct_name,
             generics,
             attributes,
@@ -132,7 +126,7 @@ impl Catalyst {
                     }
                     BIND if attr_str == CATALYST => {
                         // #[catalyst(bind = SubstrateStruct)]
-                        if let Some(lit) = get_struct(path, &meta)? {
+                        if let Some(lit) = get_struct(&meta)? {
                             if bind.is_empty() {
                                 bind = lit;
                             }
@@ -160,7 +154,6 @@ impl Catalyst {
                 let lit = LitStr::new(&ts.to_string(), Span::call_site());
                 lit.parse()?
             }),
-            struct_name: ident,
             generics,
             attributes,
             fields,
@@ -182,11 +175,7 @@ impl Field {
     }
 
     /// Parse the Catalyst struct field
-    pub fn from_ast(
-        syn::Field {
-            ident, ty, attrs, ..
-        }: syn::Field,
-    ) -> Field {
+    pub fn from_ast(syn::Field { ident, ty, .. }: syn::Field) -> Field {
         Field { ident, ty }
     }
 }
@@ -201,7 +190,7 @@ impl ToStr for syn::Path {
     }
 }
 
-fn get_struct(attr_name: String, meta: &ParseNestedMeta) -> syn::Result<Option<String>> {
+fn get_struct(meta: &ParseNestedMeta) -> syn::Result<Option<String>> {
     let expr: syn::Expr = meta.value()?.parse()?;
     let mut value = &expr;
     while let syn::Expr::Group(e) = value {
