@@ -45,11 +45,18 @@ impl Catalyst {
         let mut complex_fields: Vec<Field> = Vec::new();
 
         // TODO: get fields from substrate
-        // let active_site = json::load(fields);
+        let substrate_fields: syn::Fields = syn_serde::json::from_str(
+            r#"{"named":[{"ident":"field_bool","colon_token":true,"ty":{"path":{"segments":[{"ident":"bool"}]}}},{"ident":"field_string","colon_token":true,"ty":{"path":{"segments":[{"ident":"String"}]}}},{"ident":"field_option","colon_token":true,"ty":{"path":{"segments":[{"ident":"Option","arguments":{"angle_bracketed":{"args":[{"type":{"path":{"segments":[{"ident":"usize"}]}}}]}}}]}}}]}"#
+        ).unwrap();
 
-        for field in fields.into_iter() {
+        for field in substrate_fields.into_iter() {
             complex_fields.push(Field::from_ast(field.clone()));
         }
+
+        for field in fields.iter() {
+            complex_fields.push(Field::from_ast(field.clone()));
+        }
+
         let complex_fields = complex_fields
             .iter()
             .map(|f| f.to_token_stream())

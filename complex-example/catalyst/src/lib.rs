@@ -18,6 +18,9 @@ mod tests {
     #[test]
     fn complex_works() {
         let complex = AmyloidComplex { 
+            field_bool: false,
+            field_string: String::new(),
+            field_option: None,
             extra_bool: false,
             extra_string: String::new(),
             extra_option: None,
