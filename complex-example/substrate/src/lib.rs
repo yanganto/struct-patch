@@ -14,6 +14,9 @@ mod tests {
     #[test]
     fn expose_works() {
         assert_eq!(Base::expose(), 
-            r#""{\"named\":[{\"ident\":\"field_bool\",\"colon_token\":true,\"ty\":{\"path\":{\"segments\":[{\"ident\":\"bool\"}]}}},{\"ident\":\"field_string\",\"colon_token\":true,\"ty\":{\"path\":{\"segments\":[{\"ident\":\"String\"}]}}},{\"ident\":\"field_option\",\"colon_token\":true,\"ty\":{\"path\":{\"segments\":[{\"ident\":\"Option\",\"arguments\":{\"angle_bracketed\":{\"args\":[{\"type\":{\"path\":{\"segments\":[{\"ident\":\"usize\"}]}}}]}}}]}}}]}""#);
+            r#"{"named":[{"ident":"field_bool","colon_token":true,"ty":{"path":{"segments":[{"ident":"bool"}]}}},{"ident":"field_string","colon_token":true,"ty":{"path":{"segments":[{"ident":"String"}]}}},{"ident":"field_option","colon_token":true,"ty":{"path":{"segments":[{"ident":"Option","arguments":{"angle_bracketed":{"args":[{"type":{"path":{"segments":[{"ident":"usize"}]}}}]}}}]}}}]}"#
+            );
+
+        let _fields: syn::Fields = syn_serde::json::from_str(&Base::expose()).unwrap();
     }
 }

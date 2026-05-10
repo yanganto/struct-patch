@@ -21,7 +21,7 @@ impl Substrate {
         Ok(quote! {
             impl struct_patch::traits::Substrate for #struct_name   {
                 fn expose() -> &'static str {
-                    stringify!(#active_site)
+                    #active_site
                 }
             }
         })

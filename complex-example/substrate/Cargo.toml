@@ -13,3 +13,7 @@ rust-version.workspace = true
 
 [dependencies]
 struct-patch.workspace = true
+
+[dev-dependencies]
+syn = { version =  "2", features = ["full"] }
+syn-serde = { version = "0.3.2", features = ["json"] }
