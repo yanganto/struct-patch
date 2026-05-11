@@ -3,7 +3,10 @@
 [![MIT licensed][mit-badge]][mit-url]
 [![Docs][doc-badge]][doc-url]
 
-A lib help you patch Rust instance, and easy to partial update configures.
+A lib help you modify the config struct, you can
+- patch an instance, and easy to partial update with `Patch` derive macro
+- fill up an instance with `Filler` derive macro
+- extend with extra fields with `Substrate` and `Catalyst` derive macros
 
 ## Introduction
 This crate provides the `Patch`, `Filler` traits and accompanying derive macro.
@@ -12,6 +15,7 @@ If the any field in the instance is none then it will try to fill the field with
 Currently, `Filler` only support `Option` and `Vec` fields, and also you can check this [template](https://github.com/yanganto/ConfigTemplate)
 if you already work on a big project with a lot of configs.
 This crate support `no_std`, please check [no-std-examples](./no-std-examples).
+When extending a config, the substrate struct should be expose in the build script, please check [complex-example](./complex-example)
 
 ## Quick Example
 Deriving `Patch` on a struct will generate a struct similar to the original one, but with all fields wrapped in an `Option`.  
@@ -99,13 +103,54 @@ assert_eq!(item.maybe_field_int, Some(7));
 assert_eq!(item.list, vec![7]);
 ``` 
 
+Deriving `Substrate` on a struct will help you expose the field information, and you can easy to expose in build.rs of other crate.
+Deriving `Catalyst` on can read the field information of Substrate and generate a new Complex struct.
+The overall behavior likes biological catalysts, a catalyst bind on a substrate to form a complex struct, which has all fields from substrate and catalyst.
+
+```rust
+/// In $dependency-crate/src/lib.rs
+use struct_patch::Substrate;
+#[derive(Substrate)]
+pub struct Base {
+    field_bool: bool,
+    field_string: String,
+}
+
+/// In $main-crate/src/build.rs
+use struct_patch::Substrate;
+
+fn main() {
+    substrate::Base::expose();
+}
+
+/// In $main-crate/src/lib.rs
+use struct_patch::Catalyst;
+
+#[derive(Catalyst)]
+#[catalyst(bind = substrate::Base)]
+struct Amyloid {
+    extra_bool: bool,
+    extra_option: Option<usize>,
+}
+// Now AmyloidComplex is generated
+// struct AmyloidComplex {
+//    field_bool: bool,
+//    field_string: String,
+//    extra_bool: bool,
+//    extra_option: Option<usize>,
+//}
+``` 
+
 ## Documentation and Examples
-Also, you can modify the patch structure by defining `#[patch(...)]` or `#[filler(...)]` attributes on the original struct or fields.
+Also, you can modify the patch structure by defining `#[patch(...)]`, `#[filler(...)]` or `#[complex(...)]`, `#[catalyst(...)]`  attributes on the original struct or fields.
 
 Struct attributes:
 - `#[patch(name = "...")]`: change the name of the generated patch struct.
 - `#[patch(attribute(...))]`: add attributes to the generated patch struct.
 - `#[patch(attribute(derive(...)))]`: add derives to the generated patch struct.
+- `#[catalyst(bind = "...")]`: decide the base structure. (catalyst feature)
+- `#[complex(name = "...")]`: change the name of the generated complex struct.  (catalyst feature)
+- `#[complex(attribute(...))]`: add attributes to the generated complex struct.  (catalyst feature)
 
 Field attributes: 
 - `#[patch(skip)]`: skip the field in the generated patch struct.
