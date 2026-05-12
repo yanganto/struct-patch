@@ -19,26 +19,33 @@ struct SmallAmyloid {
     pub extra_bool: bool,
 }
 
+#[allow(dead_code)]
+impl SmallCpx {
+    /// A reaction to change the substrate
+    pub fn reaction(&mut self) {
+        self.field_bool = true;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use struct_patch::Complex;
 
     #[test]
     fn complex_works() {
-        let small_complex = SmallCpx::default();
+        let mut small_complex = SmallCpx::default();
         assert_eq!(small_complex.field_bool, false);
         assert_eq!(small_complex.field_string, String::new());
         assert_eq!(small_complex.field_option, None);
         assert_eq!(small_complex.extra_bool, false);
 
-        use struct_patch::Complex;
-        let (_cat, mut substrate) = small_complex.decouple();
+        small_complex.reaction();
 
-        substrate.field_bool = true;
+        let (_cat, substrate) = small_complex.decouple();
         assert!(substrate.has_bool());
 
         let amyloid = Amyloid::default();
-
         let complex = amyloid.bind(substrate);
         assert_eq!(complex.field_bool, true);
     }

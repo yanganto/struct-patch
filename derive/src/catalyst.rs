@@ -48,7 +48,7 @@ impl Catalyst {
         let mut substrate_fields: Vec<Field> = Vec::new();
         let mut catalyst_fields: Vec<Field> = Vec::new();
 
-        let substrate_str = std::env::var(bind).expect("not found");
+        let substrate_str = std::env::var(bind).expect("field information of substrate is absent, please expose it in build.rs");
         let raw_substrate_fields: syn::Fields = syn_serde::json::from_str(&substrate_str).unwrap();
 
         for field in raw_substrate_fields.into_iter() {
@@ -196,7 +196,7 @@ impl Catalyst {
                     }
                     _ => {
                         return Err(meta.error(format_args!(
-                            "unknown complex attribute `{}`",
+                            "unknown catalyst/complex attribute `{}`",
                             path.replace(' ', "")
                         )));
                     }
@@ -206,7 +206,7 @@ impl Catalyst {
         }
 
         if bind.is_empty() {
-            return Err(syn::Error::new(ident.span(), "No substrate for Catalyst"));
+            return Err(syn::Error::new(ident.span(), "No substrate for Catalyst, please specify with #[catalyst(bind = ...)]"));
         }
         let complex_struct_name = name.unwrap_or({
             let ts = TokenStream::from_str(&format!("{}Complex", &ident,)).unwrap();
