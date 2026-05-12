@@ -75,4 +75,4 @@ jobs:
           nix develop .#no-std -c cargo run --features=option --bin no-std-option
 
       - name: Test with catalyst
-          nix develop .#ci -c check-catalyst
+        run: nix develop .#ci -c check-catalyst
