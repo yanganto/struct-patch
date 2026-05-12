@@ -3,20 +3,25 @@
 [![MIT licensed][mit-badge]][mit-url]
 [![Docs][doc-badge]][doc-url]
 
-A lib help you modify the config struct, you can
-- patch an instance, and easy to partial update with `Patch` derive macro
-- fill up an instance with `Filler` derive macro
-- extend with extra fields with `Substrate` and `Catalyst` derive macros
+A library to help you modify config structs. It provides:
+
+- `Patch` derive macro for partial updates
+- `Filler` derive macro to fill empty fields
+- `Substrate` and `Catalyst` derive macros to extend with extra fields
 
 ## Introduction
-This crate provides the `Patch`, `Filler` traits and accompanying derive macro.
-If the any field in `Patch` is some then it will overwrite the field of instance when apply.
-If the any field in the instance is none then it will try to fill the field with the `Filler`.
-Currently, `Filler` only support `Option` and `Vec` fields, and also you can check this [template](https://github.com/yanganto/ConfigTemplate)
-if you already work on a big project with a lot of configs.
-This crate support `no_std`, please check [no-std-examples](./no-std-examples).
-When extending a config, the base struct should be expose in the build script with `Substrate` trait, then a catalyst struct can bind and produce complex struct,
-please check [complex-example](./complex-example) and the [Quick Example: case 3](#case-3---extend-a-struct-from-a-crate).
+
+This crate provides the `Patch`, `Filler`, `Substrate`, `Catalyst` and `Complex` traits with accompanying derive macros in following 3 using cases.
+
+- If any field in `Patch` is `Some`, it will overwrite the corresponding field when applied.
+- If any field in the instance is `None`, `Filler` will try to fill it, only supports `Option` and `Vec` fields.
+- With `catalyst` feature, `Substrate`, `Catalyst` and `Complex` traits with accompanying derive macros help you extend struct with extra fields.
+
+This crate supports `no_std` — check the [no-std-examples](./no-std-examples).
+
+Following are more specific case, help you to learn the details.
+- A project with config from environments, files, command line, you can easy to use `Patch` make your config organized.  Please check this [template](https://github.com/yanganto/ConfigTemplate).
+- A project extended from another project, and only some fields of config are different.  We can use `catalyst` feature to expose the base struct in the build script with `Substrate`, then a `Catalyst` struct can bind to it and produce a complex struct. Check the [complex-example](./complex-example) and [Quick Example: case 3](#case-3---extend-a-struct-from-a-crate).
 
 ## Quick Example
 #### Case 1 - Patch on a Config
@@ -111,7 +116,7 @@ Deriving `Substrate` on a struct will help you expose the field information, and
 Deriving `Catalyst` on can read the field information of Substrate and generate a new Complex struct.
 All the fields in substrate and catalyst need be public, and the fields in complex are also public.
 The overall behavior likes chemical catalysts, a catalyst **bind** on a substrate to form a complex struct, which has all fields from substrate and catalyst.
-Also, a complex can **decouple** and return a catalyst and substrate, please check [complex-example](./complex-example/catalyst/src/lib.rs).
+Also, a complex can **decouple** and return a catalyst and substrate. Check the [complex-example](./complex-example/catalyst/src/lib.rs).
 
 ```rust
 /// In $dependency_crate/src/lib.rs
@@ -148,7 +153,7 @@ struct Amyloid {
 ``` 
 
 ## Documentation and Examples
-Also, you can modify the patch structure by defining `#[patch(...)]`, `#[filler(...)]` or `#[complex(...)]`, `#[catalyst(...)]`  attributes on the original struct or fields.
+You can modify the patch structure by defining `#[patch(...)]`, `#[filler(...)]` or `#[complex(...)]`, `#[catalyst(...)]`  attributes on the original struct or fields.
 
 Struct attributes:
 - `#[patch(name = "...")]`: change the name of the generated patch struct.
@@ -164,13 +169,13 @@ Field attributes:
 - `#[patch(attribute(...))]`: add attributes to the field in the generated patch struct.
 - `#[patch(attribute(derive(...)))]`: add derives to the field in the generated patch struct.
 - `#[patch(empty_value = ...)]`: define a value as empty, so the corresponding field of patch will not wrapped by Option, and apply patch when the field is empty.
-- `#[filler(extendable)]`: use the struct of field for filler, the struct needs implement `Default`, `Extend`, `IntoIterator` and `is_empty`.
+- `#[filler(extendable)]`: use the field of the struct for filler, the struct needs implement `Default`, `Extend`, `IntoIterator` and `is_empty`.
 - `#[filler(empty_value = ...)]`: define a value as empty, so the corresponding field of Filler will be applied, even the field is not `Option` or `Extendable`.
 
 Please check the [traits][doc-traits] of document to learn more.
 
 The [examples][examples] demo following scenarios.
-- diff two instance for a patch
+- diff two instances for a patch
 - create a patch from json string
 - rename the patch structure
 - check a patch is empty or not
@@ -203,4 +208,4 @@ This crate also includes the following optional features:
 [doc-badge]: https://img.shields.io/badge/docs-rs-orange.svg
 [doc-url]: https://docs.rs/struct-patch/
 [doc-traits]: https://docs.rs/struct-patch/latest/struct_patch/traits/trait.Patch.html#container-attributes
-[examples]: /struct-patch/examples
+[examples]: /lib/examples
