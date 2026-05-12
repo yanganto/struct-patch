@@ -9,7 +9,7 @@ pub struct Base {
 }
 
 impl Base {
-    fn has_bool(&self) -> bool {
+    pub fn has_bool(&self) -> bool {
         self.field_bool
     }
 }

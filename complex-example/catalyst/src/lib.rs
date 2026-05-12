@@ -1,7 +1,7 @@
 use struct_patch::Catalyst;
 use substrate::Base;
 
-#[derive(Catalyst)]
+#[derive(Default, Catalyst)]
 #[catalyst(bind = Base)]
 #[allow(dead_code)]
 struct Amyloid {
@@ -10,7 +10,7 @@ struct Amyloid {
     pub extra_option: Option<usize>,
 }
 
-#[derive(Default, Catalyst)]
+#[derive(Catalyst)]
 #[catalyst(bind = Base)]
 #[complex(name = "SmallCpx")]
 #[allow(dead_code)]
@@ -35,14 +35,11 @@ mod tests {
         let (_cat, mut substrate) = small_complex.decouple();
 
         substrate.field_bool = true;
+        assert!(substrate.has_bool());
 
-        let _complex = AmyloidComplex {
-            field_bool: false,
-            field_string: String::new(),
-            field_option: None,
-            extra_bool: false,
-            extra_string: String::new(),
-            extra_option: None,
-        };
+        let amyloid = Amyloid::default();
+
+        let complex = amyloid.bind(substrate);
+        assert_eq!(complex.field_bool, true);
     }
 }

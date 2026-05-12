@@ -89,6 +89,21 @@ impl Catalyst {
                 }
             })
             .collect::<Vec<_>>();
+        let catalyst_impl = quote! {
+            impl struct_patch::traits::Catalyst < #substrate_name, #complex_struct_name >  for #struct_name {
+                fn bind(self, s: #substrate_name) -> #complex_struct_name {
+                    let #substrate_name {
+                        #(#substrate_fields)*
+                    } = s;
+                    let #struct_name {
+                        #(#catalyst_fields)*
+                    } = self;
+                    #complex_struct_name {
+                        #(#unpack_complex_fields)*
+                    }
+                }
+            }
+        };
         let complex_impl = quote! {
             #(#mapped_attributes)*
             #visibility struct #complex_struct_name #generics {
@@ -113,6 +128,7 @@ impl Catalyst {
         };
 
         Ok(quote! {
+            #catalyst_impl
             #complex_impl
         })
     }
