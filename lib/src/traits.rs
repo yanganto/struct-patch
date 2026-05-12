@@ -111,3 +111,26 @@ pub trait Status {
 pub trait Merge {
     fn merge(self, other: Self) -> Self;
 }
+
+#[cfg(feature = "catalyst")]
+/// A substrate struct that can expose the fields information thereof
+pub trait Substrate {
+    fn expose_content() -> &'static str;
+
+    /// Expose the field information, by call this function in Build.rs
+    fn expose();
+}
+
+#[cfg(feature = "catalyst")]
+/// A catalyst struct that can expose the fields information thereof
+pub trait Catalyst<S, Cpx> {
+    /// catalyst bind on substrate and generate complex
+    fn bind(self, substrate: S) -> Cpx;
+}
+
+#[cfg(feature = "catalyst")]
+/// A complex struct that can decouple return catalyst and substrate
+pub trait Complex<Cat, S> {
+    /// complex decouple to catalyst and substrate
+    fn decouple(self) -> (Cat, S);
+}

@@ -43,4 +43,6 @@ nesting = [
 ]
 none_as_default = ["option"]
 keep_none = ["option"]
-
+catalyst = [
+    "struct-patch-derive/catalyst"
+]

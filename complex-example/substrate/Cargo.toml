@@ -1,0 +1,19 @@
+[package]
+name = "substrate"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+categories.workspace = true
+keywords.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+description.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+struct-patch.workspace = true
+
+[dev-dependencies]
+syn = { version =  "2", features = ["full"] }
+syn-serde = { version = "0.3.2", features = ["json"] }

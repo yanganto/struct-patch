@@ -18,12 +18,14 @@ proc-macro = true
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = { version =  "2.0", features = ["parsing"] }
+syn-serde = { version = "0.3.2", features = ["json"], optional = true }
 
 [features]
 status = []
 op = []
 merge = []
 nesting = []
+catalyst = [ "syn-serde" ]
 
 [dev-dependencies]
 pretty_assertions_sorted = "1.2.3"

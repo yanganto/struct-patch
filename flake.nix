@@ -22,15 +22,25 @@
           sleep 10
           cargo publish -p struct-patch
         '';
+        checkCatalystScript = pkgs.writeShellScriptBin "check-catalyst" ''
+          cd $(git rev-parse --show-toplevel 2>/dev/null)
+          cd complex-example
+          cargo test -p substrate
+          cargo test -p catalyst
+        '';
         updateDependencyScript = pkgs.writeShellScriptBin "update-dependency" ''
           dr ./Cargo.toml
 
           cd no-std-examples
           dr ./Cargo.toml
 
-          if [[ -f "Cargo.toml.old" || -f "no-std-examples/Cargo.toml.old" ]]; then
+          cd ../complex-example
+          dr ./Cargo.toml
+
+          if [[ -f "Cargo.toml.old" || -f "no-std-examples/Cargo.toml.old" || -f "complex-example/Cargo.toml.old" ]]; then
             rm -f Cargo.toml.old
             rm -f no-std-examples/Cargo.toml.old
+            rm -f complex-example/Cargo.toml.old
             exit 1
           fi
         '';
@@ -51,6 +61,8 @@
               rust-bin.stable.latest.minimal
               openssl
               pkg-config
+
+              checkCatalystScript 
             ];
           };
 
@@ -63,6 +75,8 @@
               dr
               publishScript
               updateDependencyScript
+
+              checkCatalystScript
             ];
           };
 

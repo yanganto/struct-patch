@@ -73,3 +73,6 @@ jobs:
           cd no-std-examples
           nix develop .#no-std -c cargo run --features=box --bin no-std-box
           nix develop .#no-std -c cargo run --features=option --bin no-std-option
+
+      - name: Test with catalyst
+          nix develop .#ci -c check-catalyst
