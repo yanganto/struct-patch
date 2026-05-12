@@ -6,6 +6,7 @@ use syn::{meta::ParseNestedMeta, parenthesized, DeriveInput, LitStr, Result, Typ
 
 pub(crate) struct Catalyst {
     visibility: syn::Visibility,
+    struct_name: Ident,
     complex_struct_name: Ident,
     generics: syn::Generics,
     attributes: Vec<TokenStream>,
@@ -29,6 +30,7 @@ impl Catalyst {
     pub fn to_token_stream(&self) -> Result<TokenStream> {
         let Catalyst {
             visibility,
+            struct_name,
             complex_struct_name,
             generics,
             attributes,
@@ -36,22 +38,47 @@ impl Catalyst {
             bind,
         } = self;
 
-        let mut complex_fields: Vec<Field> = Vec::new();
+        let substrate_name: Ident = {
+            let lit = LitStr::new(&bind, Span::call_site());
+            lit.parse()?
+        };
+
+        // TODO refact
+        let mut raw_complex_fields: Vec<Field> = Vec::new();
+        let mut substrate_fields: Vec<Field> = Vec::new();
+        let mut catalyst_fields: Vec<Field> = Vec::new();
 
         let substrate_str = std::env::var(bind).expect("not found");
-        let substrate_fields: syn::Fields = syn_serde::json::from_str(&substrate_str).unwrap();
+        let raw_substrate_fields: syn::Fields = syn_serde::json::from_str(&substrate_str).unwrap();
 
-        for field in substrate_fields.into_iter() {
-            complex_fields.push(Field::from_ast(field.clone()));
+        for field in raw_substrate_fields.into_iter() {
+            raw_complex_fields.push(Field::from_ast(field.clone()));
+            substrate_fields.push(Field::from_ast(field));
         }
 
         for field in fields.iter() {
-            complex_fields.push(Field::from_ast(field.clone()));
+            raw_complex_fields.push(Field::from_ast(field.clone()));
+            catalyst_fields.push(Field::from_ast(field.clone()));
         }
 
-        let complex_fields = complex_fields
+        let complex_fields = raw_complex_fields
             .iter()
             .map(|f| f.to_token_stream())
+            .collect::<Result<Vec<_>>>()?;
+
+        let unpack_complex_fields = raw_complex_fields
+            .iter()
+            .map(|f| f.to_unpack_stream())
+            .collect::<Result<Vec<_>>>()?;
+
+        let catalyst_fields = catalyst_fields
+            .iter()
+            .map(|f| f.to_unpack_stream())
+            .collect::<Result<Vec<_>>>()?;
+
+        let substrate_fields = substrate_fields
+            .iter()
+            .map(|f| f.to_unpack_stream())
             .collect::<Result<Vec<_>>>()?;
 
         let mapped_attributes = attributes
@@ -62,12 +89,31 @@ impl Catalyst {
                 }
             })
             .collect::<Vec<_>>();
-
-        Ok(quote! {
+        let complex_impl = quote! {
             #(#mapped_attributes)*
             #visibility struct #complex_struct_name #generics {
                 #(#complex_fields)*
             }
+
+            impl struct_patch::traits::Complex < #struct_name, #substrate_name >  for #complex_struct_name {
+                fn decouple(self) -> (#struct_name, #substrate_name) {
+                    let #complex_struct_name {
+                        #(#unpack_complex_fields)*
+                    } = self;
+                    (
+                        #struct_name {
+                            #(#catalyst_fields)*
+                        },
+                        #substrate_name {
+                            #(#substrate_fields)*
+                        }
+                    )
+                }
+            }
+        };
+
+        Ok(quote! {
+            #complex_impl
         })
     }
     /// Parse the Catalyst struct
@@ -146,14 +192,16 @@ impl Catalyst {
         if bind.is_empty() {
             return Err(syn::Error::new(ident.span(), "No substrate for Catalyst"));
         }
+        let complex_struct_name = name.unwrap_or({
+            let ts = TokenStream::from_str(&format!("{}Complex", &ident,)).unwrap();
+            let lit = LitStr::new(&ts.to_string(), Span::call_site());
+            lit.parse()?
+        });
 
         Ok(Catalyst {
             visibility: vis,
-            complex_struct_name: name.unwrap_or({
-                let ts = TokenStream::from_str(&format!("{}Complex", &ident,)).unwrap();
-                let lit = LitStr::new(&ts.to_string(), Span::call_site());
-                lit.parse()?
-            }),
+            struct_name: ident,
+            complex_struct_name,
             generics,
             attributes,
             fields,
@@ -166,11 +214,16 @@ impl Field {
     /// Generate the token stream for the Complex struct fields
     pub fn to_token_stream(&self) -> Result<TokenStream> {
         let Field { ident, ty } = self;
-        let attributes: Vec<TokenStream> = Vec::new();
-
         Ok(quote! {
-            #(#attributes)*
             pub #ident: #ty,
+        })
+    }
+
+    /// Generate the token stream for unpack Complex struct fields
+    pub fn to_unpack_stream(&self) -> Result<TokenStream> {
+        let Field { ident, ty: _ } = self;
+        Ok(quote! {
+            #ident,
         })
     }
 

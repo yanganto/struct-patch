@@ -120,3 +120,17 @@ pub trait Substrate {
     /// Expose the field information, by call this function in Build.rs
     fn expose();
 }
+
+#[cfg(feature = "catalyst")]
+/// A catalyst struct that can expose the fields information thereof
+pub trait Catalyst<S, Cpx> {
+    /// catalyst bind on substrate and generate complex
+    fn bind(self, substrate: S) -> Cpx;
+}
+
+#[cfg(feature = "catalyst")]
+/// A complex struct that can decouple return catalyst and substrate
+pub trait Complex<Cat, S> {
+    /// complex decouple to catalyst and substrate
+    fn decouple(self) -> (Cat, S);
+}
