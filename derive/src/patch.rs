@@ -2,9 +2,9 @@ extern crate proc_macro;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
 use std::str::FromStr;
-use syn::{parenthesized, DeriveInput, Lit, LitStr, Result, Type};
 #[cfg(not(feature = "op"))]
 use syn::spanned::Spanned;
+use syn::{parenthesized, DeriveInput, Lit, LitStr, Result, Type};
 
 #[cfg(feature = "op")]
 use crate::Addable;
