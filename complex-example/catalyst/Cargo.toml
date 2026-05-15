@@ -14,6 +14,8 @@ rust-version.workspace = true
 [dependencies]
 struct-patch.workspace = true
 substrate = { path = "../substrate" }
+serde = { version = "1", features = ["derive"] }
+toml = "1.1.2+spec-1.1.0"
 
 [build-dependencies]
 struct-patch.workspace = true

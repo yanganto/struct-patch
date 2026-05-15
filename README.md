@@ -160,6 +160,7 @@ Struct attributes:
 - `#[patch(attribute(...))]`: add attributes to the generated patch struct.
 - `#[patch(attribute(derive(...)))]`: add derives to the generated patch struct.
 - `#[catalyst(bind = "...")]`: decide the base structure. (catalyst feature)
+- `#[catalyst(keep_field_attribute)]`: the attributes of fields in substrate will also pass to complex. (catalyst feature)
 - `#[complex(name = "...")]`: change the name of the generated complex struct.  (catalyst feature)
 - `#[complex(attribute(...))]`: add attributes to the generated complex struct.  (catalyst feature)
 
