@@ -1,8 +1,16 @@
 use struct_patch::Catalyst;
 use substrate::Base;
+use serde::Serialize;
+
 
 #[derive(Default, Catalyst)]
 #[catalyst(bind = Base)]
+
+// The Substrate has `#[serde(...)]` on fields , and catalyst keep_field_attribute
+// so the complex should have the corresponding Serialize derive
+#[catalyst(keep_field_attribute)]
+#[complex(attribute(derive(Serialize)))]
+
 #[allow(dead_code)]
 struct Amyloid {
     pub extra_bool: bool,
@@ -48,5 +56,13 @@ mod tests {
         let amyloid = Amyloid::default();
         let complex = amyloid.bind(substrate);
         assert_eq!(complex.field_bool, true);
+
+        let toml_str = toml::to_string_pretty(&complex).unwrap();
+        assert_eq!(toml_str, r#"field_bool = true
+field_string = ""
+extra_bool = false
+extra_string = ""
+"#);
+        
     }
 }
