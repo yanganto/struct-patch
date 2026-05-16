@@ -2,7 +2,7 @@ extern crate proc_macro;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
 use std::str::FromStr;
-use syn::{meta::ParseNestedMeta, parenthesized, DeriveInput, LitStr, Result, Type};
+use syn::{Attribute, meta::ParseNestedMeta, parenthesized, DeriveInput, LitStr, Result, Type};
 
 pub(crate) struct Catalyst {
     visibility: syn::Visibility,
@@ -12,9 +12,12 @@ pub(crate) struct Catalyst {
     attributes: Vec<TokenStream>,
     fields: syn::Fields,
     bind: String,
+    keep_field_attribute: bool,
 }
 
 struct Field {
+    attrs: Vec<Attribute>,
+    attributes: Vec<TokenStream>,
     ident: Option<Ident>,
     ty: Type,
 }
@@ -24,6 +27,8 @@ const COMPLEX: &str = "complex";
 const BIND: &str = "bind";
 const NAME: &str = "name";
 const ATTRIBUTE: &str = "attribute";
+// TODO #[catalyst(keep_field_attrs = [ "serde" ])] for more detail selections
+const KEEP_FIELD_ATTRIBUTE: &str = "keep_field_attribute";
 
 impl Catalyst {
     /// let catalyst bind the substrate and generate the token stream for complex
@@ -36,6 +41,7 @@ impl Catalyst {
             attributes,
             fields,
             bind,
+            keep_field_attribute,
         } = self;
 
         let substrate_name: Ident = {
@@ -57,13 +63,13 @@ impl Catalyst {
         }
 
         for field in fields.iter() {
-            raw_complex_fields.push(Field::from_ast(field.clone()));
-            catalyst_fields.push(Field::from_ast(field.clone()));
+            raw_complex_fields.push(Field::from_cat_ast(field.clone()));
+            catalyst_fields.push(Field::from_cat_ast(field.clone()));
         }
 
         let complex_fields = raw_complex_fields
             .iter()
-            .map(|f| f.to_token_stream())
+            .map(|f| f.to_token_stream(*keep_field_attribute))
             .collect::<Result<Vec<_>>>()?;
 
         let unpack_complex_fields = raw_complex_fields
@@ -153,6 +159,7 @@ impl Catalyst {
         let mut name = None;
         let mut attributes = vec![];
         let mut bind = String::new();
+        let mut keep_field_attribute = false;
 
         for attr in attrs {
             let attr_str = attr.path().to_string();
@@ -194,6 +201,10 @@ impl Catalyst {
                             }
                         }
                     }
+                    KEEP_FIELD_ATTRIBUTE if attr_str == CATALYST => {
+                        // #[catalyst(KEEP_FIELD_ATTRIBUTE )]
+                        keep_field_attribute = true;
+                    }
                     _ => {
                         return Err(meta.error(format_args!(
                             "unknown catalyst/complex attribute `{}`",
@@ -222,30 +233,74 @@ impl Catalyst {
             attributes,
             fields,
             bind,
+            keep_field_attribute,
         })
     }
 }
 
 impl Field {
     /// Generate the token stream for the Complex struct fields
-    pub fn to_token_stream(&self) -> Result<TokenStream> {
-        let Field { ident, ty } = self;
-        Ok(quote! {
-            pub #ident: #ty,
-        })
+    pub fn to_token_stream(&self, keep_field_attribute: bool) -> Result<TokenStream> {
+        let Field {
+            attrs,
+            attributes,
+            ident,
+            ty,
+        } = self;
+        if keep_field_attribute {
+            if attrs.len() > 0 {
+                Ok(quote! {
+                    #( #attrs )*
+                    pub #ident: #ty,
+                })
+            } else {
+                Ok(quote! {
+                    #( #[ #attributes ] )*
+                    pub #ident: #ty,
+                })
+            }
+        } else {
+            Ok(quote! {
+                pub #ident: #ty,
+            })
+        }
     }
 
     /// Generate the token stream for unpack Complex struct fields
     pub fn to_unpack_stream(&self) -> Result<TokenStream> {
-        let Field { ident, ty: _ } = self;
+        let Field { ident, ty: _, attributes: _, attrs: _ } = self;
         Ok(quote! {
             #ident,
         })
     }
 
     /// Parse the Catalyst struct field
-    pub fn from_ast(syn::Field { ident, ty, .. }: syn::Field) -> Field {
-        Field { ident, ty }
+    pub fn from_cat_ast(syn::Field { ident, ty,  attrs, .. }: syn::Field) -> Field {
+        let mut attributes = Vec::new();
+        for attr in attrs.iter() {
+            let attr_str = attr.path().to_string();
+            if attr_str != COMPLEX {
+                continue;
+            }
+            let _ = attr.parse_nested_meta(|meta| {
+                let path = meta.path.to_string();
+                match path.as_str() {
+                    ATTRIBUTE => {
+                        // #[complex(attribute(serde(default))]
+                        let content;
+                        parenthesized!(content in meta.input);
+                        let attribute: TokenStream = content.parse()?;
+                        attributes.push(attribute);
+                    }
+                    _ => {}
+                }
+                Ok(())
+            });
+        }
+        Field { ident, ty, attributes, attrs: Vec::new() }
+    }
+    pub fn from_ast(syn::Field { ident, ty,  attrs, .. }: syn::Field) -> Field {
+        Field { ident, ty, attrs, attributes: Vec::new() }
     }
 }
 
