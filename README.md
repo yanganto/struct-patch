@@ -172,6 +172,7 @@ Field attributes:
 - `#[patch(empty_value = ...)]`: define a value as empty, so the corresponding field of patch will not wrapped by Option, and apply patch when the field is empty.
 - `#[filler(extendable)]`: use the field of the struct for filler, the struct needs implement `Default`, `Extend`, `IntoIterator` and `is_empty`.
 - `#[filler(empty_value = ...)]`: define a value as empty, so the corresponding field of Filler will be applied, even the field is not `Option` or `Extendable`.
+- `#[complex(attribute(...))]`: add attributes to the field in the generated complex struct. (catalyst feature)
 
 Please check the [traits][doc-traits] of document to learn more.
 

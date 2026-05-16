@@ -17,6 +17,7 @@ pub(crate) struct Catalyst {
 
 struct Field {
     attrs: Vec<Attribute>,
+    attributes: Vec<TokenStream>,
     ident: Option<Ident>,
     ty: Type,
 }
@@ -62,8 +63,8 @@ impl Catalyst {
         }
 
         for field in fields.iter() {
-            raw_complex_fields.push(Field::from_ast(field.clone()));
-            catalyst_fields.push(Field::from_ast(field.clone()));
+            raw_complex_fields.push(Field::from_cat_ast(field.clone()));
+            catalyst_fields.push(Field::from_cat_ast(field.clone()));
         }
 
         let complex_fields = raw_complex_fields
@@ -240,16 +241,24 @@ impl Catalyst {
 impl Field {
     /// Generate the token stream for the Complex struct fields
     pub fn to_token_stream(&self, keep_field_attribute: bool) -> Result<TokenStream> {
-        let Field { 
+        let Field {
             attrs,
-            ident, 
+            attributes,
+            ident,
             ty,
         } = self;
         if keep_field_attribute {
-            Ok(quote! {
-                #(#attrs)*
-                pub #ident: #ty,
-            })
+            if attrs.len() > 0 {
+                Ok(quote! {
+                    #( #attrs )*
+                    pub #ident: #ty,
+                })
+            } else {
+                Ok(quote! {
+                    #( #[ #attributes ] )*
+                    pub #ident: #ty,
+                })
+            }
         } else {
             Ok(quote! {
                 pub #ident: #ty,
@@ -259,15 +268,39 @@ impl Field {
 
     /// Generate the token stream for unpack Complex struct fields
     pub fn to_unpack_stream(&self) -> Result<TokenStream> {
-        let Field { ident, ty: _, attrs: _ } = self;
+        let Field { ident, ty: _, attributes: _, attrs: _ } = self;
         Ok(quote! {
             #ident,
         })
     }
 
     /// Parse the Catalyst struct field
+    pub fn from_cat_ast(syn::Field { ident, ty,  attrs, .. }: syn::Field) -> Field {
+        let mut attributes = Vec::new();
+        for attr in attrs.iter() {
+            let attr_str = attr.path().to_string();
+            if attr_str != COMPLEX {
+                continue;
+            }
+            let _ = attr.parse_nested_meta(|meta| {
+                let path = meta.path.to_string();
+                match path.as_str() {
+                    ATTRIBUTE => {
+                        // #[complex(attribute(serde(default))]
+                        let content;
+                        parenthesized!(content in meta.input);
+                        let attribute: TokenStream = content.parse()?;
+                        attributes.push(attribute);
+                    }
+                    _ => {}
+                }
+                Ok(())
+            });
+        }
+        Field { ident, ty, attributes, attrs: Vec::new() }
+    }
     pub fn from_ast(syn::Field { ident, ty,  attrs, .. }: syn::Field) -> Field {
-        Field { ident, ty, attrs }
+        Field { ident, ty, attrs, attributes: Vec::new() }
     }
 }
 
