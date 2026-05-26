@@ -24,7 +24,9 @@ fn default_str() -> String {
 #[catalyst(bind = Base)]
 #[complex(name = "SmallCpx")]
 #[allow(dead_code)]
-#[complex(attribute(derive(Default)))]
+#[complex(attribute(derive(Default, Deserialize)))]
+#[complex(override_field_attribute("field_string", serde(default = "default_str")))]
+#[complex(override_field_attribute("field_string", serde(rename = "renamed_field")))]
 struct SmallAmyloid {
     pub extra_bool: bool,
 }
@@ -74,5 +76,20 @@ extra_bool = true
     "#;
         let complex: AmyloidComplex = toml::from_str(toml_str).unwrap();
         assert_eq!(complex.extra_string, "default");
+    }
+
+    #[test]
+    fn override_works() {
+        let toml_str = r#"field_bool = false
+extra_bool = false
+"#;
+        let complex: SmallCpx = toml::from_str(toml_str).unwrap();
+        assert_eq!(complex.field_string, "default");
+        let toml_str = r#"field_bool = false
+renamed_field = "Renamed"
+extra_bool = false
+"#;
+        let complex: SmallCpx = toml::from_str(toml_str).unwrap();
+        assert_eq!(complex.field_string, "Renamed");
     }
 }
