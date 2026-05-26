@@ -115,8 +115,9 @@ assert_eq!(item.list, vec![7]);
 Deriving `Substrate` on a struct will help you expose the field information, and you can easy to expose in build.rs of other crate.
 Deriving `Catalyst` on can read the field information of Substrate and generate a new Complex struct.
 All the fields in substrate and catalyst need be public, and the fields in complex are also public.
-The overall behavior likes chemical catalysts, a catalyst **bind** on a substrate to form a complex struct, which has all fields from substrate and catalyst.
-Also, a complex can **decouple** and return a catalyst and substrate. Check the [complex-example](./complex-example/catalyst/src/lib.rs).
+The overall behavior likes [chemical catalysts](https://en.wikipedia.org/wiki/Enzyme_catalysis), a catalyst **bind** on a substrate to form a complex struct, which has all fields from substrate and catalyst.
+Also, a complex can **decouple** without clone and return a catalyst and substrate. Check the [complex-example](./complex-example/catalyst/src/lib.rs).
+In the future, we may have a sub feature with catalyst, such that it will provide no memory moving decouple, but need unsafe code.
 
 ```rust
 /// In $dependency_crate/src/lib.rs
@@ -153,14 +154,16 @@ struct Amyloid {
 ``` 
 
 ## Documentation and Examples
-You can modify the patch structure by defining `#[patch(...)]`, `#[filler(...)]` or `#[complex(...)]`, `#[catalyst(...)]`  attributes on the original struct or fields.
+You can modify the patch structure by defining `#[patch(...)]`, `#[filler(...)]` or `#[complex(...)]`(catalyst feature), `#[catalyst(...)]`(catalyst feature)  attributes on the original struct or fields.
+Two macros are provided for the catalyst feature because we need to handle the behaviors of two structs simultaneously — the catalyst itself and the product (complex). In general, the complex macro takes precedence over the catalyst macro when any conflict arises.
 
 Struct attributes:
 - `#[patch(name = "...")]`: change the name of the generated patch struct.
 - `#[patch(attribute(...))]`: add attributes to the generated patch struct.
 - `#[patch(attribute(derive(...)))]`: add derives to the generated patch struct.
 - `#[catalyst(bind = "...")]`: decide the base structure. (catalyst feature)
-- `#[catalyst(keep_field_attribute)]`: the attributes of fields in substrate will also pass to complex. (catalyst feature)
+- `#[catalyst(keep_field_attribute)]`: All field attributes from a substrate or catalyst will be passed through to the complex, unless an override is explicitly specified for that field. (catalyst feature)
+- `#[complex(override_field_attribute("$substrate_field_name", ...))]`: override the complex field attribute, for example `serde(default = "default_str").` (catalyst feature)
 - `#[complex(name = "...")]`: change the name of the generated complex struct.  (catalyst feature)
 - `#[complex(attribute(...))]`: add attributes to the generated complex struct.  (catalyst feature)
 

@@ -2,6 +2,7 @@
 use serde::Deserialize;
 use struct_patch::Substrate;
 
+// TODO verify no rename on a struct using Substrate
 #[derive(Deserialize, Default, Substrate)]
 pub struct Base {
     #[serde(default)]

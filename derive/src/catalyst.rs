@@ -1,8 +1,11 @@
 extern crate proc_macro;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
+use std::collections::HashMap;
 use std::str::FromStr;
-use syn::{Attribute, meta::ParseNestedMeta, parenthesized, DeriveInput, LitStr, Result, Type};
+use syn::{
+    meta::ParseNestedMeta, parenthesized, Attribute, DeriveInput, LitStr, Result, Token, Type,
+};
 
 pub(crate) struct Catalyst {
     visibility: syn::Visibility,
@@ -13,6 +16,7 @@ pub(crate) struct Catalyst {
     fields: syn::Fields,
     bind: String,
     keep_field_attribute: bool,
+    override_field_attributes: HashMap<String, Vec<TokenStream>>, // TODO handle no-std
 }
 
 struct Field {
@@ -27,6 +31,7 @@ const COMPLEX: &str = "complex";
 const BIND: &str = "bind";
 const NAME: &str = "name";
 const ATTRIBUTE: &str = "attribute";
+const OVERRIDE: &str = "override_field_attribute";
 // TODO #[catalyst(keep_field_attrs = [ "serde" ])] for more detail selections
 const KEEP_FIELD_ATTRIBUTE: &str = "keep_field_attribute";
 
@@ -42,6 +47,7 @@ impl Catalyst {
             fields,
             bind,
             keep_field_attribute,
+            override_field_attributes,
         } = self;
 
         let substrate_name: Ident = {
@@ -54,7 +60,8 @@ impl Catalyst {
         let mut substrate_fields: Vec<Field> = Vec::new();
         let mut catalyst_fields: Vec<Field> = Vec::new();
 
-        let substrate_str = std::env::var(bind).expect("field information of substrate is absent, please expose it in build.rs");
+        let substrate_str = std::env::var(bind)
+            .expect("field information of substrate is absent, please expose it in build.rs");
         let raw_substrate_fields: syn::Fields = syn_serde::json::from_str(&substrate_str).unwrap();
 
         for field in raw_substrate_fields.into_iter() {
@@ -69,7 +76,7 @@ impl Catalyst {
 
         let complex_fields = raw_complex_fields
             .iter()
-            .map(|f| f.to_token_stream(*keep_field_attribute))
+            .map(|f| f.to_token_stream(*keep_field_attribute, override_field_attributes))
             .collect::<Result<Vec<_>>>()?;
 
         let unpack_complex_fields = raw_complex_fields
@@ -160,6 +167,7 @@ impl Catalyst {
         let mut attributes = vec![];
         let mut bind = String::new();
         let mut keep_field_attribute = false;
+        let mut override_field_attributes = HashMap::<String, Vec<TokenStream>>::new();
 
         for attr in attrs {
             let attr_str = attr.path().to_string();
@@ -193,6 +201,19 @@ impl Catalyst {
                         let attribute: TokenStream = content.parse()?;
                         attributes.push(attribute);
                     }
+                    OVERRIDE if attr_str == COMPLEX => {
+                        let content;
+                        syn::parenthesized!(content in meta.input);
+
+                        let key: LitStr = content.parse()?;
+                        content.parse::<Token![,]>()?;
+
+                        let tokens: TokenStream = content.parse()?;
+                        override_field_attributes
+                            .entry(key.value())
+                            .or_default()
+                            .push(tokens);
+                    }
                     BIND if attr_str == CATALYST => {
                         // #[catalyst(bind = SubstrateStruct)]
                         if let Some(lit) = get_struct(&meta)? {
@@ -217,7 +238,10 @@ impl Catalyst {
         }
 
         if bind.is_empty() {
-            return Err(syn::Error::new(ident.span(), "No substrate for Catalyst, please specify with #[catalyst(bind = ...)]"));
+            return Err(syn::Error::new(
+                ident.span(),
+                "No substrate for Catalyst, please specify with #[catalyst(bind = ...)]",
+            ));
         }
         let complex_struct_name = name.unwrap_or({
             let ts = TokenStream::from_str(&format!("{}Complex", &ident,)).unwrap();
@@ -234,26 +258,44 @@ impl Catalyst {
             fields,
             bind,
             keep_field_attribute,
+            override_field_attributes,
         })
     }
 }
 
 impl Field {
     /// Generate the token stream for the Complex struct fields
-    pub fn to_token_stream(&self, keep_field_attribute: bool) -> Result<TokenStream> {
+    pub fn to_token_stream(
+        &self,
+        keep_field_attribute: bool,
+        override_field_attributes: &HashMap<String, Vec<TokenStream>>,
+    ) -> Result<TokenStream> {
         let Field {
             attrs,
             attributes,
             ident,
             ty,
         } = self;
+
+        if let Some(ident) = ident {
+            // from override
+            if let Some(attributes) = override_field_attributes.get(&ident.to_string()) {
+                return Ok(quote! {
+                    #( #[ #attributes ] )*
+                    pub #ident: #ty,
+                });
+            }
+        }
+
         if keep_field_attribute {
             if attrs.len() > 0 {
+                // from substrate
                 Ok(quote! {
                     #( #attrs )*
                     pub #ident: #ty,
                 })
             } else {
+                // from catalyst
                 Ok(quote! {
                     #( #[ #attributes ] )*
                     pub #ident: #ty,
@@ -268,14 +310,23 @@ impl Field {
 
     /// Generate the token stream for unpack Complex struct fields
     pub fn to_unpack_stream(&self) -> Result<TokenStream> {
-        let Field { ident, ty: _, attributes: _, attrs: _ } = self;
+        let Field {
+            ident,
+            ty: _,
+            attributes: _,
+            attrs: _,
+        } = self;
         Ok(quote! {
             #ident,
         })
     }
 
     /// Parse the Catalyst struct field
-    pub fn from_cat_ast(syn::Field { ident, ty,  attrs, .. }: syn::Field) -> Field {
+    pub fn from_cat_ast(
+        syn::Field {
+            ident, ty, attrs, ..
+        }: syn::Field,
+    ) -> Field {
         let mut attributes = Vec::new();
         for attr in attrs.iter() {
             let attr_str = attr.path().to_string();
@@ -297,10 +348,24 @@ impl Field {
                 Ok(())
             });
         }
-        Field { ident, ty, attributes, attrs: Vec::new() }
+        Field {
+            ident,
+            ty,
+            attributes,
+            attrs: Vec::new(),
+        }
     }
-    pub fn from_ast(syn::Field { ident, ty,  attrs, .. }: syn::Field) -> Field {
-        Field { ident, ty, attrs, attributes: Vec::new() }
+    pub fn from_ast(
+        syn::Field {
+            ident, ty, attrs, ..
+        }: syn::Field,
+    ) -> Field {
+        Field {
+            ident,
+            ty,
+            attrs,
+            attributes: Vec::new(),
+        }
     }
 }
 
