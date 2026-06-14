@@ -114,7 +114,6 @@ assert_eq!(item.list, vec![7]);
 #### Case 3 - Extend a struct from a crate
 Deriving `Substrate` on a struct will help you expose the field information, and you can easy to expose in build.rs of other crate.
 Deriving `Catalyst` on can read the field information of Substrate and generate a new Complex struct.
-All the fields in substrate and catalyst need be public, and the fields in complex are also public.
 The overall behavior likes [chemical catalysts](https://en.wikipedia.org/wiki/Enzyme_catalysis), a catalyst **bind** on a substrate to form a complex struct, which has all fields from substrate and catalyst.
 Also, a complex can **decouple** without clone and return a catalyst and substrate. Check the [complex-example](./complex-example/catalyst/src/lib.rs).
 In the future, we may have a sub feature with catalyst, such that it will provide no memory moving decouple, but need unsafe code.
