@@ -17,6 +17,13 @@ impl Base {
     }
 }
 
+#[derive(Deserialize, Default, Substrate)]
+pub struct PrivateBase {
+    private_bool: bool,
+    private_string: String,
+    private_option: Option<usize>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -29,5 +36,14 @@ mod tests {
         );
 
         let _fields: syn::Fields = syn_serde::json::from_str(&Base::expose_content()).unwrap();
+    }
+
+    #[test]
+    fn expose_private_works() {
+        assert_eq!(
+            PrivateBase::expose_content(),
+              r#"{"named":[{"ident":"private_bool","colon_token":true,"ty":{"path":{"segments":[{"ident":"bool"}]}}},{"ident":"private_string","colon_token":true,"ty":{"path":{"segments":[{"ident":"String"}]}}},{"ident":"private_option","colon_token":true,"ty":{"path":{"segments":[{"ident":"Option","arguments":{"angle_bracketed":{"args":[{"type":{"path":{"segments":[{"ident":"usize"}]}}}]}}}]}}}]}"#);
+
+        let _fields: syn::Fields = syn_serde::json::from_str(&PrivateBase::expose_content()).unwrap();
     }
 }
