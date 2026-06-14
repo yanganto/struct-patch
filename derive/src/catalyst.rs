@@ -132,9 +132,9 @@ impl Catalyst {
                         #struct_name {
                             #(#catalyst_fields)*
                         },
-                        #substrate_name {
+                        #substrate_name::substrate_new(
                             #(#substrate_fields)*
-                        }
+                        )
                     )
                 }
             }
