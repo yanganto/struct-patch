@@ -107,7 +107,7 @@ impl Catalyst {
                 fn bind(self, s: #substrate_name) -> #complex_struct_name {
                     let (
                         #(#substrate_fields)*
-                    ) = s.substrate_unpack();
+                    ) = s.__substrate_unpack();
                     let #struct_name {
                         #(#catalyst_fields)*
                     } = self;
@@ -132,7 +132,7 @@ impl Catalyst {
                         #struct_name {
                             #(#catalyst_fields)*
                         },
-                        #substrate_name::substrate_new(
+                        #substrate_name::__substrate_new(
                             #(#substrate_fields)*
                         )
                     )

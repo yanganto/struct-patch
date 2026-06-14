@@ -38,7 +38,7 @@ mod tests {
 
     #[test]
     fn substrate_new_works() {
-        let b = Base::substrate_new(
+        let b = Base::__substrate_new(
             true,
             "test".to_string(),
             Some(100),
@@ -52,13 +52,13 @@ mod tests {
 
     #[test]
     fn substrate_unpack_works() {
-        let b = Base::substrate_new(
+        let b = Base::__substrate_new(
             true,
             "test".to_string(),
             Some(100),
             7u8,
         );
-        let (field_bool, field_string, field_option, private_number) = b.substrate_unpack();
+        let (field_bool, field_string, field_option, private_number) = b.__substrate_unpack();
 
         assert_eq!(field_bool, true);
         assert_eq!(field_string, "test");
