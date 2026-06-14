@@ -66,12 +66,14 @@ mod tests {
             toml_str,
             r#"field_bool = true
 field_string = ""
+private_number = 0
 extra_bool = false
 extra_string = ""
 "#
         );
         let toml_str = r#" field_bool = true
 field_string = ""
+private_number = 0
 extra_bool = true
     "#;
         let complex: AmyloidComplex = toml::from_str(toml_str).unwrap();
@@ -81,11 +83,13 @@ extra_bool = true
     #[test]
     fn override_works() {
         let toml_str = r#"field_bool = false
+private_number = 0
 extra_bool = false
 "#;
         let complex: SmallCpx = toml::from_str(toml_str).unwrap();
         assert_eq!(complex.field_string, "default");
         let toml_str = r#"field_bool = false
+private_number = 0
 renamed_field = "Renamed"
 extra_bool = false
 "#;

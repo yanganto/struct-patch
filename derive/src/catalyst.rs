@@ -105,9 +105,9 @@ impl Catalyst {
         let catalyst_impl = quote! {
             impl struct_patch::traits::Catalyst < #substrate_name, #complex_struct_name >  for #struct_name {
                 fn bind(self, s: #substrate_name) -> #complex_struct_name {
-                    let #substrate_name {
+                    let (
                         #(#substrate_fields)*
-                    } = s;
+                    ) = s.substrate_unpack();
                     let #struct_name {
                         #(#catalyst_fields)*
                     } = self;
