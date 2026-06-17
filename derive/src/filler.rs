@@ -142,6 +142,7 @@ impl Filler {
 
         #[cfg(feature = "status")]
         let status_impl = quote!(
+            #[automatically_derived]
             impl #generics struct_patch::traits::Status for #name #generics #where_clause {
                 fn is_empty(&self) -> bool {
                     #(
@@ -168,6 +169,7 @@ impl Filler {
 
         #[cfg(feature = "op")]
         let op_impl = quote! {
+            #[automatically_derived]
             impl #generics core::ops::Shl<#name #generics> for #struct_name #generics #where_clause {
                 type Output = Self;
 
@@ -177,6 +179,7 @@ impl Filler {
                 }
             }
 
+            #[automatically_derived]
             impl #generics core::ops::Add<Self> for #name #generics #where_clause {
                 type Output = Self;
 
@@ -223,6 +226,7 @@ impl Filler {
         let op_impl = quote!();
 
         let filler_impl = quote! {
+            #[automatically_derived]
             impl #generics struct_patch::traits::Filler< #name #generics > for #struct_name #generics #where_clause  {
                 fn apply(&mut self, filler: #name #generics) {
                     #(

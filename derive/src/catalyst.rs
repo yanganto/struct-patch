@@ -103,6 +103,7 @@ impl Catalyst {
             })
             .collect::<Vec<_>>();
         let catalyst_impl = quote! {
+            #[automatically_derived]
             impl struct_patch::traits::Catalyst < #substrate_name, #complex_struct_name >  for #struct_name {
                 fn bind(self, s: #substrate_name) -> #complex_struct_name {
                     let (
@@ -123,6 +124,7 @@ impl Catalyst {
                 #(#complex_fields)*
             }
 
+            #[automatically_derived]
             impl struct_patch::traits::Complex < #struct_name, #substrate_name >  for #complex_struct_name {
                 fn decouple(self) -> (#struct_name, #substrate_name) {
                     let #complex_struct_name {
