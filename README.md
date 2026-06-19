@@ -162,6 +162,7 @@ Struct attributes:
 - `#[patch(attribute(derive(...)))]`: add derives to the generated patch struct.
 - `#[catalyst(bind = "...")]`: decide the base structure. (catalyst feature)
 - `#[catalyst(keep_field_attribute)]`: All field attributes from a substrate or catalyst will be passed through to the complex, unless an override is explicitly specified for that field. (catalyst feature)
+- `#[catalyst(exclude_field_attributes = ["..."])]`: When `keep_field_attribute` is used, specifies attribute names to exclude from being passed through to the complex struct fields. For example, `exclude_field_attributes = ["serde"]` strips all `#[serde(...)]` field attributes from the substrate before they reach the complex. (catalyst feature)
 - `#[complex(override_field_attribute("$substrate_field_name", ...))]`: override the complex field attribute, for example `serde(default = "default_str").` (catalyst feature)
 - `#[complex(name = "...")]`: change the name of the generated complex struct.  (catalyst feature)
 - `#[complex(attribute(...))]`: add attributes to the generated complex struct.  (catalyst feature)
