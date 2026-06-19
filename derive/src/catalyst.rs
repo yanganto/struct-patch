@@ -17,6 +17,7 @@ pub(crate) struct Catalyst {
     bind: String,
     keep_field_attribute: bool,
     override_field_attributes: HashMap<String, Vec<TokenStream>>, // TODO handle no-std
+    exclude_field_attributes: Vec<String>,
 }
 
 struct Field {
@@ -32,8 +33,8 @@ const BIND: &str = "bind";
 const NAME: &str = "name";
 const ATTRIBUTE: &str = "attribute";
 const OVERRIDE: &str = "override_field_attribute";
-// TODO #[catalyst(keep_field_attrs = [ "serde" ])] for more detail selections
 const KEEP_FIELD_ATTRIBUTE: &str = "keep_field_attribute";
+const EXCLUDE_FIELD_ATTRIBUTES: &str = "exclude_field_attributes";
 
 impl Catalyst {
     /// let catalyst bind the substrate and generate the token stream for complex
@@ -48,6 +49,7 @@ impl Catalyst {
             bind,
             keep_field_attribute,
             override_field_attributes,
+            exclude_field_attributes,
         } = self;
 
         let substrate_name: Ident = {
@@ -76,7 +78,7 @@ impl Catalyst {
 
         let complex_fields = raw_complex_fields
             .iter()
-            .map(|f| f.to_token_stream(*keep_field_attribute, override_field_attributes))
+            .map(|f| f.to_token_stream(*keep_field_attribute, override_field_attributes, exclude_field_attributes))
             .collect::<Result<Vec<_>>>()?;
 
         let unpack_complex_fields = raw_complex_fields
@@ -170,6 +172,7 @@ impl Catalyst {
         let mut bind = String::new();
         let mut keep_field_attribute = false;
         let mut override_field_attributes = HashMap::<String, Vec<TokenStream>>::new();
+        let mut exclude_field_attributes = Vec::<String>::new();
 
         for attr in attrs {
             let attr_str = attr.path().to_string();
@@ -225,8 +228,21 @@ impl Catalyst {
                         }
                     }
                     KEEP_FIELD_ATTRIBUTE if attr_str == CATALYST => {
-                        // #[catalyst(KEEP_FIELD_ATTRIBUTE )]
+                        // #[catalyst(keep_field_attribute)]
                         keep_field_attribute = true;
+                    }
+                    EXCLUDE_FIELD_ATTRIBUTES if attr_str == CATALYST => {
+                        // #[catalyst(exclude_field_attributes = ["schemars", "other"])]
+                        let value = meta.value()?;
+                        let content;
+                        syn::bracketed!(content in value);
+                        while !content.is_empty() {
+                            let lit: LitStr = content.parse()?;
+                            exclude_field_attributes.push(lit.value());
+                            if content.peek(Token![,]) {
+                                content.parse::<Token![,]>()?;
+                            }
+                        }
                     }
                     _ => {
                         return Err(meta.error(format_args!(
@@ -261,6 +277,7 @@ impl Catalyst {
             bind,
             keep_field_attribute,
             override_field_attributes,
+            exclude_field_attributes,
         })
     }
 }
@@ -271,6 +288,7 @@ impl Field {
         &self,
         keep_field_attribute: bool,
         override_field_attributes: &HashMap<String, Vec<TokenStream>>,
+        exclude_field_attributes: &[String],
     ) -> Result<TokenStream> {
         let Field {
             attrs,
@@ -291,9 +309,16 @@ impl Field {
 
         if keep_field_attribute {
             if attrs.len() > 0 {
-                // from substrate
+                // from substrate: filter out excluded attribute namespaces
+                let filtered_attrs: Vec<&Attribute> = attrs
+                    .iter()
+                    .filter(|a| {
+                        let path = a.path().to_token_stream().to_string();
+                        !exclude_field_attributes.iter().any(|e| path == *e)
+                    })
+                    .collect();
                 Ok(quote! {
-                    #( #attrs )*
+                    #( #filtered_attrs )*
                     pub #ident: #ty,
                 })
             } else {
