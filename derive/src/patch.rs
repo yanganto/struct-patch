@@ -17,6 +17,7 @@ const ADDABLE: &str = "addable";
 const ADD: &str = "add";
 const NESTING: &str = "nesting";
 const EMPTY_VALUE: &str = "empty_value";
+const SKIP_WRAP: &str = "skip_wrap";
 
 pub(crate) struct Patch {
     visibility: syn::Visibility,
@@ -25,6 +26,28 @@ pub(crate) struct Patch {
     generics: syn::Generics,
     attributes: Vec<TokenStream>,
     fields: Vec<Field>,
+}
+
+enum SpecialAttr {
+    None,
+    /// Field uses an explicit sentinel value instead of `Option` wrapping.
+    EmptyValue(Lit),
+    /// Field type is already `Option<T>`; `None` means "no change", `Some(v)` applies the value.
+    SkipWrap,
+}
+
+impl SpecialAttr {
+    fn is_empty(&self) -> bool {
+        matches!(self, SpecialAttr::None)
+    }
+
+    fn empty_value(&self) -> Option<&Lit> {
+        if let SpecialAttr::EmptyValue(lit) = self {
+            Some(lit)
+        } else {
+            None
+        }
+    }
 }
 
 struct Field {
@@ -36,8 +59,7 @@ struct Field {
     addable: Addable,
     #[cfg(feature = "nesting")]
     nesting: bool,
-    /// Define which value is empty
-    empty_value: Option<Lit>,
+    special_attr: SpecialAttr,
 }
 
 impl Patch {
@@ -61,99 +83,114 @@ impl Patch {
         #[cfg(not(feature = "nesting"))]
         let field_names = fields
             .iter()
-            .filter(|f| f.empty_value.is_none())
+            .filter(|f| f.special_attr.is_empty())
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(not(feature = "nesting"))]
         let field_names_by_empty_value = fields
             .iter()
-            .filter(|f| f.empty_value.is_some())
+            .filter(|f| matches!(f.special_attr, SpecialAttr::EmptyValue(_)))
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let field_names = fields
             .iter()
-            .filter(|f| !f.nesting && f.empty_value.is_none())
+            .filter(|f| !f.nesting && f.special_attr.is_empty())
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let field_names_by_empty_value = fields
             .iter()
-            .filter(|f| !f.nesting && f.empty_value.is_some())
+            .filter(|f| !f.nesting && matches!(f.special_attr, SpecialAttr::EmptyValue(_)))
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         let field_name_empty_values = fields
             .iter()
-            .filter_map(|f| f.empty_value.as_ref())
+            .filter_map(|f| f.special_attr.empty_value())
+            .collect::<Vec<_>>();
+
+        // Fields with `#[patch(skip_wrap)]` — the patch keeps the original
+        // (already-`Option`) type, and `None` in the patch means "no change".
+        #[cfg(not(feature = "nesting"))]
+        let skip_wrap_field_names = fields
+            .iter()
+            .filter(|f| matches!(f.special_attr, SpecialAttr::SkipWrap))
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+        #[cfg(feature = "nesting")]
+        let skip_wrap_field_names = fields
+            .iter()
+            .filter(|f| matches!(f.special_attr, SpecialAttr::SkipWrap) && !f.nesting)
+            .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
 
         // Rename fields
         #[cfg(not(feature = "nesting"))]
         let renamed_field_names = fields
             .iter()
-            .filter(|f| f.retyped && f.empty_value.is_none())
+            .filter(|f| f.retyped && f.special_attr.is_empty())
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(not(feature = "nesting"))]
         let renamed_field_names_by_empty_value = fields
             .iter()
-            .filter(|f| f.retyped && f.empty_value.is_some())
+            .filter(|f| f.retyped && matches!(f.special_attr, SpecialAttr::EmptyValue(_)))
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let renamed_field_names = fields
             .iter()
-            .filter(|f| f.retyped && !f.nesting && f.empty_value.is_none())
+            .filter(|f| f.retyped && !f.nesting && f.special_attr.is_empty())
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let renamed_field_names_by_empty_value = fields
             .iter()
-            .filter(|f| f.retyped && !f.nesting && f.empty_value.is_some())
+            .filter(|f| f.retyped && !f.nesting && matches!(f.special_attr, SpecialAttr::EmptyValue(_)))
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         let renamed_field_name_empty_values = fields
             .iter()
             .filter(|f| f.retyped)
-            .filter_map(|f| f.empty_value.as_ref())
+            .filter_map(|f| f.special_attr.empty_value())
             .collect::<Vec<_>>();
 
         // Original fields
         #[cfg(not(feature = "nesting"))]
         let original_field_names = fields
             .iter()
-            .filter(|f| !f.retyped && f.empty_value.is_none())
+            .filter(|f| !f.retyped && f.special_attr.is_empty())
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(not(feature = "nesting"))]
         let original_field_names_by_empty_value = fields
             .iter()
-            .filter(|f| !f.retyped && f.empty_value.is_some())
+            .filter(|f| !f.retyped && matches!(f.special_attr, SpecialAttr::EmptyValue(_)))
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let original_field_names = fields
             .iter()
-            .filter(|f| !f.retyped && !f.nesting && f.empty_value.is_none())
+            .filter(|f| !f.retyped && !f.nesting && f.special_attr.is_empty())
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let original_field_names_by_empty_value = fields
             .iter()
-            .filter(|f| !f.retyped && !f.nesting && f.empty_value.is_some())
+            .filter(|f| !f.retyped && !f.nesting && matches!(f.special_attr, SpecialAttr::EmptyValue(_)))
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(not(feature = "nesting"))]
         let original_field_name_empty_values = fields
             .iter()
             .filter(|f| !f.retyped)
-            .filter_map(|f| f.empty_value.as_ref())
+            .filter_map(|f| f.special_attr.empty_value())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let original_field_name_empty_values = fields
             .iter()
             .filter(|f| !f.retyped && !f.nesting)
-            .filter_map(|f| f.empty_value.as_ref())
+            .filter_map(|f| f.special_attr.empty_value())
             .collect::<Vec<_>>();
 
         // Nesting fields
@@ -208,6 +245,11 @@ impl Patch {
                         }
                     )*
                     #(
+                        if self.#skip_wrap_field_names.is_some() {
+                            return false
+                        }
+                    )*
+                    #(
                         if !self.#nesting_field_names.is_empty() {
                             return false
                         }
@@ -253,6 +295,9 @@ impl Patch {
                             },
                         )*
                         #(
+                            #skip_wrap_field_names: other.#skip_wrap_field_names.or(self.#skip_wrap_field_names),
+                        )*
+                        #(
                             #nesting_field_names: other.#nesting_field_names.merge(self.#nesting_field_names),
                         )*
                     }
@@ -266,7 +311,7 @@ impl Patch {
         let addable_handles = fields
             .iter()
             .map(|f| {
-                match (&f.addable, f.empty_value.is_some()) {
+                match (&f.addable, matches!(f.special_attr, SpecialAttr::EmptyValue(_))) {
                     (Addable::AddTrait, true) => quote!(
                         a + &b
                     ),
@@ -353,6 +398,16 @@ impl Patch {
                             },
                         )*
                         #(
+                            #skip_wrap_field_names: match (self.#skip_wrap_field_names, rhs.#skip_wrap_field_names) {
+                                (Some(a), Some(b)) => {
+                                    #addable_handles
+                                },
+                                (Some(a), None) => Some(a),
+                                (None, Some(b)) => Some(b),
+                                (None, None) => None,
+                            },
+                        )*
+                        #(
                             #nesting_field_names: self.#nesting_field_names + rhs.#nesting_field_names,
                         )*
                     }
@@ -432,6 +487,16 @@ impl Patch {
                             },
                         )*
                         #(
+                            #skip_wrap_field_names: match (self.#skip_wrap_field_names, rhs.#skip_wrap_field_names) {
+                                (Some(a), Some(b)) => {
+                                    #addable_handles
+                                },
+                                (Some(a), None) => Some(a),
+                                (None, Some(b)) => Some(b),
+                                (None, None) => None,
+                            },
+                        )*
+                        #(
                             #nesting_field_names: self.#nesting_field_names + rhs.#nesting_field_names,
                         )*
                     }
@@ -467,6 +532,11 @@ impl Patch {
                         }
                     )*
                     #(
+                        if let Some(v) = patch.#skip_wrap_field_names {
+                            self.#skip_wrap_field_names = Some(v);
+                        }
+                    )*
+                    #(
                         self.#nesting_field_names.apply(patch.#nesting_field_names);
                     )*
                 }
@@ -484,6 +554,9 @@ impl Patch {
                         )*
                         #(
                             #original_field_names_by_empty_value: self.#original_field_names_by_empty_value,
+                        )*
+                        #(
+                            #skip_wrap_field_names: self.#skip_wrap_field_names,
                         )*
                         #(
                             #nesting_field_names: self.#nesting_field_names.into_patch(),
@@ -526,6 +599,14 @@ impl Patch {
                             },
                         )*
                         #(
+                            #skip_wrap_field_names: if self.#skip_wrap_field_names != previous_struct.#skip_wrap_field_names {
+                                self.#skip_wrap_field_names
+                            }
+                            else {
+                                None
+                            },
+                        )*
+                        #(
                             #nesting_field_names: self.#nesting_field_names.into_patch_by_diff(previous_struct.#nesting_field_names),
                         )*
                     }
@@ -538,6 +619,9 @@ impl Patch {
                         )*
                         #(
                             #field_names_by_empty_value: #field_name_empty_values,
+                        )*
+                        #(
+                            #skip_wrap_field_names: None,
                         )*
                         #(
                             #nesting_field_names: #nesting_field_types::new_empty_patch(),
@@ -656,7 +740,7 @@ impl Field {
             attributes,
             #[cfg(feature = "nesting")]
             nesting,
-            empty_value,
+            special_attr,
             ..
         } = self;
 
@@ -671,7 +755,7 @@ impl Field {
         match ident {
             #[cfg(not(feature = "nesting"))]
             Some(ident) => {
-                if empty_value.is_some() {
+                if !special_attr.is_empty() {
                     Ok(quote! {
                         #(#attributes)*
                         pub #ident: #ty,
@@ -695,7 +779,7 @@ impl Field {
                         #(#attributes)*
                         pub #ident: #patch_type,
                     })
-                } else if empty_value.is_some() {
+                } else if !special_attr.is_empty() {
                     Ok(quote! {
                         #(#attributes)*
                         pub #ident: #ty,
@@ -709,7 +793,7 @@ impl Field {
             }
             #[cfg(not(feature = "nesting"))]
             None => {
-                if empty_value.is_some() {
+                if !special_attr.is_empty() {
                     Ok(quote! {
                         #(#attributes)*
                         pub #ty,
@@ -733,7 +817,7 @@ impl Field {
                         #(#attributes)*
                         pub #patch_type,
                     })
-                } else if empty_value.is_some() {
+                } else if !special_attr.is_empty() {
                     Ok(quote! {
                         #(#attributes)*
                         pub #ty,
@@ -757,7 +841,7 @@ impl Field {
         let mut attributes = vec![];
         let mut field_type = None;
         let mut skip = false;
-        let mut empty_value = None;
+        let mut special_attr = SpecialAttr::None;
 
         #[cfg(feature = "op")]
         let mut addable = Addable::Disable;
@@ -829,17 +913,31 @@ impl Field {
                     }
                     EMPTY_VALUE => {
                         // #[patch(empty_value = ...)]
-                        if empty_value.is_some() {
+                        if matches!(special_attr, SpecialAttr::EmptyValue(_)) {
                             return Err(meta.error(
                                 "The empty value is already set, we can't defined more than once",
                             ));
                         }
+                        if matches!(special_attr, SpecialAttr::SkipWrap) {
+                            return Err(meta.error(
+                                "`empty_value` and `skip_wrap` cannot be combined on the same field",
+                            ));
+                        }
                         if let Some(lit) = crate::get_lit(path, &meta)? {
-                            empty_value = Some(lit);
+                            special_attr = SpecialAttr::EmptyValue(lit);
                         } else {
                             return Err(meta
                                 .error("empty_value needs a clear value to define what is empty"));
                         }
+                    }
+                    SKIP_WRAP => {
+                        // #[patch(skip_wrap)]
+                        if matches!(special_attr, SpecialAttr::EmptyValue(_)) {
+                            return Err(meta.error(
+                                "`skip_wrap` and `empty_value` cannot be combined on the same field",
+                            ));
+                        }
+                        special_attr = SpecialAttr::SkipWrap;
                     }
                     _ => {
                         return Err(meta.error(format_args!(
@@ -864,7 +962,7 @@ impl Field {
             addable,
             #[cfg(feature = "nesting")]
             nesting,
-            empty_value,
+            special_attr,
         }))
     }
 }
@@ -917,7 +1015,7 @@ mod tests {
                     retyped: true,
                     #[cfg(feature = "op")]
                     addable: Addable::Disable,
-                    empty_value: None,
+                    special_attr: SpecialAttr::None,
                 },
                 Field {
                     ident: Some(syn::Ident::new("field3", Span::call_site())),
@@ -926,7 +1024,7 @@ mod tests {
                     retyped: false,
                     #[cfg(feature = "op")]
                     addable: Addable::Disable,
-                    empty_value: Some(Lit::Bool(syn::LitBool::new(false, Span::call_site()))),
+                    special_attr: SpecialAttr::EmptyValue(Lit::Bool(syn::LitBool::new(false, Span::call_site()))),
                 },
             ],
         };
