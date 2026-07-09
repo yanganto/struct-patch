@@ -152,6 +152,39 @@ struct Amyloid {
 //}
 ``` 
 
+#### Case 4 - Avoid double-`Option` for `Option<Vec<_>>` fields
+By default, deriving `Patch` wraps every field in an `Option`, so a field typed
+`Option<Vec<T>>` becomes `Option<Option<Vec<T>>>` in the generated patch. When
+this double wrapping is undesirable, annotate the field with
+`#[patch(skip_wrap)]` to keep the original type in the patch. `None` in the
+patch then means "no change" and `Some(v)` replaces the field — including
+`Some(vec![])` to explicitly clear the vector.
+
+```rust
+use struct_patch::Patch;
+
+#[derive(Default, Patch)]
+struct Item {
+    #[patch(skip_wrap)]
+    tags: Option<Vec<String>>,
+}
+
+// Generated struct
+// struct ItemPatch {
+//     tags: Option<Vec<String>>,
+// }
+
+let mut item = Item { tags: Some(vec!["a".into()]) };
+
+// `None` leaves the field unchanged.
+item.apply(ItemPatch { tags: None });
+assert_eq!(item.tags, Some(vec!["a".into()]));
+
+// `Some(vec![])` still applies and clears the list.
+item.apply(ItemPatch { tags: Some(vec![]) });
+assert_eq!(item.tags, Some(vec![]));
+```
+
 ## Documentation and Examples
 You can modify the patch structure by defining `#[patch(...)]`, `#[filler(...)]` or `#[complex(...)]`(catalyst feature), `#[catalyst(...)]`(catalyst feature)  attributes on the original struct or fields.
 Two macros are provided for the catalyst feature because we need to handle the behaviors of two structs simultaneously — the catalyst itself and the product (complex). In general, the complex macro takes precedence over the catalyst macro when any conflict arises.
@@ -173,6 +206,7 @@ Field attributes:
 - `#[patch(attribute(...))]`: add attributes to the field in the generated patch struct.
 - `#[patch(attribute(derive(...)))]`: add derives to the field in the generated patch struct.
 - `#[patch(empty_value = ...)]`: define a value as empty, so the corresponding field of patch will not wrapped by Option, and apply patch when the field is empty.
+- `#[patch(skip_wrap)]`: keep the field type as-is in the patch struct (no extra `Option` wrapping). Useful when the field is already `Option<...>` (for example `Option<Vec<_>>`) and you do not want a double-`Option` in the patch. With `skip_wrap`, `None` in the patch means "no change" and `Some(v)` sets the field to `Some(v)` (including `Some(vec![])` to clear the vector). Cannot be combined with `empty_value`.
 - `#[filler(extendable)]`: use the field of the struct for filler, the struct needs implement `Default`, `Extend`, `IntoIterator` and `is_empty`.
 - `#[filler(empty_value = ...)]`: define a value as empty, so the corresponding field of Filler will be applied, even the field is not `Option` or `Extendable`.
 - `#[complex(attribute(...))]`: add attributes to the field in the generated complex struct. (catalyst feature)

@@ -77,6 +77,37 @@
 /// //     data: Option<String>,
 /// // }
 /// ```
+///
+/// ### `#[patch(skip_wrap)]`
+/// Keep the field type as-is in the generated patch struct (no extra `Option`
+/// wrapping). This is useful for fields that are already `Option<...>`,
+/// typically `Option<Vec<_>>`, where the default double-`Option` in the patch
+/// is unwanted. With `skip_wrap`, `None` in the patch means "no change" and
+/// `Some(v)` sets the field to `Some(v)` (including `Some(vec![])` to clear
+/// the vector). Cannot be combined with `empty_value`.
+/// ```rust
+/// # use struct_patch::Patch;
+/// #[derive(Default, Patch)]
+/// struct Item {
+///     #[patch(skip_wrap)]
+///     tags: Option<Vec<String>>,
+/// }
+///
+/// // Generated struct
+/// // struct ItemPatch {
+/// //     tags: Option<Vec<String>>, // not wrapped again
+/// // }
+///
+/// let mut item = Item { tags: Some(vec!["a".into()]) };
+///
+/// // `None` in the patch keeps the field unchanged.
+/// item.apply(ItemPatch { tags: None });
+/// assert_eq!(item.tags, Some(vec!["a".into()]));
+///
+/// // `Some(vec![])` still applies and clears the list.
+/// item.apply(ItemPatch { tags: Some(vec![]) });
+/// assert_eq!(item.tags, Some(vec![]));
+/// ```
 pub trait Patch<P> {
     /// Apply a patch
     fn apply(&mut self, patch: P);
