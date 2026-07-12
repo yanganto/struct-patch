@@ -77,15 +77,26 @@ impl Catalyst {
         }
 
         #[cfg(feature = "unsafe")]
+        let complex_ident = Ident::new("complex", Span::call_site());
+        #[cfg(feature = "unsafe")]
+        let catalyst_ident = Ident::new("catalyst", Span::call_site());
+
+        #[cfg(feature = "unsafe")]
         let catalyst_ptr_read_fields = catalyst_fields
             .iter()
-            .map(|f| f.to_ptr_read_stream())
+            .map(|f| f.to_ptr_read_stream(&complex_ident))
             .collect::<Result<Vec<_>>>()?;
 
         #[cfg(feature = "unsafe")]
         let substrate_ptr_read_fields = substrate_fields
             .iter()
-            .map(|f| f.to_ptr_read_arg_stream())
+            .map(|f| f.to_ptr_read_arg_stream(&complex_ident))
+            .collect::<Result<Vec<_>>>()?;
+
+        #[cfg(feature = "unsafe")]
+        let catalyst_bind_ptr_read_fields = catalyst_fields
+            .iter()
+            .map(|f| f.to_ptr_read_stream(&catalyst_ident))
             .collect::<Result<Vec<_>>>()?;
 
         let complex_fields = raw_complex_fields
@@ -93,11 +104,12 @@ impl Catalyst {
             .map(|f| f.to_token_stream(*keep_field_attribute, override_field_attributes, exclude_field_attributes))
             .collect::<Result<Vec<_>>>()?;
 
+        #[cfg(not(feature = "unsafe"))]
         let unpack_complex_fields = raw_complex_fields
             .iter()
             .map(|f| f.to_unpack_stream())
             .collect::<Result<Vec<_>>>()?;
-
+        #[cfg(not(feature = "unsafe"))]
         let catalyst_fields = catalyst_fields
             .iter()
             .map(|f| f.to_unpack_stream())
@@ -116,22 +128,43 @@ impl Catalyst {
                 }
             })
             .collect::<Vec<_>>();
-        let catalyst_impl = quote! {
-            #[automatically_derived]
-            impl struct_patch::traits::Catalyst < #substrate_name, #complex_struct_name >  for #struct_name {
-                fn bind(self, s: #substrate_name) -> #complex_struct_name {
-                    let (
-                        #(#substrate_fields)*
-                    ) = s.__substrate_unpack();
-                    let #struct_name {
-                        #(#catalyst_fields)*
-                    } = self;
-                    #complex_struct_name {
-                        #(#unpack_complex_fields)*
+
+        let catalyst_impl = {
+            #[cfg(feature = "unsafe")]
+            quote! {
+                #[automatically_derived]
+                impl struct_patch::traits::Catalyst < #substrate_name, #complex_struct_name >  for #struct_name {
+                    fn bind(self, s: #substrate_name) -> #complex_struct_name {
+                        let (
+                            #(#substrate_fields)*
+                        ) = s.__substrate_unpack();
+                        let catalyst = std::mem::ManuallyDrop::new(self);
+                        unsafe {
+                            #complex_struct_name {
+                                #(#substrate_fields)*
+                                #(#catalyst_bind_ptr_read_fields)*
+                            }
+                        }
                     }
                 }
             }
-
+            #[cfg(not(feature = "unsafe"))]
+            quote! {
+                #[automatically_derived]
+                impl struct_patch::traits::Catalyst < #substrate_name, #complex_struct_name >  for #struct_name {
+                    fn bind(self, s: #substrate_name) -> #complex_struct_name {
+                        let (
+                            #(#substrate_fields)*
+                        ) = s.__substrate_unpack();
+                        let #struct_name {
+                            #(#catalyst_fields)*
+                        } = self;
+                        #complex_struct_name {
+                            #(#unpack_complex_fields)*
+                        }
+                    }
+                }
+            }
         };
 
         let decouple_impl = {
@@ -390,7 +423,7 @@ impl Field {
 
     /// Generate the token stream for reading a field via ptr::read for struct construction
     #[cfg(feature = "unsafe")]
-    pub fn to_ptr_read_stream(&self) -> Result<TokenStream> {
+    pub fn to_ptr_read_stream(&self, source: &Ident) -> Result<TokenStream> {
         let Field {
             ident,
             ty: _,
@@ -398,13 +431,13 @@ impl Field {
             attrs: _,
         } = self;
         Ok(quote! {
-            #ident: std::ptr::read(&complex.#ident),
+            #ident: std::ptr::read(&#source.#ident),
         })
     }
 
     /// Generate the token stream for reading a field via ptr::read as a function argument
     #[cfg(feature = "unsafe")]
-    pub fn to_ptr_read_arg_stream(&self) -> Result<TokenStream> {
+    pub fn to_ptr_read_arg_stream(&self, source: &Ident) -> Result<TokenStream> {
         let Field {
             ident,
             ty: _,
@@ -412,7 +445,7 @@ impl Field {
             attrs: _,
         } = self;
         Ok(quote! {
-            std::ptr::read(&complex.#ident),
+            std::ptr::read(&#source.#ident),
         })
     }
 
