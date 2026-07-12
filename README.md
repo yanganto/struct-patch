@@ -116,7 +116,7 @@ Deriving `Substrate` on a struct will help you expose the field information, and
 Deriving `Catalyst` on can read the field information of Substrate and generate a new Complex struct.
 The overall behavior likes [chemical catalysts](https://en.wikipedia.org/wiki/Enzyme_catalysis), a catalyst **bind** on a substrate to form a complex struct, which has all fields from substrate and catalyst.
 Also, a complex can **decouple** without clone and return a catalyst and substrate. Check the [complex-example](./complex-example/catalyst/src/lib.rs).
-In the future, we may have a sub feature with catalyst, such that it will provide no memory moving decouple, but need unsafe code.
+With the `unsafe` feature, `bind` and `decouple` use `ManuallyDrop` + `ptr::read` to avoid memory moves, and `__substrate_new` / `__substrate_unpack` use `MaybeUninit` + `ptr::write` / `ptr::read`.
 
 ```rust
 /// In $dependency_crate/src/lib.rs
@@ -239,6 +239,7 @@ This crate also includes the following optional features:
     - `none_as_default`: `T` needs to implement `Default`.  When patching on None, it will patch on a default instance, and this also let you patch structs containing fields with optional values.
     - `keep_none`: When patching on None, it is still None.
 - `nesting`(optional): allow a inner field with `Patch` derive and `#[patch(nesting)]` attribute
+- `unsafe`(optional): use `ManuallyDrop` + `ptr::read` / `MaybeUninit` + `ptr::write` in generated `bind`, `decouple`, `__substrate_new`, and `__substrate_unpack` to avoid memory moves. Requires the `catalyst` feature.
 
 [crates-badge]: https://img.shields.io/crates/v/struct-patch.svg
 [crate-url]: https://crates.io/crates/struct-patch
