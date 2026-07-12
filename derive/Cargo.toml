@@ -26,6 +26,7 @@ op = []
 merge = []
 nesting = []
 catalyst = [ "syn-serde" ]
+unsafe = []
 
 [dev-dependencies]
 pretty_assertions_sorted = "1.2.3"

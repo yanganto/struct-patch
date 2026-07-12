@@ -46,3 +46,6 @@ keep_none = ["option"]
 catalyst = [
     "struct-patch-derive/catalyst"
 ]
+unsafe = [
+    "struct-patch-derive/unsafe"
+]
