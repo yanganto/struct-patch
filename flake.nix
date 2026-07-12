@@ -24,6 +24,9 @@
           cd complex-example
           cargo test -p substrate
           cargo test -p catalyst
+
+          echo "Run catatyst test with unsafe features"
+          cargo test -p catalyst --features unsafe
         '';
       in
       with pkgs;
