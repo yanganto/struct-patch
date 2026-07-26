@@ -16,5 +16,5 @@ struct-patch.workspace = true
 serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]
-syn = { version =  "2", features = ["full"] }
+syn = { version =  "3", features = ["full"] }
 syn-serde = { version = "0.3.2", features = ["json"] }
