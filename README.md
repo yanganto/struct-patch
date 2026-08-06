@@ -156,15 +156,15 @@ struct Amyloid {
 // }
 ```
 
-#### Case 5 - Log which fields were patched
+#### Case 5 - Log which fields were patched or filled
 
-There are two ways to observe which fields are patched:
+Both `Patch` and `Filler` support two ways to observe which fields are changed:
 
 **Ad-hoc at the call site** — use `apply_with_log`, which takes a closure that
-is called with each patched field name:
+is called with each patched/filled field name:
 
 ```rust
-use struct_patch::Patch;
+use struct_patch::{Filler, Patch};
 
 #[derive(Default, Patch)]
 struct Item {
@@ -180,18 +180,32 @@ item.apply_with_log(patch, |field| patched_fields.push(field.to_string()));
 
 assert_eq!(patched_fields, vec!["field_int"]);
 assert_eq!(item.field_int, 42);
+
+#[derive(Default, Filler)]
+struct Settings {
+    theme: Option<String>,
+}
+
+let mut settings = Settings::default();
+let mut filled_fields = Vec::new();
+settings.apply_with_log(
+    SettingsFiller { theme: Some("dark".into()) },
+    |field| filled_fields.push(field.to_string()),
+);
+assert_eq!(filled_fields, vec!["theme"]);
 ```
 
 For structs using `#[patch(nesting)]`, the log closure is threaded into nested
 patches so you receive field names from all levels of nesting.
 
-**Always-on via struct attribute** — use `#[patch(default_log(fn_path))]` to wire a
-specific function into `apply` itself. Every call to `apply` on that struct will
-automatically invoke the function for each field that is changed, with no
-extra effort at call sites. Has no effect on `apply_with_log`.
+**Always-on via struct attribute** — use `#[patch(default_log(fn_path))]` or
+`#[filler(default_log(fn_path))]` to wire a specific function into `apply`
+itself. Every call to `apply` on that struct will automatically invoke the
+function for each field that is changed, with no extra effort at call sites.
+Has no effect on `apply_with_log`.
 
 ```rust
-use struct_patch::Patch;
+use struct_patch::{Filler, Patch};
 
 fn my_log(field: &str) {
     println!("patched: {field}");
@@ -207,9 +221,23 @@ struct Config {
 let mut cfg = Config::default();
 cfg.apply(ConfigPatch { retries: Some(3), timeout: None });
 // prints: patched: retries
+
+fn my_filler_log(field: &str) {
+    println!("filled: {field}");
+}
+
+#[derive(Default, Filler)]
+#[filler(default_log(my_filler_log))]
+struct Settings {
+    theme: Option<String>,
+}
+
+let mut settings = Settings::default();
+settings.apply(SettingsFiller { theme: Some("dark".into()) });
+// prints: filled: theme
 ```
 
-The path may be any item path (`crate::logging::log_patch_field`,
+The path may be any item path (`crate::logging::log_field`,
 `tracing::debug!` wrapped in a thin function, etc.).
 
 #### Case 4 - Avoid double-`Option` for `Option<Vec<_>>` fields
@@ -257,6 +285,7 @@ Two attribute namespaces are provided for the catalyst feature because we need t
 - `#[patch(attribute(derive(...)))]`: add derives to the generated patch struct.
 - `#[patch(default_log(fn_path))]`: call `fn_path` with each patched field name on every `apply` call. Has no effect on `apply_with_log`. The function must accept `&str`.
 - `#[filler(attribute(...))]`: add attributes to the generated filler struct.
+- `#[filler(default_log(fn_path))]`: call `fn_path` with each filled field name on every `apply` call. Has no effect on `apply_with_log`. The function must accept `&str`.
 - `#[catalyst(bind = "...")]`: specify the base (substrate) structure. (catalyst feature)
 - `#[catalyst(keep_field_attribute)]`: pass all field attributes from a substrate or catalyst through to the complex, unless an override is explicitly specified for that field. (catalyst feature)
 - `#[catalyst(exclude_field_attributes = ["..."])]`: when `keep_field_attribute` is used, specifies attribute names to exclude from being passed through to the complex struct fields. For example, `exclude_field_attributes = ["serde"]` strips all `#[serde(...)]` field attributes from the substrate before they reach the complex. (catalyst feature)
@@ -298,6 +327,7 @@ The [examples][examples] demonstrate the following scenarios:
 - show operators on fillers (`filler-op.rs`)
 - show `skip_wrap` field behavior (`instance.rs`)
 - use `Patch` with `clap` for command-line config (`clap.rs`)
+- demonstrate `default_log` and `apply_with_log` for both `Patch` and `Filler` (`log.rs`)
 
 ## Features
 

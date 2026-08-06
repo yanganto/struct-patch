@@ -172,6 +172,31 @@ pub trait Filler<F> {
     /// Apply a filler
     fn apply(&mut self, filler: F);
 
+    /// Apply a filler, calling `log` with each field name that is actually filled.
+    ///
+    /// The default implementation ignores `log` and delegates to [`apply`](Filler::apply).
+    /// The derive macro generates an override that calls `log` once per field that is
+    /// actually filled (i.e. the field was empty and the filler supplied a value).
+    ///
+    /// ```rust
+    /// # use struct_patch::Filler;
+    /// #[derive(Default, Filler)]
+    /// struct Item {
+    ///     value: Option<usize>,
+    /// }
+    ///
+    /// let mut item = Item::default();
+    /// let filler = ItemFiller { value: Some(42) };
+    ///
+    /// let mut filled_fields = Vec::new();
+    /// item.apply_with_log(filler, |field| filled_fields.push(field.to_string()));
+    ///
+    /// assert_eq!(filled_fields, vec!["value"]);
+    /// ```
+    fn apply_with_log<L: FnMut(&str)>(&mut self, filler: F, _log: L) {
+        self.apply(filler);
+    }
+
     /// Get an empty filler instance
     fn new_empty_filler() -> F;
 }
