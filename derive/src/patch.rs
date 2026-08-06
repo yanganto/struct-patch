@@ -146,7 +146,9 @@ impl Patch {
         #[cfg(feature = "nesting")]
         let renamed_field_names_by_empty_value = fields
             .iter()
-            .filter(|f| f.retyped && !f.nesting && matches!(f.special_attr, SpecialAttr::EmptyValue(_)))
+            .filter(|f| {
+                f.retyped && !f.nesting && matches!(f.special_attr, SpecialAttr::EmptyValue(_))
+            })
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         let renamed_field_name_empty_values = fields
@@ -177,7 +179,9 @@ impl Patch {
         #[cfg(feature = "nesting")]
         let original_field_names_by_empty_value = fields
             .iter()
-            .filter(|f| !f.retyped && !f.nesting && matches!(f.special_attr, SpecialAttr::EmptyValue(_)))
+            .filter(|f| {
+                !f.retyped && !f.nesting && matches!(f.special_attr, SpecialAttr::EmptyValue(_))
+            })
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(not(feature = "nesting"))]
@@ -538,6 +542,42 @@ impl Patch {
                     )*
                     #(
                         self.#nesting_field_names.apply(patch.#nesting_field_names);
+                    )*
+                }
+
+                fn apply_with_log<F: FnMut(&str)>(&mut self, patch: #name #generics, mut log: F) {
+                    #(
+                        if let Some(v) = patch.#renamed_field_names {
+                            log(stringify!(#renamed_field_names));
+                            self.#renamed_field_names.apply(v);
+                        }
+                    )*
+                    #(
+                        if patch.#renamed_field_names_by_empty_value != #renamed_field_name_empty_values {
+                            log(stringify!(#renamed_field_names_by_empty_value));
+                            self.#renamed_field_names_by_empty_value.apply(patch.#renamed_field_names_by_empty_value);
+                        }
+                    )*
+                    #(
+                        if let Some(v) = patch.#original_field_names {
+                            log(stringify!(#original_field_names));
+                            self.#original_field_names = v;
+                        }
+                    )*
+                    #(
+                        if patch.#original_field_names_by_empty_value != #original_field_name_empty_values {
+                            log(stringify!(#original_field_names_by_empty_value));
+                            self.#original_field_names_by_empty_value = patch.#original_field_names_by_empty_value;
+                        }
+                    )*
+                    #(
+                        if let Some(v) = patch.#skip_wrap_field_names {
+                            log(stringify!(#skip_wrap_field_names));
+                            self.#skip_wrap_field_names = Some(v);
+                        }
+                    )*
+                    #(
+                        self.#nesting_field_names.apply_with_log(patch.#nesting_field_names, &mut log);
                     )*
                 }
 
@@ -1024,7 +1064,10 @@ mod tests {
                     retyped: false,
                     #[cfg(feature = "op")]
                     addable: Addable::Disable,
-                    special_attr: SpecialAttr::EmptyValue(Lit::Bool(syn::LitBool::new(false, Span::call_site()))),
+                    special_attr: SpecialAttr::EmptyValue(Lit::Bool(syn::LitBool::new(
+                        false,
+                        Span::call_site(),
+                    ))),
                 },
             ],
         };

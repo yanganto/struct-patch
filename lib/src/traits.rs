@@ -112,6 +112,32 @@ pub trait Patch<P> {
     /// Apply a patch
     fn apply(&mut self, patch: P);
 
+    /// Apply a patch, calling `log` with each patched field name.
+    ///
+    /// The default implementation ignores `log` and delegates to [`apply`](Patch::apply).
+    /// The derive macro generates an override that calls `log` once per field that is
+    /// actually changed.
+    ///
+    /// ```rust
+    /// # use struct_patch::Patch;
+    /// #[derive(Default, Patch)]
+    /// struct Item {
+    ///     field_int: usize,
+    ///     field_string: String,
+    /// }
+    ///
+    /// let mut item = Item::default();
+    /// let patch = ItemPatch { field_int: Some(42), field_string: None };
+    ///
+    /// let mut patched_fields = Vec::new();
+    /// item.apply_with_log(patch, |field| patched_fields.push(field.to_string()));
+    ///
+    /// assert_eq!(patched_fields, vec!["field_int"]);
+    /// ```
+    fn apply_with_log<F: FnMut(&str)>(&mut self, patch: P, _log: F) {
+        self.apply(patch);
+    }
+
     /// Returns a patch that when applied turns any struct of the same type into `Self`
     fn into_patch(self) -> P;
 

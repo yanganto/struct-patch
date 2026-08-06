@@ -13,7 +13,7 @@ A library to help you modify config structs. It provides:
 
 This crate provides the `Patch`, `Filler`, `Substrate`, `Catalyst` and `Complex` traits with accompanying derive macros in the following three use cases.
 
-- If any field in a `Patch` is `Some`, it overwrites the corresponding field when applied.
+- If any field in a `Patch` is `Some`, it overwrites the corresponding field when applied. Use `apply_with_log` to receive a callback for each field that is actually changed.
 - If any field in the instance is empty (`None` or an empty collection), `Filler` will try to fill it. It supports `Option`, `Vec`, `VecDeque`, `LinkedList`, `HashMap`, `BTreeMap`, `HashSet`, `BTreeSet`, `BinaryHeap` fields, as well as custom types via `#[filler(extendable)]` and any type via `#[filler(empty_value = ...)]`.
 - With the `catalyst` feature, `Substrate`, `Catalyst` and `Complex` traits with accompanying derive macros help you extend a struct with extra fields from another crate.
 
@@ -155,6 +155,34 @@ struct Amyloid {
 //     pub extra_option: Option<usize>,
 // }
 ```
+
+#### Case 5 - Log which fields were patched
+
+`apply_with_log` works like `apply` but calls a closure with the name of each
+field that is actually changed. This lets you print or record which fields were
+updated, in whatever format you need.
+
+```rust
+use struct_patch::Patch;
+
+#[derive(Default, Patch)]
+struct Item {
+    field_int: usize,
+    field_string: String,
+}
+
+let mut item = Item::default();
+let patch = ItemPatch { field_int: Some(42), field_string: None };
+
+let mut patched_fields = Vec::new();
+item.apply_with_log(patch, |field| patched_fields.push(field.to_string()));
+
+assert_eq!(patched_fields, vec!["field_int"]);
+assert_eq!(item.field_int, 42);
+```
+
+For structs using `#[patch(nesting)]`, the log closure is threaded into nested patches
+so you receive field names from all levels of nesting.
 
 #### Case 4 - Avoid double-`Option` for `Option<Vec<_>>` fields
 By default, deriving `Patch` wraps every field in an `Option`, so a field typed
