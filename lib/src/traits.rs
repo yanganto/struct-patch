@@ -60,6 +60,26 @@
 /// // struct ItemOverlay {}
 /// ```
 ///
+/// ### `#[patch(default_log(fn_path))]`
+/// Automatically call `fn_path(&str)` with each patched field name inside
+/// every generated `apply` call. Has no effect on `apply_with_log`. The path
+/// may be any function path visible at the call site.
+/// ```rust
+/// # use struct_patch::Patch;
+/// fn log_field(field: &str) { let _ = field; }
+///
+/// #[derive(Default, Patch)]
+/// #[patch(default_log(log_field))]
+/// struct Item {
+///     field_int: usize,
+///     field_string: String,
+/// }
+///
+/// let mut item = Item::default();
+/// item.apply(ItemPatch { field_int: Some(1), field_string: None });
+/// // log_field("field_int") is called automatically
+/// ```
+///
 /// ## Field attributes
 /// ### `#[patch(skip)]`
 /// If you want certain fields to be unpatchable, you can let the derive macro skip certain fields when creating the patch struct

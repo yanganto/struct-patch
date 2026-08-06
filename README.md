@@ -158,9 +158,10 @@ struct Amyloid {
 
 #### Case 5 - Log which fields were patched
 
-`apply_with_log` works like `apply` but calls a closure with the name of each
-field that is actually changed. This lets you print or record which fields were
-updated, in whatever format you need.
+There are two ways to observe which fields are patched:
+
+**Ad-hoc at the call site** — use `apply_with_log`, which takes a closure that
+is called with each patched field name:
 
 ```rust
 use struct_patch::Patch;
@@ -181,8 +182,35 @@ assert_eq!(patched_fields, vec!["field_int"]);
 assert_eq!(item.field_int, 42);
 ```
 
-For structs using `#[patch(nesting)]`, the log closure is threaded into nested patches
-so you receive field names from all levels of nesting.
+For structs using `#[patch(nesting)]`, the log closure is threaded into nested
+patches so you receive field names from all levels of nesting.
+
+**Always-on via struct attribute** — use `#[patch(default_log(fn_path))]` to wire a
+specific function into `apply` itself. Every call to `apply` on that struct will
+automatically invoke the function for each field that is changed, with no
+extra effort at call sites. Has no effect on `apply_with_log`.
+
+```rust
+use struct_patch::Patch;
+
+fn my_log(field: &str) {
+    println!("patched: {field}");
+}
+
+#[derive(Default, Patch)]
+#[patch(default_log(my_log))]
+struct Config {
+    retries: usize,
+    timeout: u64,
+}
+
+let mut cfg = Config::default();
+cfg.apply(ConfigPatch { retries: Some(3), timeout: None });
+// prints: patched: retries
+```
+
+The path may be any item path (`crate::logging::log_patch_field`,
+`tracing::debug!` wrapped in a thin function, etc.).
 
 #### Case 4 - Avoid double-`Option` for `Option<Vec<_>>` fields
 By default, deriving `Patch` wraps every field in an `Option`, so a field typed
@@ -227,6 +255,7 @@ Two attribute namespaces are provided for the catalyst feature because we need t
 - `#[patch(name = "...")]`: change the name of the generated patch struct.
 - `#[patch(attribute(...))]`: add attributes to the generated patch struct.
 - `#[patch(attribute(derive(...)))]`: add derives to the generated patch struct.
+- `#[patch(default_log(fn_path))]`: call `fn_path` with each patched field name on every `apply` call. Has no effect on `apply_with_log`. The function must accept `&str`.
 - `#[filler(attribute(...))]`: add attributes to the generated filler struct.
 - `#[catalyst(bind = "...")]`: specify the base (substrate) structure. (catalyst feature)
 - `#[catalyst(keep_field_attribute)]`: pass all field attributes from a substrate or catalyst through to the complex, unless an override is explicitly specified for that field. (catalyst feature)

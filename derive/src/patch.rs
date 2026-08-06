@@ -18,6 +18,7 @@ const ADD: &str = "add";
 const NESTING: &str = "nesting";
 const EMPTY_VALUE: &str = "empty_value";
 const SKIP_WRAP: &str = "skip_wrap";
+const DEFAULT_LOG: &str = "default_log";
 
 pub(crate) struct Patch {
     visibility: syn::Visibility,
@@ -26,6 +27,7 @@ pub(crate) struct Patch {
     generics: syn::Generics,
     attributes: Vec<TokenStream>,
     fields: Vec<Field>,
+    default_log_fn: Option<syn::Path>,
 }
 
 enum SpecialAttr {
@@ -72,6 +74,7 @@ impl Patch {
             generics,
             attributes,
             fields,
+            default_log_fn,
         } = self;
 
         let patch_struct_fields = fields
@@ -511,32 +514,56 @@ impl Patch {
         #[cfg(not(feature = "op"))]
         let op_impl = quote!();
 
+        // Per-field log-call token streams, parallel with each field-name vec.
+        // Emit `default_log_fn(stringify!(field));` when a struct-level log is configured,
+        // or an empty token stream otherwise.
+        let make_log_calls = |names: &[Option<&Ident>]| -> Vec<TokenStream> {
+            if let Some(f) = default_log_fn {
+                names
+                    .iter()
+                    .map(|n| quote! { #f(stringify!(#n)); })
+                    .collect()
+            } else {
+                names.iter().map(|_| quote! {}).collect()
+            }
+        };
+        let renamed_log_calls = make_log_calls(&renamed_field_names);
+        let renamed_by_ev_log_calls = make_log_calls(&renamed_field_names_by_empty_value);
+        let original_log_calls = make_log_calls(&original_field_names);
+        let original_by_ev_log_calls = make_log_calls(&original_field_names_by_empty_value);
+        let skip_wrap_log_calls = make_log_calls(&skip_wrap_field_names);
+
         let patch_impl = quote! {
             #[automatically_derived]
             impl #generics struct_patch::traits::Patch< #name #generics > for #struct_name #generics #where_clause  {
                 fn apply(&mut self, patch: #name #generics) {
                     #(
                         if let Some(v) = patch.#renamed_field_names {
+                            #renamed_log_calls
                             self.#renamed_field_names.apply(v);
                         }
                     )*
                     #(
                         if patch.#renamed_field_names_by_empty_value != #renamed_field_name_empty_values {
+                            #renamed_by_ev_log_calls
                             self.#renamed_field_names_by_empty_value.apply(patch.#renamed_field_names_by_empty_value);
                         }
                     )*
                     #(
                         if let Some(v) = patch.#original_field_names {
+                            #original_log_calls
                             self.#original_field_names = v;
                         }
                     )*
                     #(
                         if patch.#original_field_names_by_empty_value != #original_field_name_empty_values  {
+                            #original_by_ev_log_calls
                             self.#original_field_names_by_empty_value = patch.#original_field_names_by_empty_value ;
                         }
                     )*
                     #(
                         if let Some(v) = patch.#skip_wrap_field_names {
+                            #skip_wrap_log_calls
                             self.#skip_wrap_field_names = Some(v);
                         }
                     )*
@@ -706,6 +733,7 @@ impl Patch {
         let mut name = None;
         let mut attributes = vec![];
         let mut fields = vec![];
+        let mut default_log_fn: Option<syn::Path> = None;
 
         for attr in attrs {
             if attr.path().to_string().as_str() != PATCH {
@@ -739,6 +767,12 @@ impl Patch {
                         let attribute: TokenStream = content.parse()?;
                         attributes.push(attribute);
                     }
+                    DEFAULT_LOG => {
+                        // #[patch(default_log(path::to::fn))]
+                        let content;
+                        parenthesized!(content in meta.input);
+                        default_log_fn = Some(content.parse()?);
+                    }
                     _ => {
                         return Err(meta.error(format_args!(
                             "unknown patch container attribute `{}`",
@@ -767,6 +801,7 @@ impl Patch {
             generics,
             attributes,
             fields,
+            default_log_fn,
         })
     }
 }
@@ -1045,6 +1080,7 @@ mod tests {
             patch_struct_name: syn::Ident::new("MyPatch", Span::call_site()),
             generics: syn::Generics::default(),
             attributes: vec![quote! { derive(Debug, PartialEq, Clone, Serialize, Deserialize) }],
+            default_log_fn: None,
             fields: vec![
                 Field {
                     ident: Some(syn::Ident::new("field1", Span::call_site())),
