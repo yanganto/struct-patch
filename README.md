@@ -337,7 +337,7 @@ This crate includes the following optional features:
   - By default, when there is a field conflict between patches/fillers, `+` will add them together if `#[patch(addable)]`, `#[patch(add = fn)]`, or `#[filler(addable)]` is provided; otherwise it will panic.
 - `merge` *(optional)*: implements the `Merge` trait for the patch struct, which provides the `merge` method, and `<<` (if `op` is enabled) between patches.
 - `alloc` *(optional)*: enables `alloc` support for `no_std` + alloc environments.
-- `std` *(optional)*: enables `std`-dependent features (implies `box` and `option`).
+- `std` *(optional)*: enables `std`-dependent features (implies `box` and `option`). Note: the `log` example is incompatible with this feature.
 - `box` *(optional)*: implements the `Patch<Box<P>>` trait for `T` where `T` implements `Patch<P>`.
   This lets you patch a boxed (or unboxed) struct with a boxed patch.
 - `option` *(optional)*: implements the `Patch<Option<P>>` trait for `Option<T>` where `T` implements `Patch<P>`. Please take a look at the example to learn more.
