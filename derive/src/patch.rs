@@ -533,6 +533,27 @@ impl Patch {
         let original_by_ev_log_calls = make_log_calls(&original_field_names_by_empty_value);
         let skip_wrap_log_calls = make_log_calls(&skip_wrap_field_names);
 
+        // For the `apply` method: propagate `default_log_fn` into nesting fields so
+        // that sub-fields of nested structs are also logged when applying with a
+        // struct-level default log. When no default_log_fn is set, fall back to plain
+        // `.apply()` so nested structs use their own log config (if any).
+        #[cfg(feature = "nesting")]
+        let nesting_apply_section: TokenStream = if let Some(ref f) = default_log_fn {
+            quote! {
+                #(
+                    self.#nesting_field_names.apply_with_log(patch.#nesting_field_names, #f);
+                )*
+            }
+        } else {
+            quote! {
+                #(
+                    self.#nesting_field_names.apply(patch.#nesting_field_names);
+                )*
+            }
+        };
+        #[cfg(not(feature = "nesting"))]
+        let nesting_apply_section: TokenStream = quote! {};
+
         let patch_impl = quote! {
             #[automatically_derived]
             impl #generics struct_patch::traits::Patch< #name #generics > for #struct_name #generics #where_clause  {
@@ -567,9 +588,7 @@ impl Patch {
                             self.#skip_wrap_field_names = Some(v);
                         }
                     )*
-                    #(
-                        self.#nesting_field_names.apply(patch.#nesting_field_names);
-                    )*
+                    #nesting_apply_section
                 }
 
                 fn apply_with_log<F: FnMut(&str)>(&mut self, patch: #name #generics, mut log: F) {
@@ -1091,6 +1110,8 @@ mod tests {
                     retyped: true,
                     #[cfg(feature = "op")]
                     addable: Addable::Disable,
+                    #[cfg(feature = "nesting")]
+                    nesting: false,
                     special_attr: SpecialAttr::None,
                 },
                 Field {
@@ -1100,6 +1121,8 @@ mod tests {
                     retyped: false,
                     #[cfg(feature = "op")]
                     addable: Addable::Disable,
+                    #[cfg(feature = "nesting")]
+                    nesting: false,
                     special_attr: SpecialAttr::EmptyValue(Lit::Bool(syn::LitBool::new(
                         false,
                         Span::call_site(),
