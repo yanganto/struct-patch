@@ -717,6 +717,54 @@ impl Patch {
             }
         };
 
+        // A blanket `impl<T,P> Patch<Box<P>> for T where T: Patch<P>` causes
+        // the Rust trait solver to build an infinite `Box<Box<Box<…>>>` proof
+        // chain when `Filler` (which shares the method name `apply`) is used in
+        // the same crate, triggering a recursion-limit overflow.  A concrete
+        // impl per derived type terminates the solver immediately.
+        #[cfg(feature = "box")]
+        let box_impl = quote! {
+            #[automatically_derived]
+            impl #generics struct_patch::traits::Patch<struct_patch::__Box< #name #generics >>
+                for #struct_name #generics #where_clause
+            {
+                fn apply(&mut self, patch: struct_patch::__Box< #name #generics >) {
+                    struct_patch::traits::Patch::apply(self, *patch);
+                }
+
+                fn apply_with_log<__F: ::core::ops::FnMut(&str)>(
+                    &mut self,
+                    patch: struct_patch::__Box< #name #generics >,
+                    log: __F,
+                ) {
+                    struct_patch::traits::Patch::apply_with_log(self, *patch, log);
+                }
+
+                fn into_patch(self) -> struct_patch::__Box< #name #generics > {
+                    struct_patch::__Box::new(
+                        struct_patch::traits::Patch::into_patch(self)
+                    )
+                }
+
+                fn into_patch_by_diff(
+                    self,
+                    previous_struct: Self,
+                ) -> struct_patch::__Box< #name #generics > {
+                    struct_patch::__Box::new(
+                        struct_patch::traits::Patch::into_patch_by_diff(self, previous_struct)
+                    )
+                }
+
+                fn new_empty_patch() -> struct_patch::__Box< #name #generics > {
+                    struct_patch::__Box::new(
+                        <#struct_name #generics as struct_patch::traits::Patch< #name #generics >>::new_empty_patch()
+                    )
+                }
+            }
+        };
+        #[cfg(not(feature = "box"))]
+        let box_impl = quote! {};
+
         Ok(quote! {
             #patch_struct
 
@@ -727,6 +775,8 @@ impl Patch {
             #patch_impl
 
             #op_impl
+
+            #box_impl
         })
     }
 

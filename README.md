@@ -328,6 +328,7 @@ The [examples][examples] demonstrate the following scenarios:
 - show `skip_wrap` field behavior (`instance.rs`)
 - use `Patch` with `clap` for command-line config (`clap.rs`)
 - demonstrate `default_log` and `apply_with_log` for both `Patch` and `Filler` (`log.rs`)
+- apply a heap-allocated (boxed) patch and produce a boxed diff (`box.rs`)
 
 ## Features
 
@@ -337,9 +338,8 @@ This crate includes the following optional features:
   - By default, when there is a field conflict between patches/fillers, `+` will add them together if `#[patch(addable)]`, `#[patch(add = fn)]`, or `#[filler(addable)]` is provided; otherwise it will panic.
 - `merge` *(optional)*: implements the `Merge` trait for the patch struct, which provides the `merge` method, and `<<` (if `op` is enabled) between patches.
 - `alloc` *(optional)*: enables `alloc` support for `no_std` + alloc environments.
-- `std` *(optional)*: enables `std`-dependent features (implies `box` and `option`). Note: the `log` example is incompatible with this feature.
-- `box` *(optional)*: implements the `Patch<Box<P>>` trait for `T` where `T` implements `Patch<P>`.
-  This lets you patch a boxed (or unboxed) struct with a boxed patch.
+- `std` *(optional)*: enables `std`-dependent features (implies `box` and `option`).
+- `box` *(optional)*: for every struct that derives `Patch`, also generates `impl Patch<Box<PatchStruct>> for Struct`, letting you apply a heap-allocated (boxed) patch directly via `item.apply(Box::new(patch))`.
 - `option` *(optional)*: implements the `Patch<Option<P>>` trait for `Option<T>` where `T` implements `Patch<P>`. Please take a look at the example to learn more.
   - default behavior: `T` needs to implement `From<P>`. When patching on `None`, it converts the patch into `T` via `From<P>`, letting you patch structs containing fields with optional values.
   - `none_as_default` *(optional)*: `T` needs to implement `Default`. When patching on `None`, it patches on a default instance. Mutually exclusive with `keep_none`.
