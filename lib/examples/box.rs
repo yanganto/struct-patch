@@ -1,7 +1,12 @@
 use struct_patch::Patch;
 
+fn log_field(field: &str) {
+    println!("[default_log] field changed: {field}");
+}
+
 #[derive(Default, Patch)]
 #[patch(attribute(derive(Debug, Default)))]
+#[patch(default_log(log_field))]
 struct Config {
     host: String,
     port: u16,
