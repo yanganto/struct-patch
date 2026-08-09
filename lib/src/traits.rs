@@ -60,6 +60,26 @@
 /// // struct ItemOverlay {}
 /// ```
 ///
+/// ### `#[patch(default_log(fn_path))]`
+/// Automatically call `fn_path(&str)` with each patched field name inside
+/// every generated `apply` call. Has no effect on `apply_with_log`. The path
+/// may be any function path visible at the call site.
+/// ```rust
+/// # use struct_patch::Patch;
+/// fn log_field(field: &str) { let _ = field; }
+///
+/// #[derive(Default, Patch)]
+/// #[patch(default_log(log_field))]
+/// struct Item {
+///     field_int: usize,
+///     field_string: String,
+/// }
+///
+/// let mut item = Item::default();
+/// item.apply(ItemPatch { field_int: Some(1), field_string: None });
+/// // log_field("field_int") is called automatically
+/// ```
+///
 /// ## Field attributes
 /// ### `#[patch(skip)]`
 /// If you want certain fields to be unpatchable, you can let the derive macro skip certain fields when creating the patch struct
@@ -112,6 +132,32 @@ pub trait Patch<P> {
     /// Apply a patch
     fn apply(&mut self, patch: P);
 
+    /// Apply a patch, calling `log` with each patched field name.
+    ///
+    /// The default implementation ignores `log` and delegates to [`apply`](Patch::apply).
+    /// The derive macro generates an override that calls `log` once per field that is
+    /// actually changed.
+    ///
+    /// ```rust
+    /// # use struct_patch::Patch;
+    /// #[derive(Default, Patch)]
+    /// struct Item {
+    ///     field_int: usize,
+    ///     field_string: String,
+    /// }
+    ///
+    /// let mut item = Item::default();
+    /// let patch = ItemPatch { field_int: Some(42), field_string: None };
+    ///
+    /// let mut patched_fields = Vec::new();
+    /// item.apply_with_log(patch, |field| patched_fields.push(field.to_string()));
+    ///
+    /// assert_eq!(patched_fields, vec!["field_int"]);
+    /// ```
+    fn apply_with_log<F: FnMut(&str)>(&mut self, patch: P, _log: F) {
+        self.apply(patch);
+    }
+
     /// Returns a patch that when applied turns any struct of the same type into `Self`
     fn into_patch(self) -> P;
 
@@ -125,6 +171,31 @@ pub trait Patch<P> {
 pub trait Filler<F> {
     /// Apply a filler
     fn apply(&mut self, filler: F);
+
+    /// Apply a filler, calling `log` with each field name that is actually filled.
+    ///
+    /// The default implementation ignores `log` and delegates to [`apply`](Filler::apply).
+    /// The derive macro generates an override that calls `log` once per field that is
+    /// actually filled (i.e. the field was empty and the filler supplied a value).
+    ///
+    /// ```rust
+    /// # use struct_patch::Filler;
+    /// #[derive(Default, Filler)]
+    /// struct Item {
+    ///     value: Option<usize>,
+    /// }
+    ///
+    /// let mut item = Item::default();
+    /// let filler = ItemFiller { value: Some(42) };
+    ///
+    /// let mut filled_fields = Vec::new();
+    /// item.apply_with_log(filler, |field| filled_fields.push(field.to_string()));
+    ///
+    /// assert_eq!(filled_fields, vec!["value"]);
+    /// ```
+    fn apply_with_log<L: FnMut(&str)>(&mut self, filler: F, _log: L) {
+        self.apply(filler);
+    }
 
     /// Get an empty filler instance
     fn new_empty_filler() -> F;

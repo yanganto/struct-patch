@@ -49,3 +49,10 @@ catalyst = [
 unsafe = [
     "struct-patch-derive/unsafe"
 ]
+
+# exmaple features for CI not reall feature
+log = []  # avoid running std on log example
+
+[[example]]
+name = "log"
+required-features = ["log"]

@@ -22,6 +22,10 @@ struct Item {
 // }
 
 fn main() {
+    fn log(field: &str) {
+        println!("TRACE: {field} patched")
+    }
+
     let mut item = Item::default();
 
     let mut patch: ItemPatch = Item::new_empty_patch();
@@ -33,7 +37,7 @@ fn main() {
         "ItemPatch { field_complete: None, field_int: Some(7), field_string: None, field_option_vec: None }"
     );
 
-    item.apply(patch);
+    item.apply_with_log(patch, log);
 
     assert!(!item.field_complete);
     assert_eq!(item.field_int, 7);
