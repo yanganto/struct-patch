@@ -11,6 +11,7 @@ const ATTRIBUTE: &str = "attribute";
 const EXTENDABLE: &str = "extendable";
 const EMPTY_VALUE: &str = "empty_value";
 const ADDABLE: &str = "addable";
+const DEFAULT_LOG: &str = "default_log";
 
 pub(crate) struct Filler {
     visibility: syn::Visibility,
@@ -19,6 +20,7 @@ pub(crate) struct Filler {
     generics: syn::Generics,
     attributes: Vec<TokenStream>,
     fields: Vec<Field>,
+    default_log_fn: Option<syn::Path>,
 }
 
 enum FillerType {
@@ -65,6 +67,7 @@ impl Filler {
             generics,
             attributes,
             fields,
+            default_log_fn,
         } = self;
 
         let filler_struct_fields = fields
@@ -225,23 +228,63 @@ impl Filler {
         #[cfg(not(feature = "op"))]
         let op_impl = quote!();
 
+        let make_log_calls = |names: &[Option<&Ident>]| -> Vec<TokenStream> {
+            if let Some(f) = default_log_fn {
+                names
+                    .iter()
+                    .map(|n| quote! { #f(stringify!(#n)); })
+                    .collect()
+            } else {
+                names.iter().map(|_| quote! {}).collect()
+            }
+        };
+        let native_value_log_calls = make_log_calls(&native_value_field_names);
+        let extendable_log_calls = make_log_calls(&extendable_field_names);
+        let option_log_calls = make_log_calls(&option_field_names);
+
         let filler_impl = quote! {
             #[automatically_derived]
             impl #generics struct_patch::traits::Filler< #name #generics > for #struct_name #generics #where_clause  {
                 fn apply(&mut self, filler: #name #generics) {
                     #(
                         if self.#native_value_field_names == #native_value_field_empty_values {
+                            #native_value_log_calls
                             self.#native_value_field_names = filler.#native_value_field_names;
                         }
                     )*
                     #(
                         if self.#extendable_field_names.is_empty() {
+                            #extendable_log_calls
                             self.#extendable_field_names.extend(filler.#extendable_field_names.into_iter());
                         }
                     )*
                     #(
                         if let Some(v) = filler.#option_field_names {
                             if self.#option_field_names.is_none() {
+                                #option_log_calls
+                                self.#option_field_names = Some(v);
+                            }
+                        }
+                    )*
+                }
+
+                fn apply_with_log<__L: FnMut(&str)>(&mut self, filler: #name #generics, mut log: __L) {
+                    #(
+                        if self.#native_value_field_names == #native_value_field_empty_values {
+                            log(stringify!(#native_value_field_names));
+                            self.#native_value_field_names = filler.#native_value_field_names;
+                        }
+                    )*
+                    #(
+                        if self.#extendable_field_names.is_empty() {
+                            log(stringify!(#extendable_field_names));
+                            self.#extendable_field_names.extend(filler.#extendable_field_names.into_iter());
+                        }
+                    )*
+                    #(
+                        if let Some(v) = filler.#option_field_names {
+                            if self.#option_field_names.is_none() {
+                                log(stringify!(#option_field_names));
                                 self.#option_field_names = Some(v);
                             }
                         }
@@ -287,6 +330,7 @@ impl Filler {
 
         let mut attributes = vec![];
         let mut fields = vec![];
+        let mut default_log_fn: Option<syn::Path> = None;
 
         for attr in attrs {
             if attr.path().to_string().as_str() != FILLER {
@@ -309,6 +353,12 @@ impl Filler {
                         parenthesized!(content in meta.input);
                         let attribute: TokenStream = content.parse()?;
                         attributes.push(attribute);
+                    }
+                    DEFAULT_LOG => {
+                        // #[filler(default_log(path::to::fn))]
+                        let content;
+                        parenthesized!(content in meta.input);
+                        default_log_fn = Some(content.parse()?);
                     }
                     _ => {
                         return Err(meta.error(format_args!(
@@ -337,6 +387,7 @@ impl Filler {
             generics,
             attributes,
             fields,
+            default_log_fn,
         })
     }
 }

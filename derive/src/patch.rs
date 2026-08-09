@@ -18,6 +18,7 @@ const ADD: &str = "add";
 const NESTING: &str = "nesting";
 const EMPTY_VALUE: &str = "empty_value";
 const SKIP_WRAP: &str = "skip_wrap";
+const DEFAULT_LOG: &str = "default_log";
 
 pub(crate) struct Patch {
     visibility: syn::Visibility,
@@ -26,6 +27,7 @@ pub(crate) struct Patch {
     generics: syn::Generics,
     attributes: Vec<TokenStream>,
     fields: Vec<Field>,
+    default_log_fn: Option<syn::Path>,
 }
 
 enum SpecialAttr {
@@ -72,6 +74,7 @@ impl Patch {
             generics,
             attributes,
             fields,
+            default_log_fn,
         } = self;
 
         let patch_struct_fields = fields
@@ -146,7 +149,9 @@ impl Patch {
         #[cfg(feature = "nesting")]
         let renamed_field_names_by_empty_value = fields
             .iter()
-            .filter(|f| f.retyped && !f.nesting && matches!(f.special_attr, SpecialAttr::EmptyValue(_)))
+            .filter(|f| {
+                f.retyped && !f.nesting && matches!(f.special_attr, SpecialAttr::EmptyValue(_))
+            })
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         let renamed_field_name_empty_values = fields
@@ -177,7 +182,9 @@ impl Patch {
         #[cfg(feature = "nesting")]
         let original_field_names_by_empty_value = fields
             .iter()
-            .filter(|f| !f.retyped && !f.nesting && matches!(f.special_attr, SpecialAttr::EmptyValue(_)))
+            .filter(|f| {
+                !f.retyped && !f.nesting && matches!(f.special_attr, SpecialAttr::EmptyValue(_))
+            })
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(not(feature = "nesting"))]
@@ -507,37 +514,116 @@ impl Patch {
         #[cfg(not(feature = "op"))]
         let op_impl = quote!();
 
+        // Per-field log-call token streams, parallel with each field-name vec.
+        // Emit `default_log_fn(stringify!(field));` when a struct-level log is configured,
+        // or an empty token stream otherwise.
+        let make_log_calls = |names: &[Option<&Ident>]| -> Vec<TokenStream> {
+            if let Some(f) = default_log_fn {
+                names
+                    .iter()
+                    .map(|n| quote! { #f(stringify!(#n)); })
+                    .collect()
+            } else {
+                names.iter().map(|_| quote! {}).collect()
+            }
+        };
+        let renamed_log_calls = make_log_calls(&renamed_field_names);
+        let renamed_by_ev_log_calls = make_log_calls(&renamed_field_names_by_empty_value);
+        let original_log_calls = make_log_calls(&original_field_names);
+        let original_by_ev_log_calls = make_log_calls(&original_field_names_by_empty_value);
+        let skip_wrap_log_calls = make_log_calls(&skip_wrap_field_names);
+
+        // For the `apply` method: propagate `default_log_fn` into nesting fields so
+        // that sub-fields of nested structs are also logged when applying with a
+        // struct-level default log. When no default_log_fn is set, fall back to plain
+        // `.apply()` so nested structs use their own log config (if any).
+        #[cfg(feature = "nesting")]
+        let nesting_apply_section: TokenStream = if let Some(ref f) = default_log_fn {
+            quote! {
+                #(
+                    self.#nesting_field_names.apply_with_log(patch.#nesting_field_names, #f);
+                )*
+            }
+        } else {
+            quote! {
+                #(
+                    self.#nesting_field_names.apply(patch.#nesting_field_names);
+                )*
+            }
+        };
+        #[cfg(not(feature = "nesting"))]
+        let nesting_apply_section: TokenStream = quote! {};
+
         let patch_impl = quote! {
             #[automatically_derived]
             impl #generics struct_patch::traits::Patch< #name #generics > for #struct_name #generics #where_clause  {
                 fn apply(&mut self, patch: #name #generics) {
                     #(
                         if let Some(v) = patch.#renamed_field_names {
+                            #renamed_log_calls
                             self.#renamed_field_names.apply(v);
                         }
                     )*
                     #(
                         if patch.#renamed_field_names_by_empty_value != #renamed_field_name_empty_values {
+                            #renamed_by_ev_log_calls
                             self.#renamed_field_names_by_empty_value.apply(patch.#renamed_field_names_by_empty_value);
                         }
                     )*
                     #(
                         if let Some(v) = patch.#original_field_names {
+                            #original_log_calls
                             self.#original_field_names = v;
                         }
                     )*
                     #(
                         if patch.#original_field_names_by_empty_value != #original_field_name_empty_values  {
+                            #original_by_ev_log_calls
                             self.#original_field_names_by_empty_value = patch.#original_field_names_by_empty_value ;
                         }
                     )*
                     #(
                         if let Some(v) = patch.#skip_wrap_field_names {
+                            #skip_wrap_log_calls
+                            self.#skip_wrap_field_names = Some(v);
+                        }
+                    )*
+                    #nesting_apply_section
+                }
+
+                fn apply_with_log<F: FnMut(&str)>(&mut self, patch: #name #generics, mut log: F) {
+                    #(
+                        if let Some(v) = patch.#renamed_field_names {
+                            log(stringify!(#renamed_field_names));
+                            self.#renamed_field_names.apply(v);
+                        }
+                    )*
+                    #(
+                        if patch.#renamed_field_names_by_empty_value != #renamed_field_name_empty_values {
+                            log(stringify!(#renamed_field_names_by_empty_value));
+                            self.#renamed_field_names_by_empty_value.apply(patch.#renamed_field_names_by_empty_value);
+                        }
+                    )*
+                    #(
+                        if let Some(v) = patch.#original_field_names {
+                            log(stringify!(#original_field_names));
+                            self.#original_field_names = v;
+                        }
+                    )*
+                    #(
+                        if patch.#original_field_names_by_empty_value != #original_field_name_empty_values {
+                            log(stringify!(#original_field_names_by_empty_value));
+                            self.#original_field_names_by_empty_value = patch.#original_field_names_by_empty_value;
+                        }
+                    )*
+                    #(
+                        if let Some(v) = patch.#skip_wrap_field_names {
+                            log(stringify!(#skip_wrap_field_names));
                             self.#skip_wrap_field_names = Some(v);
                         }
                     )*
                     #(
-                        self.#nesting_field_names.apply(patch.#nesting_field_names);
+                        self.#nesting_field_names.apply_with_log(patch.#nesting_field_names, &mut log);
                     )*
                 }
 
@@ -631,6 +717,54 @@ impl Patch {
             }
         };
 
+        // A blanket `impl<T,P> Patch<Box<P>> for T where T: Patch<P>` causes
+        // the Rust trait solver to build an infinite `Box<Box<Box<…>>>` proof
+        // chain when `Filler` (which shares the method name `apply`) is used in
+        // the same crate, triggering a recursion-limit overflow.  A concrete
+        // impl per derived type terminates the solver immediately.
+        #[cfg(feature = "box")]
+        let box_impl = quote! {
+            #[automatically_derived]
+            impl #generics struct_patch::traits::Patch<struct_patch::__Box< #name #generics >>
+                for #struct_name #generics #where_clause
+            {
+                fn apply(&mut self, patch: struct_patch::__Box< #name #generics >) {
+                    struct_patch::traits::Patch::apply(self, *patch);
+                }
+
+                fn apply_with_log<__F: ::core::ops::FnMut(&str)>(
+                    &mut self,
+                    patch: struct_patch::__Box< #name #generics >,
+                    log: __F,
+                ) {
+                    struct_patch::traits::Patch::apply_with_log(self, *patch, log);
+                }
+
+                fn into_patch(self) -> struct_patch::__Box< #name #generics > {
+                    struct_patch::__Box::new(
+                        struct_patch::traits::Patch::into_patch(self)
+                    )
+                }
+
+                fn into_patch_by_diff(
+                    self,
+                    previous_struct: Self,
+                ) -> struct_patch::__Box< #name #generics > {
+                    struct_patch::__Box::new(
+                        struct_patch::traits::Patch::into_patch_by_diff(self, previous_struct)
+                    )
+                }
+
+                fn new_empty_patch() -> struct_patch::__Box< #name #generics > {
+                    struct_patch::__Box::new(
+                        <#struct_name #generics as struct_patch::traits::Patch< #name #generics >>::new_empty_patch()
+                    )
+                }
+            }
+        };
+        #[cfg(not(feature = "box"))]
+        let box_impl = quote! {};
+
         Ok(quote! {
             #patch_struct
 
@@ -641,6 +775,8 @@ impl Patch {
             #patch_impl
 
             #op_impl
+
+            #box_impl
         })
     }
 
@@ -666,6 +802,7 @@ impl Patch {
         let mut name = None;
         let mut attributes = vec![];
         let mut fields = vec![];
+        let mut default_log_fn: Option<syn::Path> = None;
 
         for attr in attrs {
             if attr.path().to_string().as_str() != PATCH {
@@ -699,6 +836,12 @@ impl Patch {
                         let attribute: TokenStream = content.parse()?;
                         attributes.push(attribute);
                     }
+                    DEFAULT_LOG => {
+                        // #[patch(default_log(path::to::fn))]
+                        let content;
+                        parenthesized!(content in meta.input);
+                        default_log_fn = Some(content.parse()?);
+                    }
                     _ => {
                         return Err(meta.error(format_args!(
                             "unknown patch container attribute `{}`",
@@ -727,6 +870,7 @@ impl Patch {
             generics,
             attributes,
             fields,
+            default_log_fn,
         })
     }
 }
@@ -1005,6 +1149,7 @@ mod tests {
             patch_struct_name: syn::Ident::new("MyPatch", Span::call_site()),
             generics: syn::Generics::default(),
             attributes: vec![quote! { derive(Debug, PartialEq, Clone, Serialize, Deserialize) }],
+            default_log_fn: None,
             fields: vec![
                 Field {
                     ident: Some(syn::Ident::new("field1", Span::call_site())),
@@ -1015,6 +1160,8 @@ mod tests {
                     retyped: true,
                     #[cfg(feature = "op")]
                     addable: Addable::Disable,
+                    #[cfg(feature = "nesting")]
+                    nesting: false,
                     special_attr: SpecialAttr::None,
                 },
                 Field {
@@ -1024,7 +1171,12 @@ mod tests {
                     retyped: false,
                     #[cfg(feature = "op")]
                     addable: Addable::Disable,
-                    special_attr: SpecialAttr::EmptyValue(Lit::Bool(syn::LitBool::new(false, Span::call_site()))),
+                    #[cfg(feature = "nesting")]
+                    nesting: false,
+                    special_attr: SpecialAttr::EmptyValue(Lit::Bool(syn::LitBool::new(
+                        false,
+                        Span::call_site(),
+                    ))),
                 },
             ],
         };

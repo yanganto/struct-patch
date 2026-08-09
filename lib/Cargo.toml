@@ -36,7 +36,7 @@ merge = [
 
 alloc = []
 std = ["box", "option"]
-box = ["alloc"]
+box = ["alloc", "struct-patch-derive/box"]
 option = []
 nesting = [
     "struct-patch-derive/nesting"
@@ -49,3 +49,8 @@ catalyst = [
 unsafe = [
     "struct-patch-derive/unsafe"
 ]
+
+
+[[example]]
+name = "box"
+required-features = ["box"]

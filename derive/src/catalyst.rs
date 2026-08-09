@@ -101,7 +101,13 @@ impl Catalyst {
 
         let complex_fields = raw_complex_fields
             .iter()
-            .map(|f| f.to_token_stream(*keep_field_attribute, override_field_attributes, exclude_field_attributes))
+            .map(|f| {
+                f.to_token_stream(
+                    *keep_field_attribute,
+                    override_field_attributes,
+                    exclude_field_attributes,
+                )
+            })
             .collect::<Result<Vec<_>>>()?;
 
         #[cfg(not(feature = "unsafe"))]
