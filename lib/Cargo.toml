@@ -36,7 +36,7 @@ merge = [
 
 alloc = []
 std = ["box", "option"]
-box = ["alloc"]
+box = ["alloc", "struct-patch-derive/box"]
 option = []
 nesting = [
     "struct-patch-derive/nesting"
@@ -50,9 +50,7 @@ unsafe = [
     "struct-patch-derive/unsafe"
 ]
 
-# exmaple features for CI not reall feature
-log = []  # avoid running std on log example
 
 [[example]]
-name = "log"
-required-features = ["log"]
+name = "box"
+required-features = ["box"]

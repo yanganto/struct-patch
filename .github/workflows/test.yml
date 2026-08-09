@@ -19,18 +19,19 @@ jobs:
 
       - name: Test no default features
         run: |
-          nix develop .#ci -c cargo run --no-default-features --example instance
-          nix develop .#ci -c cargo run --no-default-features --example filler
-          nix develop .#ci -c cargo run --no-default-features --example diff
-          nix develop .#ci -c cargo run --no-default-features --example json
-          nix develop .#ci -c cargo run --no-default-features --example rename-patch-struct
-          nix develop .#ci -c cargo run --no-default-features --example patch-attr
-          nix develop .#ci -c cargo run --no-default-features --example time
-          nix develop .#ci -c cargo run --no-default-features --example clap
-          nix develop .#ci -c cargo run --no-default-features --features=nesting --example nesting
-          nix develop .#ci -c cargo run --no-default-features --features=option --example option
-          nix develop .#ci -c cargo run --no-default-features --features=log --example log 
-          nix develop .#ci -c cargo test --no-default-features
+          nix develop .#ci -c cargo run --quiet --no-default-features --example instance
+          nix develop .#ci -c cargo run --quiet --no-default-features --example filler
+          nix develop .#ci -c cargo run --quiet --no-default-features --example diff
+          nix develop .#ci -c cargo run --quiet --no-default-features --example json
+          nix develop .#ci -c cargo run --quiet --no-default-features --example rename-patch-struct
+          nix develop .#ci -c cargo run --quiet --no-default-features --example patch-attr
+          nix develop .#ci -c cargo run --quiet --no-default-features --example time
+          nix develop .#ci -c cargo run --quiet --no-default-features --example clap
+          nix develop .#ci -c cargo run --quiet --no-default-features --features=nesting --example nesting
+          nix develop .#ci -c cargo run --quiet --no-default-features --features=option --example option
+          nix develop .#ci -c cargo run --quiet --no-default-features --example=log
+          nix develop .#ci -c cargo run --quiet --no-default-features --features=box --example box
+          nix develop .#ci -c cargo test --quiet --no-default-features
 
       - name: Test with std features
         run: |
@@ -42,6 +43,7 @@ jobs:
           nix develop .#ci -c cargo run --features=std --example rename-patch-struct
           nix develop .#ci -c cargo run --features=std --example patch-attr
           nix develop .#ci -c cargo run --features=std --example option
+          nix develop .#ci -c cargo run --features=std --example box
           nix develop .#ci -c cargo run --features=std,nesting --example nesting
           nix develop .#ci -c cargo test --features=std
 
@@ -62,13 +64,14 @@ jobs:
 
       - name: Test with default features
         run: |
-          nix develop .#ci -c cargo run --example status
-          nix develop .#ci -c cargo run --example op
-          nix develop .#ci -c cargo run --example clap
-          nix develop .#ci -c cargo run --features=nesting --example nesting
-          nix develop .#ci -c cargo run --features=nesting --example clap
-          nix develop .#ci -c cargo run --features=log --example log
-          nix develop .#ci -c cargo test
+          nix develop .#ci -c cargo run --quiet --example status
+          nix develop .#ci -c cargo run --quiet --example op
+          nix develop .#ci -c cargo run --quiet --example clap
+          nix develop .#ci -c cargo run --quiet --features=nesting --example nesting
+          nix develop .#ci -c cargo run --quiet --features=nesting --example clap
+          nix develop .#ci -c cargo run --quiet --example=log
+          nix develop .#ci -c cargo run --quiet --features=box --example box
+          nix develop .#ci -c cargo test --quiet
 
       - name: Test in no std
         run: |

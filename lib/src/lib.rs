@@ -89,6 +89,9 @@ pub use struct_patch_derive::Patch;
 #[doc(hidden)]
 pub use struct_patch_derive::Substrate;
 pub mod r#box;
+#[cfg(feature = "box")]
+#[doc(hidden)]
+pub use alloc::boxed::Box as __Box;
 pub mod option;
 pub mod traits;
 pub use traits::*;
