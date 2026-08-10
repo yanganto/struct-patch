@@ -448,7 +448,7 @@ impl Patch {
                         )*
                         #(
                             #apply_by_field_names: match (self.#apply_by_field_names, rhs.#apply_by_field_names) {
-                                (Some(a), Some(b)) => Some(#apply_by_fns(a, b)),
+                                (Some(mut a), Some(b)) => { #apply_by_fns(&mut a, b); Some(a) },
                                 (Some(a), None) => Some(a),
                                 (None, Some(b)) => Some(b),
                                 (None, None) => None,
@@ -545,7 +545,7 @@ impl Patch {
                         )*
                         #(
                             #apply_by_field_names: match (self.#apply_by_field_names, rhs.#apply_by_field_names) {
-                                (Some(a), Some(b)) => Some(#apply_by_fns(a, b)),
+                                (Some(mut a), Some(b)) => { #apply_by_fns(&mut a, b); Some(a) },
                                 (Some(a), None) => Some(a),
                                 (None, Some(b)) => Some(b),
                                 (None, None) => None,
@@ -640,10 +640,7 @@ impl Patch {
                     #(
                         if let Some(v) = patch.#apply_by_field_names {
                             #apply_by_log_calls
-                            self.#apply_by_field_names = #apply_by_fns(
-                                ::core::mem::take(&mut self.#apply_by_field_names),
-                                v,
-                            );
+                            #apply_by_fns(&mut self.#apply_by_field_names, v);
                         }
                     )*
                     #nesting_apply_section
@@ -683,10 +680,7 @@ impl Patch {
                     #(
                         if let Some(v) = patch.#apply_by_field_names {
                             log(stringify!(#apply_by_field_names));
-                            self.#apply_by_field_names = #apply_by_fns(
-                                ::core::mem::take(&mut self.#apply_by_field_names),
-                                v,
-                            );
+                            #apply_by_fns(&mut self.#apply_by_field_names, v);
                         }
                     )*
                     #(
@@ -1164,9 +1158,8 @@ impl Field {
                     }
                     APPLY_BY => {
                         // #[patch(apply_by(path::to::fn))]
-                        // The function is called as `fn(original: T, new_value: T) -> T`
-                        // when the patch field is Some. Requires T: Default to take ownership
-                        // of the original value without a temporary placeholder.
+                        // The function is called as `fn(original: &mut T, new_value: T)`
+                        // when the patch field is Some.
                         let content;
                         parenthesized!(content in meta.input);
                         apply_by = Some(content.parse()?);

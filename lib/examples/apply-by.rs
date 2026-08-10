@@ -1,7 +1,7 @@
 use struct_patch::Patch;
 
-fn concat_list(original: Vec<i32>, additional: Vec<i32>) -> Vec<i32> {
-    original.into_iter().chain(additional).collect()
+fn concat_list(original: &mut Vec<i32>, additional: Vec<i32>) {
+    original.extend(additional);
 }
 
 #[derive(Debug, Default, Patch)]
