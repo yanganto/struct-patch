@@ -30,6 +30,7 @@ jobs:
           nix develop .#ci -c cargo run --quiet --no-default-features --features=nesting --example nesting
           nix develop .#ci -c cargo run --quiet --no-default-features --features=option --example option
           nix develop .#ci -c cargo run --quiet --no-default-features --example=log
+          nix develop .#ci -c cargo run --quiet --no-default-features --example apply-by
           nix develop .#ci -c cargo run --quiet --no-default-features --features=box --example box
           nix develop .#ci -c cargo test --quiet --no-default-features
 
@@ -70,6 +71,7 @@ jobs:
           nix develop .#ci -c cargo run --quiet --features=nesting --example nesting
           nix develop .#ci -c cargo run --quiet --features=nesting --example clap
           nix develop .#ci -c cargo run --quiet --example=log
+          nix develop .#ci -c cargo run --quiet --example apply-by
           nix develop .#ci -c cargo run --quiet --features=box --example box
           nix develop .#ci -c cargo test --quiet
 
