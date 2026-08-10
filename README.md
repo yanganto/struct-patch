@@ -28,7 +28,10 @@ The following are more specific scenarios to help you learn the details:
 #### Case 1 - Patch on a Config
 Deriving `Patch` on a struct generates a struct similar to the original one, but with all fields wrapped in an `Option`.
 An instance of such a patch struct can be applied onto the original struct, replacing values only if they are set to `Some`, leaving them unchanged otherwise.
-See also: [Case Study: Avoid double-`Option` for `Option<Vec<_>>` fields](docs/already-optional-field.md) | [Case Study: Log which fields were patched or filled](docs/logs.md)
+See also Case Studies: 
+  - [Avoid double-`Option` for `Option<Vec<_>>` fields](docs/already-optional-field.md) 
+  - [Log which fields were patched or filled](docs/logs.md)
+  - [Custom apply logic per field with `apply_by`](docs/custom-apply.md)
 ```rust
 use struct_patch::Patch;
 use serde::{Deserialize, Serialize};
@@ -185,6 +188,7 @@ Two attribute namespaces are provided for the catalyst feature because we need t
 - `#[patch(attribute(derive(...)))]`: add derives to the field in the generated patch struct.
 - `#[patch(empty_value = ...)]`: define a value as empty, so the corresponding field of the patch will not be wrapped by `Option`, and the patch is applied when the field differs from the empty value.
 - `#[patch(skip_wrap)]`: keep the field type as-is in the patch struct (no extra `Option` wrapping). Useful when the field is already `Option<...>` (for example `Option<Vec<_>>`) and you do not want a double-`Option` in the patch. With `skip_wrap`, `None` in the patch means "no change" and `Some(v)` sets the field to `Some(v)` (including `Some(vec![])` to clear the vector). Cannot be combined with `empty_value`.
+- `#[patch(apply_by(fn))]`: call `fn(original, new_value)` to update the field when the patch field is `Some`, instead of a plain assignment. The function signature must be `fn(original: &mut T, new_value: T)` — it mutates in place, so no `Default` bound is needed. When two patches are combined with `+` and both carry `Some` for this field, the same function merges the two patch values.
 - `#[patch(nesting)]`: treat the field as a nested patchable struct. The inner struct must also derive `Patch`. Requires the `nesting` feature.
 - `#[patch(addable)]`: allow conflicting patches to add their values together with the `+` operator instead of panicking. Requires the `op` feature.
 - `#[patch(add = fn)]`: like `addable`, but use the specified function to combine values. Requires the `op` feature.
@@ -213,6 +217,7 @@ The [examples][examples] demonstrate the following scenarios:
 - use `Patch` with `clap` for command-line config (`clap.rs`)
 - demonstrate `default_log` and `apply_with_log` for both `Patch` and `Filler` (`log.rs`)
 - apply a heap-allocated (boxed) patch and produce a boxed diff (`box.rs`)
+- demonstrate `apply_by` for custom field-level apply logic, e.g. list concatenation (`apply-by.rs`)
 
 ## Features
 
