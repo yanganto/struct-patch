@@ -19,6 +19,7 @@ const NESTING: &str = "nesting";
 const EMPTY_VALUE: &str = "empty_value";
 const SKIP_WRAP: &str = "skip_wrap";
 const DEFAULT_LOG: &str = "default_log";
+const APPLY_BY: &str = "apply_by";
 
 pub(crate) struct Patch {
     visibility: syn::Visibility,
@@ -62,6 +63,7 @@ struct Field {
     #[cfg(feature = "nesting")]
     nesting: bool,
     special_attr: SpecialAttr,
+    apply_by: Option<syn::Path>,
 }
 
 impl Patch {
@@ -164,7 +166,7 @@ impl Patch {
         #[cfg(not(feature = "nesting"))]
         let original_field_names = fields
             .iter()
-            .filter(|f| !f.retyped && f.special_attr.is_empty())
+            .filter(|f| !f.retyped && f.special_attr.is_empty() && f.apply_by.is_none())
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(not(feature = "nesting"))]
@@ -176,7 +178,7 @@ impl Patch {
         #[cfg(feature = "nesting")]
         let original_field_names = fields
             .iter()
-            .filter(|f| !f.retyped && !f.nesting && f.special_attr.is_empty())
+            .filter(|f| !f.retyped && !f.nesting && f.special_attr.is_empty() && f.apply_by.is_none())
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
@@ -186,6 +188,33 @@ impl Patch {
                 !f.retyped && !f.nesting && matches!(f.special_attr, SpecialAttr::EmptyValue(_))
             })
             .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+
+        // Fields with `#[patch(apply_by(fn))]` — applied via a user-supplied function
+        // `fn(original: T, new_value: T) -> T` instead of a plain assignment.
+        #[cfg(not(feature = "nesting"))]
+        let apply_by_field_names = fields
+            .iter()
+            .filter(|f| !f.retyped && f.special_attr.is_empty() && f.apply_by.is_some())
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+        #[cfg(not(feature = "nesting"))]
+        let apply_by_fns = fields
+            .iter()
+            .filter(|f| !f.retyped && f.special_attr.is_empty() && f.apply_by.is_some())
+            .filter_map(|f| f.apply_by.as_ref())
+            .collect::<Vec<_>>();
+        #[cfg(feature = "nesting")]
+        let apply_by_field_names = fields
+            .iter()
+            .filter(|f| !f.retyped && !f.nesting && f.special_attr.is_empty() && f.apply_by.is_some())
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+        #[cfg(feature = "nesting")]
+        let apply_by_fns = fields
+            .iter()
+            .filter(|f| !f.retyped && !f.nesting && f.special_attr.is_empty() && f.apply_by.is_some())
+            .filter_map(|f| f.apply_by.as_ref())
             .collect::<Vec<_>>();
         #[cfg(not(feature = "nesting"))]
         let original_field_name_empty_values = fields
@@ -305,6 +334,9 @@ impl Patch {
                             #skip_wrap_field_names: other.#skip_wrap_field_names.or(self.#skip_wrap_field_names),
                         )*
                         #(
+                            #apply_by_field_names: other.#apply_by_field_names.or(self.#apply_by_field_names),
+                        )*
+                        #(
                             #nesting_field_names: other.#nesting_field_names.merge(self.#nesting_field_names),
                         )*
                     }
@@ -415,6 +447,14 @@ impl Patch {
                             },
                         )*
                         #(
+                            #apply_by_field_names: match (self.#apply_by_field_names, rhs.#apply_by_field_names) {
+                                (Some(_), Some(_)) => panic!("There are conflict patches on an apply_by field; only one patch may be Some."),
+                                (Some(a), None) => Some(a),
+                                (None, Some(b)) => Some(b),
+                                (None, None) => None,
+                            },
+                        )*
+                        #(
                             #nesting_field_names: self.#nesting_field_names + rhs.#nesting_field_names,
                         )*
                     }
@@ -504,6 +544,14 @@ impl Patch {
                             },
                         )*
                         #(
+                            #apply_by_field_names: match (self.#apply_by_field_names, rhs.#apply_by_field_names) {
+                                (Some(_), Some(_)) => panic!("There are conflict patches on an apply_by field; only one patch may be Some."),
+                                (Some(a), None) => Some(a),
+                                (None, Some(b)) => Some(b),
+                                (None, None) => None,
+                            },
+                        )*
+                        #(
                             #nesting_field_names: self.#nesting_field_names + rhs.#nesting_field_names,
                         )*
                     }
@@ -532,6 +580,7 @@ impl Patch {
         let original_log_calls = make_log_calls(&original_field_names);
         let original_by_ev_log_calls = make_log_calls(&original_field_names_by_empty_value);
         let skip_wrap_log_calls = make_log_calls(&skip_wrap_field_names);
+        let apply_by_log_calls = make_log_calls(&apply_by_field_names);
 
         // For the `apply` method: propagate `default_log_fn` into nesting fields so
         // that sub-fields of nested structs are also logged when applying with a
@@ -588,6 +637,15 @@ impl Patch {
                             self.#skip_wrap_field_names = Some(v);
                         }
                     )*
+                    #(
+                        if let Some(v) = patch.#apply_by_field_names {
+                            #apply_by_log_calls
+                            self.#apply_by_field_names = #apply_by_fns(
+                                ::core::mem::take(&mut self.#apply_by_field_names),
+                                v,
+                            );
+                        }
+                    )*
                     #nesting_apply_section
                 }
 
@@ -623,6 +681,15 @@ impl Patch {
                         }
                     )*
                     #(
+                        if let Some(v) = patch.#apply_by_field_names {
+                            log(stringify!(#apply_by_field_names));
+                            self.#apply_by_field_names = #apply_by_fns(
+                                ::core::mem::take(&mut self.#apply_by_field_names),
+                                v,
+                            );
+                        }
+                    )*
+                    #(
                         self.#nesting_field_names.apply_with_log(patch.#nesting_field_names, &mut log);
                     )*
                 }
@@ -643,6 +710,9 @@ impl Patch {
                         )*
                         #(
                             #skip_wrap_field_names: self.#skip_wrap_field_names,
+                        )*
+                        #(
+                            #apply_by_field_names: Some(self.#apply_by_field_names),
                         )*
                         #(
                             #nesting_field_names: self.#nesting_field_names.into_patch(),
@@ -687,6 +757,14 @@ impl Patch {
                         #(
                             #skip_wrap_field_names: if self.#skip_wrap_field_names != previous_struct.#skip_wrap_field_names {
                                 self.#skip_wrap_field_names
+                            }
+                            else {
+                                None
+                            },
+                        )*
+                        #(
+                            #apply_by_field_names: if self.#apply_by_field_names != previous_struct.#apply_by_field_names {
+                                Some(self.#apply_by_field_names)
                             }
                             else {
                                 None
@@ -986,6 +1064,7 @@ impl Field {
         let mut field_type = None;
         let mut skip = false;
         let mut special_attr = SpecialAttr::None;
+        let mut apply_by: Option<syn::Path> = None;
 
         #[cfg(feature = "op")]
         let mut addable = Addable::Disable;
@@ -1083,6 +1162,15 @@ impl Field {
                         }
                         special_attr = SpecialAttr::SkipWrap;
                     }
+                    APPLY_BY => {
+                        // #[patch(apply_by(path::to::fn))]
+                        // The function is called as `fn(original: T, new_value: T) -> T`
+                        // when the patch field is Some. Requires T: Default to take ownership
+                        // of the original value without a temporary placeholder.
+                        let content;
+                        parenthesized!(content in meta.input);
+                        apply_by = Some(content.parse()?);
+                    }
                     _ => {
                         return Err(meta.error(format_args!(
                             "unknown patch field attribute `{}`",
@@ -1107,6 +1195,7 @@ impl Field {
             #[cfg(feature = "nesting")]
             nesting,
             special_attr,
+            apply_by,
         }))
     }
 }
@@ -1163,6 +1252,7 @@ mod tests {
                     #[cfg(feature = "nesting")]
                     nesting: false,
                     special_attr: SpecialAttr::None,
+                    apply_by: None,
                 },
                 Field {
                     ident: Some(syn::Ident::new("field3", Span::call_site())),
@@ -1177,6 +1267,7 @@ mod tests {
                         false,
                         Span::call_site(),
                     ))),
+                    apply_by: None,
                 },
             ],
         };
