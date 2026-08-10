@@ -28,6 +28,7 @@ The following are more specific scenarios to help you learn the details:
 #### Case 1 - Patch on a Config
 Deriving `Patch` on a struct generates a struct similar to the original one, but with all fields wrapped in an `Option`.
 An instance of such a patch struct can be applied onto the original struct, replacing values only if they are set to `Some`, leaving them unchanged otherwise.
+See also: [Case Study: Avoid double-`Option` for `Option<Vec<_>>` fields](docs/already-optional-field.md) | [Case Study: Log which fields were patched or filled](docs/logs.md)
 ```rust
 use struct_patch::Patch;
 use serde::{Deserialize, Serialize};
@@ -154,123 +155,6 @@ struct Amyloid {
 //     pub extra_bool: bool,
 //     pub extra_option: Option<usize>,
 // }
-```
-
-#### Case 5 - Log which fields were patched or filled
-
-Both `Patch` and `Filler` support two ways to observe which fields are changed:
-
-**Ad-hoc at the call site** — use `apply_with_log`, which takes a closure that
-is called with each patched/filled field name:
-
-```rust
-use struct_patch::{Filler, Patch};
-
-#[derive(Default, Patch)]
-struct Item {
-    field_int: usize,
-    field_string: String,
-}
-
-let mut item = Item::default();
-let patch = ItemPatch { field_int: Some(42), field_string: None };
-
-let mut patched_fields = Vec::new();
-item.apply_with_log(patch, |field| patched_fields.push(field.to_string()));
-
-assert_eq!(patched_fields, vec!["field_int"]);
-assert_eq!(item.field_int, 42);
-
-#[derive(Default, Filler)]
-struct Settings {
-    theme: Option<String>,
-}
-
-let mut settings = Settings::default();
-let mut filled_fields = Vec::new();
-settings.apply_with_log(
-    SettingsFiller { theme: Some("dark".into()) },
-    |field| filled_fields.push(field.to_string()),
-);
-assert_eq!(filled_fields, vec!["theme"]);
-```
-
-For structs using `#[patch(nesting)]`, the log closure is threaded into nested
-patches so you receive field names from all levels of nesting.
-
-**Always-on via struct attribute** — use `#[patch(default_log(fn_path))]` or
-`#[filler(default_log(fn_path))]` to wire a specific function into `apply`
-itself. Every call to `apply` on that struct will automatically invoke the
-function for each field that is changed, with no extra effort at call sites.
-Has no effect on `apply_with_log`.
-
-```rust
-use struct_patch::{Filler, Patch};
-
-fn my_log(field: &str) {
-    println!("patched: {field}");
-}
-
-#[derive(Default, Patch)]
-#[patch(default_log(my_log))]
-struct Config {
-    retries: usize,
-    timeout: u64,
-}
-
-let mut cfg = Config::default();
-cfg.apply(ConfigPatch { retries: Some(3), timeout: None });
-// prints: patched: retries
-
-fn my_filler_log(field: &str) {
-    println!("filled: {field}");
-}
-
-#[derive(Default, Filler)]
-#[filler(default_log(my_filler_log))]
-struct Settings {
-    theme: Option<String>,
-}
-
-let mut settings = Settings::default();
-settings.apply(SettingsFiller { theme: Some("dark".into()) });
-// prints: filled: theme
-```
-
-The path may be any item path (`crate::logging::log_field`,
-`tracing::debug!` wrapped in a thin function, etc.).
-
-#### Case 4 - Avoid double-`Option` for `Option<Vec<_>>` fields
-By default, deriving `Patch` wraps every field in an `Option`, so a field typed
-`Option<Vec<T>>` becomes `Option<Option<Vec<T>>>` in the generated patch. When
-this double wrapping is undesirable, annotate the field with
-`#[patch(skip_wrap)]` to keep the original type in the patch. `None` in the
-patch then means "no change" and `Some(v)` replaces the field — including
-`Some(vec![])` to explicitly clear the vector.
-
-```rust
-use struct_patch::Patch;
-
-#[derive(Default, Patch)]
-struct Item {
-    #[patch(skip_wrap)]
-    tags: Option<Vec<String>>,
-}
-
-// Generated struct
-// struct ItemPatch {
-//     tags: Option<Vec<String>>,
-// }
-
-let mut item = Item { tags: Some(vec!["a".into()]) };
-
-// `None` leaves the field unchanged.
-item.apply(ItemPatch { tags: None });
-assert_eq!(item.tags, Some(vec!["a".into()]));
-
-// `Some(vec![])` still applies and clears the list.
-item.apply(ItemPatch { tags: Some(vec![]) });
-assert_eq!(item.tags, Some(vec![]));
 ```
 
 ## Attributes
