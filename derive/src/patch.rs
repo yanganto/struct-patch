@@ -448,7 +448,7 @@ impl Patch {
                         )*
                         #(
                             #apply_by_field_names: match (self.#apply_by_field_names, rhs.#apply_by_field_names) {
-                                (Some(_), Some(_)) => panic!("There are conflict patches on an apply_by field; only one patch may be Some."),
+                                (Some(a), Some(b)) => Some(#apply_by_fns(a, b)),
                                 (Some(a), None) => Some(a),
                                 (None, Some(b)) => Some(b),
                                 (None, None) => None,
@@ -545,7 +545,7 @@ impl Patch {
                         )*
                         #(
                             #apply_by_field_names: match (self.#apply_by_field_names, rhs.#apply_by_field_names) {
-                                (Some(_), Some(_)) => panic!("There are conflict patches on an apply_by field; only one patch may be Some."),
+                                (Some(a), Some(b)) => Some(#apply_by_fns(a, b)),
                                 (Some(a), None) => Some(a),
                                 (None, Some(b)) => Some(b),
                                 (None, None) => None,
