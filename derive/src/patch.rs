@@ -191,7 +191,7 @@ impl Patch {
             .collect::<Vec<_>>();
 
         // Fields with `#[patch(apply_by(fn))]` — applied via a user-supplied function
-        // `fn(original: T, new_value: T) -> T` instead of a plain assignment.
+        // `fn(original: &mut T, new_value: T) ` instead of a plain assignment.
         #[cfg(not(feature = "nesting"))]
         let apply_by_field_names = fields
             .iter()
