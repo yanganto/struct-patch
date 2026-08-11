@@ -32,6 +32,7 @@ See also Case Studies:
   - [Avoid double-`Option` for `Option<Vec<_>>` fields](docs/already-optional-field.md) 
   - [Log which fields were patched or filled](docs/logs.md)
   - [Custom apply logic per field with `apply_by`](docs/custom-apply.md)
+
 ```rust
 use struct_patch::Patch;
 use serde::{Deserialize, Serialize};
@@ -83,6 +84,8 @@ fn patch_json() {
 
 #### Case 2 - Fill up on a Config
 Deriving `Filler` on a struct generates a struct similar to the original one, keeping only the fields that can be filled (`Option`, collections, `extendable`, or `empty_value` fields). Unlike `Patch`, the `Filler` only works on empty fields of the instance.
+See also Case Studies: 
+  - [Log which fields were patched or filled](docs/logs.md)
 
 ```rust
 use struct_patch::Filler;
