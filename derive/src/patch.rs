@@ -119,14 +119,133 @@ impl Patch {
         #[cfg(not(feature = "nesting"))]
         let skip_wrap_field_names = fields
             .iter()
-            .filter(|f| matches!(f.special_attr, SpecialAttr::SkipWrap))
+            .filter(|f| matches!(f.special_attr, SpecialAttr::SkipWrap) && f.apply_by.is_none())
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let skip_wrap_field_names = fields
             .iter()
-            .filter(|f| matches!(f.special_attr, SpecialAttr::SkipWrap) && !f.nesting)
+            .filter(|f| {
+                matches!(f.special_attr, SpecialAttr::SkipWrap)
+                    && !f.nesting
+                    && f.apply_by.is_none()
+            })
             .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+
+        // Fields with both `#[patch(skip_wrap)]` and `#[patch(apply_by(fn))]`.
+        // Two sub-groups based on whether the original field type is `Option<T>`:
+        //
+        // • Option sub-group: patch field stays `Option<T>`; fn is called with the
+        //   unwrapped inner value when the patch is `Some`.  Function signature:
+        //   `fn(original: &mut T, new_value: T)`.
+        //
+        // • Plain sub-group: patch field stays `T` (no Option wrap at all); fn is
+        //   always called unconditionally.  Same function signature.
+        #[cfg(not(feature = "nesting"))]
+        let skip_wrap_apply_by_option_field_names = fields
+            .iter()
+            .filter(|f| {
+                matches!(f.special_attr, SpecialAttr::SkipWrap)
+                    && f.apply_by.is_some()
+                    && is_option_type(&f.ty)
+            })
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+        #[cfg(not(feature = "nesting"))]
+        let skip_wrap_apply_by_option_fns = fields
+            .iter()
+            .filter(|f| {
+                matches!(f.special_attr, SpecialAttr::SkipWrap)
+                    && f.apply_by.is_some()
+                    && is_option_type(&f.ty)
+            })
+            .filter_map(|f| f.apply_by.as_ref())
+            .collect::<Vec<_>>();
+        #[cfg(not(feature = "nesting"))]
+        let skip_wrap_apply_by_plain_field_names = fields
+            .iter()
+            .filter(|f| {
+                matches!(f.special_attr, SpecialAttr::SkipWrap)
+                    && f.apply_by.is_some()
+                    && !is_option_type(&f.ty)
+            })
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+        #[cfg(not(feature = "nesting"))]
+        let skip_wrap_apply_by_plain_field_types = fields
+            .iter()
+            .filter(|f| {
+                matches!(f.special_attr, SpecialAttr::SkipWrap)
+                    && f.apply_by.is_some()
+                    && !is_option_type(&f.ty)
+            })
+            .map(|f| &f.ty)
+            .collect::<Vec<_>>();
+        #[cfg(not(feature = "nesting"))]
+        let skip_wrap_apply_by_plain_fns = fields
+            .iter()
+            .filter(|f| {
+                matches!(f.special_attr, SpecialAttr::SkipWrap)
+                    && f.apply_by.is_some()
+                    && !is_option_type(&f.ty)
+            })
+            .filter_map(|f| f.apply_by.as_ref())
+            .collect::<Vec<_>>();
+        #[cfg(feature = "nesting")]
+        let skip_wrap_apply_by_option_field_names = fields
+            .iter()
+            .filter(|f| {
+                matches!(f.special_attr, SpecialAttr::SkipWrap)
+                    && !f.nesting
+                    && f.apply_by.is_some()
+                    && is_option_type(&f.ty)
+            })
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+        #[cfg(feature = "nesting")]
+        let skip_wrap_apply_by_option_fns = fields
+            .iter()
+            .filter(|f| {
+                matches!(f.special_attr, SpecialAttr::SkipWrap)
+                    && !f.nesting
+                    && f.apply_by.is_some()
+                    && is_option_type(&f.ty)
+            })
+            .filter_map(|f| f.apply_by.as_ref())
+            .collect::<Vec<_>>();
+        #[cfg(feature = "nesting")]
+        let skip_wrap_apply_by_plain_field_names = fields
+            .iter()
+            .filter(|f| {
+                matches!(f.special_attr, SpecialAttr::SkipWrap)
+                    && !f.nesting
+                    && f.apply_by.is_some()
+                    && !is_option_type(&f.ty)
+            })
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+        #[cfg(feature = "nesting")]
+        let skip_wrap_apply_by_plain_field_types = fields
+            .iter()
+            .filter(|f| {
+                matches!(f.special_attr, SpecialAttr::SkipWrap)
+                    && !f.nesting
+                    && f.apply_by.is_some()
+                    && !is_option_type(&f.ty)
+            })
+            .map(|f| &f.ty)
+            .collect::<Vec<_>>();
+        #[cfg(feature = "nesting")]
+        let skip_wrap_apply_by_plain_fns = fields
+            .iter()
+            .filter(|f| {
+                matches!(f.special_attr, SpecialAttr::SkipWrap)
+                    && !f.nesting
+                    && f.apply_by.is_some()
+                    && !is_option_type(&f.ty)
+            })
+            .filter_map(|f| f.apply_by.as_ref())
             .collect::<Vec<_>>();
 
         // Rename fields
@@ -178,7 +297,9 @@ impl Patch {
         #[cfg(feature = "nesting")]
         let original_field_names = fields
             .iter()
-            .filter(|f| !f.retyped && !f.nesting && f.special_attr.is_empty() && f.apply_by.is_none())
+            .filter(|f| {
+                !f.retyped && !f.nesting && f.special_attr.is_empty() && f.apply_by.is_none()
+            })
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
@@ -207,13 +328,17 @@ impl Patch {
         #[cfg(feature = "nesting")]
         let apply_by_field_names = fields
             .iter()
-            .filter(|f| !f.retyped && !f.nesting && f.special_attr.is_empty() && f.apply_by.is_some())
+            .filter(|f| {
+                !f.retyped && !f.nesting && f.special_attr.is_empty() && f.apply_by.is_some()
+            })
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let apply_by_fns = fields
             .iter()
-            .filter(|f| !f.retyped && !f.nesting && f.special_attr.is_empty() && f.apply_by.is_some())
+            .filter(|f| {
+                !f.retyped && !f.nesting && f.special_attr.is_empty() && f.apply_by.is_some()
+            })
             .filter_map(|f| f.apply_by.as_ref())
             .collect::<Vec<_>>();
         #[cfg(not(feature = "nesting"))]
@@ -286,6 +411,16 @@ impl Patch {
                         }
                     )*
                     #(
+                        if self.#skip_wrap_apply_by_option_field_names.is_some() {
+                            return false
+                        }
+                    )*
+                    #(
+                        if self.#skip_wrap_apply_by_plain_field_names != <#skip_wrap_apply_by_plain_field_types as Default>::default() {
+                            return false
+                        }
+                    )*
+                    #(
                         if !self.#nesting_field_names.is_empty() {
                             return false
                         }
@@ -332,6 +467,16 @@ impl Patch {
                         )*
                         #(
                             #skip_wrap_field_names: other.#skip_wrap_field_names.or(self.#skip_wrap_field_names),
+                        )*
+                        #(
+                            #skip_wrap_apply_by_option_field_names: other.#skip_wrap_apply_by_option_field_names.or(self.#skip_wrap_apply_by_option_field_names),
+                        )*
+                        #(
+                            #skip_wrap_apply_by_plain_field_names: {
+                                let mut merged = self.#skip_wrap_apply_by_plain_field_names;
+                                #skip_wrap_apply_by_plain_fns(&mut merged, other.#skip_wrap_apply_by_plain_field_names);
+                                merged
+                            },
                         )*
                         #(
                             #apply_by_field_names: other.#apply_by_field_names.or(self.#apply_by_field_names),
@@ -447,6 +592,21 @@ impl Patch {
                             },
                         )*
                         #(
+                            #skip_wrap_apply_by_option_field_names: match (self.#skip_wrap_apply_by_option_field_names, rhs.#skip_wrap_apply_by_option_field_names) {
+                                (Some(mut a), Some(b)) => { #skip_wrap_apply_by_option_fns(&mut a, b); Some(a) },
+                                (Some(a), None) => Some(a),
+                                (None, Some(b)) => Some(b),
+                                (None, None) => None,
+                            },
+                        )*
+                        #(
+                            #skip_wrap_apply_by_plain_field_names: {
+                                let mut a = self.#skip_wrap_apply_by_plain_field_names;
+                                #skip_wrap_apply_by_plain_fns(&mut a, rhs.#skip_wrap_apply_by_plain_field_names);
+                                a
+                            },
+                        )*
+                        #(
                             #apply_by_field_names: match (self.#apply_by_field_names, rhs.#apply_by_field_names) {
                                 (Some(mut a), Some(b)) => { #apply_by_fns(&mut a, b); Some(a) },
                                 (Some(a), None) => Some(a),
@@ -544,6 +704,21 @@ impl Patch {
                             },
                         )*
                         #(
+                            #skip_wrap_apply_by_option_field_names: match (self.#skip_wrap_apply_by_option_field_names, rhs.#skip_wrap_apply_by_option_field_names) {
+                                (Some(mut a), Some(b)) => { #skip_wrap_apply_by_option_fns(&mut a, b); Some(a) },
+                                (Some(a), None) => Some(a),
+                                (None, Some(b)) => Some(b),
+                                (None, None) => None,
+                            },
+                        )*
+                        #(
+                            #skip_wrap_apply_by_plain_field_names: {
+                                let mut a = self.#skip_wrap_apply_by_plain_field_names;
+                                #skip_wrap_apply_by_plain_fns(&mut a, rhs.#skip_wrap_apply_by_plain_field_names);
+                                a
+                            },
+                        )*
+                        #(
                             #apply_by_field_names: match (self.#apply_by_field_names, rhs.#apply_by_field_names) {
                                 (Some(mut a), Some(b)) => { #apply_by_fns(&mut a, b); Some(a) },
                                 (Some(a), None) => Some(a),
@@ -580,6 +755,8 @@ impl Patch {
         let original_log_calls = make_log_calls(&original_field_names);
         let original_by_ev_log_calls = make_log_calls(&original_field_names_by_empty_value);
         let skip_wrap_log_calls = make_log_calls(&skip_wrap_field_names);
+        let skip_wrap_apply_by_option_log_calls = make_log_calls(&skip_wrap_apply_by_option_field_names);
+        let skip_wrap_apply_by_plain_log_calls = make_log_calls(&skip_wrap_apply_by_plain_field_names);
         let apply_by_log_calls = make_log_calls(&apply_by_field_names);
 
         // For the `apply` method: propagate `default_log_fn` into nesting fields so
@@ -638,6 +815,20 @@ impl Patch {
                         }
                     )*
                     #(
+                        if let Some(v) = patch.#skip_wrap_apply_by_option_field_names {
+                            #skip_wrap_apply_by_option_log_calls
+                            if let Some(ref mut orig) = self.#skip_wrap_apply_by_option_field_names {
+                                #skip_wrap_apply_by_option_fns(orig, v);
+                            }
+                        }
+                    )*
+                    #(
+                        {
+                            #skip_wrap_apply_by_plain_log_calls
+                            #skip_wrap_apply_by_plain_fns(&mut self.#skip_wrap_apply_by_plain_field_names, patch.#skip_wrap_apply_by_plain_field_names);
+                        }
+                    )*
+                    #(
                         if let Some(v) = patch.#apply_by_field_names {
                             #apply_by_log_calls
                             #apply_by_fns(&mut self.#apply_by_field_names, v);
@@ -678,6 +869,20 @@ impl Patch {
                         }
                     )*
                     #(
+                        if let Some(v) = patch.#skip_wrap_apply_by_option_field_names {
+                            log(stringify!(#skip_wrap_apply_by_option_field_names));
+                            if let Some(ref mut orig) = self.#skip_wrap_apply_by_option_field_names {
+                                #skip_wrap_apply_by_option_fns(orig, v);
+                            }
+                        }
+                    )*
+                    #(
+                        {
+                            log(stringify!(#skip_wrap_apply_by_plain_field_names));
+                            #skip_wrap_apply_by_plain_fns(&mut self.#skip_wrap_apply_by_plain_field_names, patch.#skip_wrap_apply_by_plain_field_names);
+                        }
+                    )*
+                    #(
                         if let Some(v) = patch.#apply_by_field_names {
                             log(stringify!(#apply_by_field_names));
                             #apply_by_fns(&mut self.#apply_by_field_names, v);
@@ -704,6 +909,12 @@ impl Patch {
                         )*
                         #(
                             #skip_wrap_field_names: self.#skip_wrap_field_names,
+                        )*
+                        #(
+                            #skip_wrap_apply_by_option_field_names: self.#skip_wrap_apply_by_option_field_names,
+                        )*
+                        #(
+                            #skip_wrap_apply_by_plain_field_names: self.#skip_wrap_apply_by_plain_field_names,
                         )*
                         #(
                             #apply_by_field_names: Some(self.#apply_by_field_names),
@@ -757,6 +968,22 @@ impl Patch {
                             },
                         )*
                         #(
+                            #skip_wrap_apply_by_option_field_names: if self.#skip_wrap_apply_by_option_field_names != previous_struct.#skip_wrap_apply_by_option_field_names {
+                                self.#skip_wrap_apply_by_option_field_names
+                            }
+                            else {
+                                None
+                            },
+                        )*
+                        #(
+                            #skip_wrap_apply_by_plain_field_names: if self.#skip_wrap_apply_by_plain_field_names != previous_struct.#skip_wrap_apply_by_plain_field_names {
+                                self.#skip_wrap_apply_by_plain_field_names
+                            }
+                            else {
+                                <#skip_wrap_apply_by_plain_field_types as Default>::default()
+                            },
+                        )*
+                        #(
                             #apply_by_field_names: if self.#apply_by_field_names != previous_struct.#apply_by_field_names {
                                 Some(self.#apply_by_field_names)
                             }
@@ -780,6 +1007,12 @@ impl Patch {
                         )*
                         #(
                             #skip_wrap_field_names: None,
+                        )*
+                        #(
+                            #skip_wrap_apply_by_option_field_names: None,
+                        )*
+                        #(
+                            #skip_wrap_apply_by_plain_field_names: <#skip_wrap_apply_by_plain_field_types as Default>::default(),
                         )*
                         #(
                             #nesting_field_names: #nesting_field_types::new_empty_patch(),
@@ -1191,6 +1424,15 @@ impl Field {
             apply_by,
         }))
     }
+}
+
+fn is_option_type(ty: &syn::Type) -> bool {
+    if let syn::Type::Path(type_path) = ty {
+        if let Some(segment) = type_path.path.segments.last() {
+            return segment.ident == "Option";
+        }
+    }
+    false
 }
 
 trait ToStr {
