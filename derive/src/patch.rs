@@ -37,11 +37,16 @@ enum SpecialAttr {
     EmptyValue(Lit),
     /// Field type is already `Option<T>`; `None` means "no change", `Some(v)` applies the value.
     SkipWrap,
+    /// Field is Option-wrapped in the patch struct; applied via a user-supplied function.
+    ApplyBy(syn::Path),
+    /// Combines `skip_wrap` and `apply_by`: field keeps its original type, fn applied on change.
+    SkipWrapApplyBy(syn::Path),
 }
 
 impl SpecialAttr {
+    /// Returns true when the patch field is wrapped in `Option<T>` (default behaviour).
     fn is_empty(&self) -> bool {
-        matches!(self, SpecialAttr::None)
+        matches!(self, SpecialAttr::None | SpecialAttr::ApplyBy(_))
     }
 
     fn empty_value(&self) -> Option<&Lit> {
@@ -49,6 +54,13 @@ impl SpecialAttr {
             Some(lit)
         } else {
             None
+        }
+    }
+
+    fn apply_by_fn(&self) -> Option<&syn::Path> {
+        match self {
+            SpecialAttr::ApplyBy(p) | SpecialAttr::SkipWrapApplyBy(p) => Some(p),
+            _ => None,
         }
     }
 }
@@ -63,7 +75,6 @@ struct Field {
     #[cfg(feature = "nesting")]
     nesting: bool,
     special_attr: SpecialAttr,
-    apply_by: Option<syn::Path>,
 }
 
 impl Patch {
@@ -119,22 +130,19 @@ impl Patch {
         #[cfg(not(feature = "nesting"))]
         let skip_wrap_field_names = fields
             .iter()
-            .filter(|f| matches!(f.special_attr, SpecialAttr::SkipWrap) && f.apply_by.is_none())
+            .filter(|f| matches!(f.special_attr, SpecialAttr::SkipWrap))
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let skip_wrap_field_names = fields
             .iter()
-            .filter(|f| {
-                matches!(f.special_attr, SpecialAttr::SkipWrap)
-                    && !f.nesting
-                    && f.apply_by.is_none()
-            })
+            .filter(|f| matches!(f.special_attr, SpecialAttr::SkipWrap) && !f.nesting)
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
 
-        // Fields with both `#[patch(skip_wrap)]` and `#[patch(apply_by(fn))]`.
-        // Two sub-groups based on whether the original field type is `Option<T>`:
+        // Fields with `SkipWrapApplyBy` (i.e. both `#[patch(skip_wrap)]` and
+        // `#[patch(apply_by(fn))]`).  Two sub-groups based on whether the original
+        // field type is `Option<T>`:
         //
         // • Option sub-group: patch field stays `Option<T>`; fn is called with the
         //   unwrapped inner value when the patch is `Some`.  Function signature:
@@ -146,8 +154,7 @@ impl Patch {
         let skip_wrap_apply_by_option_field_names = fields
             .iter()
             .filter(|f| {
-                matches!(f.special_attr, SpecialAttr::SkipWrap)
-                    && f.apply_by.is_some()
+                matches!(f.special_attr, SpecialAttr::SkipWrapApplyBy(_))
                     && is_option_type(&f.ty)
             })
             .map(|f| f.ident.as_ref())
@@ -156,18 +163,16 @@ impl Patch {
         let skip_wrap_apply_by_option_fns = fields
             .iter()
             .filter(|f| {
-                matches!(f.special_attr, SpecialAttr::SkipWrap)
-                    && f.apply_by.is_some()
+                matches!(f.special_attr, SpecialAttr::SkipWrapApplyBy(_))
                     && is_option_type(&f.ty)
             })
-            .filter_map(|f| f.apply_by.as_ref())
+            .filter_map(|f| f.special_attr.apply_by_fn())
             .collect::<Vec<_>>();
         #[cfg(not(feature = "nesting"))]
         let skip_wrap_apply_by_plain_field_names = fields
             .iter()
             .filter(|f| {
-                matches!(f.special_attr, SpecialAttr::SkipWrap)
-                    && f.apply_by.is_some()
+                matches!(f.special_attr, SpecialAttr::SkipWrapApplyBy(_))
                     && !is_option_type(&f.ty)
             })
             .map(|f| f.ident.as_ref())
@@ -176,8 +181,7 @@ impl Patch {
         let skip_wrap_apply_by_plain_field_types = fields
             .iter()
             .filter(|f| {
-                matches!(f.special_attr, SpecialAttr::SkipWrap)
-                    && f.apply_by.is_some()
+                matches!(f.special_attr, SpecialAttr::SkipWrapApplyBy(_))
                     && !is_option_type(&f.ty)
             })
             .map(|f| &f.ty)
@@ -186,19 +190,17 @@ impl Patch {
         let skip_wrap_apply_by_plain_fns = fields
             .iter()
             .filter(|f| {
-                matches!(f.special_attr, SpecialAttr::SkipWrap)
-                    && f.apply_by.is_some()
+                matches!(f.special_attr, SpecialAttr::SkipWrapApplyBy(_))
                     && !is_option_type(&f.ty)
             })
-            .filter_map(|f| f.apply_by.as_ref())
+            .filter_map(|f| f.special_attr.apply_by_fn())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let skip_wrap_apply_by_option_field_names = fields
             .iter()
             .filter(|f| {
-                matches!(f.special_attr, SpecialAttr::SkipWrap)
+                matches!(f.special_attr, SpecialAttr::SkipWrapApplyBy(_))
                     && !f.nesting
-                    && f.apply_by.is_some()
                     && is_option_type(&f.ty)
             })
             .map(|f| f.ident.as_ref())
@@ -207,20 +209,18 @@ impl Patch {
         let skip_wrap_apply_by_option_fns = fields
             .iter()
             .filter(|f| {
-                matches!(f.special_attr, SpecialAttr::SkipWrap)
+                matches!(f.special_attr, SpecialAttr::SkipWrapApplyBy(_))
                     && !f.nesting
-                    && f.apply_by.is_some()
                     && is_option_type(&f.ty)
             })
-            .filter_map(|f| f.apply_by.as_ref())
+            .filter_map(|f| f.special_attr.apply_by_fn())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let skip_wrap_apply_by_plain_field_names = fields
             .iter()
             .filter(|f| {
-                matches!(f.special_attr, SpecialAttr::SkipWrap)
+                matches!(f.special_attr, SpecialAttr::SkipWrapApplyBy(_))
                     && !f.nesting
-                    && f.apply_by.is_some()
                     && !is_option_type(&f.ty)
             })
             .map(|f| f.ident.as_ref())
@@ -229,9 +229,8 @@ impl Patch {
         let skip_wrap_apply_by_plain_field_types = fields
             .iter()
             .filter(|f| {
-                matches!(f.special_attr, SpecialAttr::SkipWrap)
+                matches!(f.special_attr, SpecialAttr::SkipWrapApplyBy(_))
                     && !f.nesting
-                    && f.apply_by.is_some()
                     && !is_option_type(&f.ty)
             })
             .map(|f| &f.ty)
@@ -240,12 +239,11 @@ impl Patch {
         let skip_wrap_apply_by_plain_fns = fields
             .iter()
             .filter(|f| {
-                matches!(f.special_attr, SpecialAttr::SkipWrap)
+                matches!(f.special_attr, SpecialAttr::SkipWrapApplyBy(_))
                     && !f.nesting
-                    && f.apply_by.is_some()
                     && !is_option_type(&f.ty)
             })
-            .filter_map(|f| f.apply_by.as_ref())
+            .filter_map(|f| f.special_attr.apply_by_fn())
             .collect::<Vec<_>>();
 
         // Rename fields
@@ -285,7 +283,7 @@ impl Patch {
         #[cfg(not(feature = "nesting"))]
         let original_field_names = fields
             .iter()
-            .filter(|f| !f.retyped && f.special_attr.is_empty() && f.apply_by.is_none())
+            .filter(|f| !f.retyped && matches!(f.special_attr, SpecialAttr::None))
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(not(feature = "nesting"))]
@@ -297,9 +295,7 @@ impl Patch {
         #[cfg(feature = "nesting")]
         let original_field_names = fields
             .iter()
-            .filter(|f| {
-                !f.retyped && !f.nesting && f.special_attr.is_empty() && f.apply_by.is_none()
-            })
+            .filter(|f| !f.retyped && !f.nesting && matches!(f.special_attr, SpecialAttr::None))
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
@@ -312,24 +308,24 @@ impl Patch {
             .collect::<Vec<_>>();
 
         // Fields with `#[patch(apply_by(fn))]` — applied via a user-supplied function
-        // `fn(original: &mut T, new_value: T) ` instead of a plain assignment.
+        // `fn(original: &mut T, new_value: T)` instead of a plain assignment.
         #[cfg(not(feature = "nesting"))]
         let apply_by_field_names = fields
             .iter()
-            .filter(|f| !f.retyped && f.special_attr.is_empty() && f.apply_by.is_some())
+            .filter(|f| !f.retyped && matches!(f.special_attr, SpecialAttr::ApplyBy(_)))
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(not(feature = "nesting"))]
         let apply_by_fns = fields
             .iter()
-            .filter(|f| !f.retyped && f.special_attr.is_empty() && f.apply_by.is_some())
-            .filter_map(|f| f.apply_by.as_ref())
+            .filter(|f| !f.retyped && matches!(f.special_attr, SpecialAttr::ApplyBy(_)))
+            .filter_map(|f| f.special_attr.apply_by_fn())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let apply_by_field_names = fields
             .iter()
             .filter(|f| {
-                !f.retyped && !f.nesting && f.special_attr.is_empty() && f.apply_by.is_some()
+                !f.retyped && !f.nesting && matches!(f.special_attr, SpecialAttr::ApplyBy(_))
             })
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
@@ -337,9 +333,9 @@ impl Patch {
         let apply_by_fns = fields
             .iter()
             .filter(|f| {
-                !f.retyped && !f.nesting && f.special_attr.is_empty() && f.apply_by.is_some()
+                !f.retyped && !f.nesting && matches!(f.special_attr, SpecialAttr::ApplyBy(_))
             })
-            .filter_map(|f| f.apply_by.as_ref())
+            .filter_map(|f| f.special_attr.apply_by_fn())
             .collect::<Vec<_>>();
         #[cfg(not(feature = "nesting"))]
         let original_field_name_empty_values = fields
@@ -1291,7 +1287,6 @@ impl Field {
         let mut field_type = None;
         let mut skip = false;
         let mut special_attr = SpecialAttr::None;
-        let mut apply_by: Option<syn::Path> = None;
 
         #[cfg(feature = "op")]
         let mut addable = Addable::Disable;
@@ -1382,20 +1377,43 @@ impl Field {
                     }
                     SKIP_WRAP => {
                         // #[patch(skip_wrap)]
+                        // Upgrades ApplyBy → SkipWrapApplyBy when apply_by was already parsed.
                         if matches!(special_attr, SpecialAttr::EmptyValue(_)) {
                             return Err(meta.error(
                                 "`skip_wrap` and `empty_value` cannot be combined on the same field",
                             ));
                         }
-                        special_attr = SpecialAttr::SkipWrap;
+                        // Use mem::replace so we move the contained Path without
+                        // moving `special_attr` itself (required by FnMut closure).
+                        let prev = std::mem::replace(&mut special_attr, SpecialAttr::None);
+                        special_attr = match prev {
+                            SpecialAttr::ApplyBy(p) | SpecialAttr::SkipWrapApplyBy(p) => {
+                                SpecialAttr::SkipWrapApplyBy(p)
+                            }
+                            _ => SpecialAttr::SkipWrap,
+                        };
                     }
                     APPLY_BY => {
                         // #[patch(apply_by(path::to::fn))]
                         // The function is called as `fn(original: &mut T, new_value: T)`
                         // when the patch field is Some.
+                        // Upgrades SkipWrap → SkipWrapApplyBy when skip_wrap was already parsed.
                         let content;
                         parenthesized!(content in meta.input);
-                        apply_by = Some(content.parse()?);
+                        let path: syn::Path = content.parse()?;
+                        let prev = std::mem::replace(&mut special_attr, SpecialAttr::None);
+                        special_attr = match prev {
+                            SpecialAttr::SkipWrap => SpecialAttr::SkipWrapApplyBy(path),
+                            SpecialAttr::None => SpecialAttr::ApplyBy(path),
+                            SpecialAttr::ApplyBy(_) | SpecialAttr::SkipWrapApplyBy(_) => {
+                                return Err(meta.error("apply_by can only be specified once"));
+                            }
+                            SpecialAttr::EmptyValue(_) => {
+                                return Err(meta.error(
+                                    "`apply_by` and `empty_value` cannot be combined on the same field",
+                                ));
+                            }
+                        };
                     }
                     _ => {
                         return Err(meta.error(format_args!(
@@ -1421,7 +1439,6 @@ impl Field {
             #[cfg(feature = "nesting")]
             nesting,
             special_attr,
-            apply_by,
         }))
     }
 }
@@ -1487,7 +1504,6 @@ mod tests {
                     #[cfg(feature = "nesting")]
                     nesting: false,
                     special_attr: SpecialAttr::None,
-                    apply_by: None,
                 },
                 Field {
                     ident: Some(syn::Ident::new("field3", Span::call_site())),
@@ -1502,7 +1518,6 @@ mod tests {
                         false,
                         Span::call_site(),
                     ))),
-                    apply_by: None,
                 },
             ],
         };
