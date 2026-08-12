@@ -64,11 +64,33 @@ impl SpecialAttr {
     }
 }
 
+enum FieldType {
+    Original(Type),
+    Retyped(Type),
+}
+
+impl FieldType {
+    fn is_retyped(&self) -> bool {
+        matches!(self, FieldType::Retyped(_))
+    }
+
+    fn inner(&self) -> &Type {
+        match self {
+            FieldType::Original(ty) | FieldType::Retyped(ty) => ty,
+        }
+    }
+}
+
+impl ToTokens for FieldType {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        self.inner().to_tokens(tokens)
+    }
+}
+
 struct Field {
     ident: Option<Ident>,
-    ty: Type,
+    ty: FieldType,
     attributes: Vec<TokenStream>,
-    retyped: bool,
     #[cfg(feature = "op")]
     addable: Addable,
     #[cfg(feature = "nesting")]
@@ -154,7 +176,7 @@ impl Patch {
             .iter()
             .filter(|f| {
                 matches!(f.special_attr, SpecialAttr::SkipWrapApplyBy(_))
-                    && is_option_type(&f.ty)
+                    && is_option_type(f.ty.inner())
             })
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
@@ -163,7 +185,7 @@ impl Patch {
             .iter()
             .filter(|f| {
                 matches!(f.special_attr, SpecialAttr::SkipWrapApplyBy(_))
-                    && is_option_type(&f.ty)
+                    && is_option_type(f.ty.inner())
             })
             .filter_map(|f| f.special_attr.apply_by_fn())
             .collect::<Vec<_>>();
@@ -172,7 +194,7 @@ impl Patch {
             .iter()
             .filter(|f| {
                 matches!(f.special_attr, SpecialAttr::SkipWrapApplyBy(_))
-                    && !is_option_type(&f.ty)
+                    && !is_option_type(f.ty.inner())
             })
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
@@ -181,16 +203,16 @@ impl Patch {
             .iter()
             .filter(|f| {
                 matches!(f.special_attr, SpecialAttr::SkipWrapApplyBy(_))
-                    && !is_option_type(&f.ty)
+                    && !is_option_type(f.ty.inner())
             })
-            .map(|f| &f.ty)
+            .map(|f| f.ty.inner())
             .collect::<Vec<_>>();
         #[cfg(not(feature = "nesting"))]
         let skip_wrap_apply_by_plain_fns = fields
             .iter()
             .filter(|f| {
                 matches!(f.special_attr, SpecialAttr::SkipWrapApplyBy(_))
-                    && !is_option_type(&f.ty)
+                    && !is_option_type(f.ty.inner())
             })
             .filter_map(|f| f.special_attr.apply_by_fn())
             .collect::<Vec<_>>();
@@ -200,7 +222,7 @@ impl Patch {
             .filter(|f| {
                 matches!(f.special_attr, SpecialAttr::SkipWrapApplyBy(_))
                     && !f.nesting
-                    && is_option_type(&f.ty)
+                    && is_option_type(f.ty.inner())
             })
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
@@ -210,7 +232,7 @@ impl Patch {
             .filter(|f| {
                 matches!(f.special_attr, SpecialAttr::SkipWrapApplyBy(_))
                     && !f.nesting
-                    && is_option_type(&f.ty)
+                    && is_option_type(f.ty.inner())
             })
             .filter_map(|f| f.special_attr.apply_by_fn())
             .collect::<Vec<_>>();
@@ -220,7 +242,7 @@ impl Patch {
             .filter(|f| {
                 matches!(f.special_attr, SpecialAttr::SkipWrapApplyBy(_))
                     && !f.nesting
-                    && !is_option_type(&f.ty)
+                    && !is_option_type(f.ty.inner())
             })
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
@@ -230,9 +252,9 @@ impl Patch {
             .filter(|f| {
                 matches!(f.special_attr, SpecialAttr::SkipWrapApplyBy(_))
                     && !f.nesting
-                    && !is_option_type(&f.ty)
+                    && !is_option_type(f.ty.inner())
             })
-            .map(|f| &f.ty)
+            .map(|f| f.ty.inner())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let skip_wrap_apply_by_plain_fns = fields
@@ -240,7 +262,7 @@ impl Patch {
             .filter(|f| {
                 matches!(f.special_attr, SpecialAttr::SkipWrapApplyBy(_))
                     && !f.nesting
-                    && !is_option_type(&f.ty)
+                    && !is_option_type(f.ty.inner())
             })
             .filter_map(|f| f.special_attr.apply_by_fn())
             .collect::<Vec<_>>();
@@ -249,32 +271,34 @@ impl Patch {
         #[cfg(not(feature = "nesting"))]
         let renamed_field_names = fields
             .iter()
-            .filter(|f| f.retyped && f.special_attr.is_wrapped())
+            .filter(|f| f.ty.is_retyped() && f.special_attr.is_wrapped())
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(not(feature = "nesting"))]
         let renamed_field_names_by_empty_value = fields
             .iter()
-            .filter(|f| f.retyped && matches!(f.special_attr, SpecialAttr::EmptyValue(_)))
+            .filter(|f| f.ty.is_retyped() && matches!(f.special_attr, SpecialAttr::EmptyValue(_)))
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let renamed_field_names = fields
             .iter()
-            .filter(|f| f.retyped && !f.nesting && f.special_attr.is_wrapped())
+            .filter(|f| f.ty.is_retyped() && !f.nesting && f.special_attr.is_wrapped())
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let renamed_field_names_by_empty_value = fields
             .iter()
             .filter(|f| {
-                f.retyped && !f.nesting && matches!(f.special_attr, SpecialAttr::EmptyValue(_))
+                f.ty.is_retyped()
+                    && !f.nesting
+                    && matches!(f.special_attr, SpecialAttr::EmptyValue(_))
             })
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         let renamed_field_name_empty_values = fields
             .iter()
-            .filter(|f| f.retyped)
+            .filter(|f| f.ty.is_retyped())
             .filter_map(|f| f.special_attr.empty_value())
             .collect::<Vec<_>>();
 
@@ -282,26 +306,30 @@ impl Patch {
         #[cfg(not(feature = "nesting"))]
         let original_field_names = fields
             .iter()
-            .filter(|f| !f.retyped && matches!(f.special_attr, SpecialAttr::None))
+            .filter(|f| !f.ty.is_retyped() && matches!(f.special_attr, SpecialAttr::None))
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(not(feature = "nesting"))]
         let original_field_names_by_empty_value = fields
             .iter()
-            .filter(|f| !f.retyped && matches!(f.special_attr, SpecialAttr::EmptyValue(_)))
+            .filter(|f| !f.ty.is_retyped() && matches!(f.special_attr, SpecialAttr::EmptyValue(_)))
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let original_field_names = fields
             .iter()
-            .filter(|f| !f.retyped && !f.nesting && matches!(f.special_attr, SpecialAttr::None))
+            .filter(|f| {
+                !f.ty.is_retyped() && !f.nesting && matches!(f.special_attr, SpecialAttr::None)
+            })
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let original_field_names_by_empty_value = fields
             .iter()
             .filter(|f| {
-                !f.retyped && !f.nesting && matches!(f.special_attr, SpecialAttr::EmptyValue(_))
+                !f.ty.is_retyped()
+                    && !f.nesting
+                    && matches!(f.special_attr, SpecialAttr::EmptyValue(_))
             })
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
@@ -311,20 +339,22 @@ impl Patch {
         #[cfg(not(feature = "nesting"))]
         let apply_by_field_names = fields
             .iter()
-            .filter(|f| !f.retyped && matches!(f.special_attr, SpecialAttr::ApplyBy(_)))
+            .filter(|f| !f.ty.is_retyped() && matches!(f.special_attr, SpecialAttr::ApplyBy(_)))
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(not(feature = "nesting"))]
         let apply_by_fns = fields
             .iter()
-            .filter(|f| !f.retyped && matches!(f.special_attr, SpecialAttr::ApplyBy(_)))
+            .filter(|f| !f.ty.is_retyped() && matches!(f.special_attr, SpecialAttr::ApplyBy(_)))
             .filter_map(|f| f.special_attr.apply_by_fn())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let apply_by_field_names = fields
             .iter()
             .filter(|f| {
-                !f.retyped && !f.nesting && matches!(f.special_attr, SpecialAttr::ApplyBy(_))
+                !f.ty.is_retyped()
+                    && !f.nesting
+                    && matches!(f.special_attr, SpecialAttr::ApplyBy(_))
             })
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
@@ -332,20 +362,22 @@ impl Patch {
         let apply_by_fns = fields
             .iter()
             .filter(|f| {
-                !f.retyped && !f.nesting && matches!(f.special_attr, SpecialAttr::ApplyBy(_))
+                !f.ty.is_retyped()
+                    && !f.nesting
+                    && matches!(f.special_attr, SpecialAttr::ApplyBy(_))
             })
             .filter_map(|f| f.special_attr.apply_by_fn())
             .collect::<Vec<_>>();
         #[cfg(not(feature = "nesting"))]
         let original_field_name_empty_values = fields
             .iter()
-            .filter(|f| !f.retyped)
+            .filter(|f| !f.ty.is_retyped())
             .filter_map(|f| f.special_attr.empty_value())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
         let original_field_name_empty_values = fields
             .iter()
-            .filter(|f| !f.retyped && !f.nesting)
+            .filter(|f| !f.ty.is_retyped() && !f.nesting)
             .filter_map(|f| f.special_attr.empty_value())
             .collect::<Vec<_>>();
 
@@ -365,7 +397,7 @@ impl Patch {
         let nesting_field_types = fields
             .iter()
             .filter(|f| f.nesting)
-            .map(|f| f.ty.clone())
+            .map(|f| f.ty.inner().clone())
             .collect::<Vec<_>>();
 
         let mapped_attributes = attributes
@@ -750,8 +782,10 @@ impl Patch {
         let original_log_calls = make_log_calls(&original_field_names);
         let original_by_ev_log_calls = make_log_calls(&original_field_names_by_empty_value);
         let skip_wrap_log_calls = make_log_calls(&skip_wrap_field_names);
-        let skip_wrap_apply_by_option_log_calls = make_log_calls(&skip_wrap_apply_by_option_field_names);
-        let skip_wrap_apply_by_plain_log_calls = make_log_calls(&skip_wrap_apply_by_plain_field_names);
+        let skip_wrap_apply_by_option_log_calls =
+            make_log_calls(&skip_wrap_apply_by_option_field_names);
+        let skip_wrap_apply_by_plain_log_calls =
+            make_log_calls(&skip_wrap_apply_by_plain_field_names);
         let apply_by_log_calls = make_log_calls(&apply_by_field_names);
 
         // For the `apply` method: propagate `default_log_fn` into nesting fields so
@@ -1430,8 +1464,9 @@ impl Field {
 
         Ok(Some(Field {
             ident,
-            retyped: field_type.is_some(),
-            ty: field_type.unwrap_or(ty),
+            ty: field_type
+                .map(FieldType::Retyped)
+                .unwrap_or(FieldType::Original(ty)),
             attributes,
             #[cfg(feature = "op")]
             addable,
@@ -1493,11 +1528,12 @@ mod tests {
             fields: vec![
                 Field {
                     ident: Some(syn::Ident::new("field1", Span::call_site())),
-                    ty: LitStr::new("SubItemPatch", Span::call_site())
-                        .parse()
-                        .unwrap(),
+                    ty: FieldType::Retyped(
+                        LitStr::new("SubItemPatch", Span::call_site())
+                            .parse()
+                            .unwrap(),
+                    ),
                     attributes: vec![],
-                    retyped: true,
                     #[cfg(feature = "op")]
                     addable: Addable::Disable,
                     #[cfg(feature = "nesting")]
@@ -1506,9 +1542,10 @@ mod tests {
                 },
                 Field {
                     ident: Some(syn::Ident::new("field3", Span::call_site())),
-                    ty: LitStr::new("bool", Span::call_site()).parse().unwrap(),
+                    ty: FieldType::Original(
+                        LitStr::new("bool", Span::call_site()).parse().unwrap(),
+                    ),
                     attributes: vec![],
-                    retyped: false,
                     #[cfg(feature = "op")]
                     addable: Addable::Disable,
                     #[cfg(feature = "nesting")]
