@@ -44,8 +44,7 @@ enum SpecialAttr {
 }
 
 impl SpecialAttr {
-    /// Returns true when the patch field is wrapped in `Option<T>` (default behaviour).
-    fn is_empty(&self) -> bool {
+    fn is_wrapped(&self) -> bool {
         matches!(self, SpecialAttr::None | SpecialAttr::ApplyBy(_))
     }
 
@@ -99,7 +98,7 @@ impl Patch {
         #[cfg(not(feature = "nesting"))]
         let field_names = fields
             .iter()
-            .filter(|f| f.special_attr.is_empty())
+            .filter(|f| f.special_attr.is_wrapped())
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(not(feature = "nesting"))]
@@ -111,7 +110,7 @@ impl Patch {
         #[cfg(feature = "nesting")]
         let field_names = fields
             .iter()
-            .filter(|f| !f.nesting && f.special_attr.is_empty())
+            .filter(|f| !f.nesting && f.special_attr.is_wrapped())
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
@@ -250,7 +249,7 @@ impl Patch {
         #[cfg(not(feature = "nesting"))]
         let renamed_field_names = fields
             .iter()
-            .filter(|f| f.retyped && f.special_attr.is_empty())
+            .filter(|f| f.retyped && f.special_attr.is_wrapped())
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(not(feature = "nesting"))]
@@ -262,7 +261,7 @@ impl Patch {
         #[cfg(feature = "nesting")]
         let renamed_field_names = fields
             .iter()
-            .filter(|f| f.retyped && !f.nesting && f.special_attr.is_empty())
+            .filter(|f| f.retyped && !f.nesting && f.special_attr.is_wrapped())
             .map(|f| f.ident.as_ref())
             .collect::<Vec<_>>();
         #[cfg(feature = "nesting")]
@@ -1200,7 +1199,7 @@ impl Field {
         match ident {
             #[cfg(not(feature = "nesting"))]
             Some(ident) => {
-                if !special_attr.is_empty() {
+                if !special_attr.is_wrapped() {
                     Ok(quote! {
                         #(#attributes)*
                         pub #ident: #ty,
@@ -1224,7 +1223,7 @@ impl Field {
                         #(#attributes)*
                         pub #ident: #patch_type,
                     })
-                } else if !special_attr.is_empty() {
+                } else if !special_attr.is_wrapped() {
                     Ok(quote! {
                         #(#attributes)*
                         pub #ident: #ty,
@@ -1238,7 +1237,7 @@ impl Field {
             }
             #[cfg(not(feature = "nesting"))]
             None => {
-                if !special_attr.is_empty() {
+                if !special_attr.is_wrapped() {
                     Ok(quote! {
                         #(#attributes)*
                         pub #ty,
@@ -1262,7 +1261,7 @@ impl Field {
                         #(#attributes)*
                         pub #patch_type,
                     })
-                } else if !special_attr.is_empty() {
+                } else if !special_attr.is_wrapped() {
                     Ok(quote! {
                         #(#attributes)*
                         pub #ty,
