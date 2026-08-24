@@ -17,8 +17,8 @@ proc-macro = true
 [dependencies]
 proc-macro2 = "1.0"
 quote = "1.0"
-syn = { version =  "2.0", features = ["parsing"] }
-syn-serde = { version = "0.3.2", features = ["json"], optional = true }
+syn = { version =  "3", features = ["parsing"] }
+syn-serde = { package = "syn-serde3", version = "0.0.1", features = ["json"], optional = true }
 cargo_metadata = { version = "0.18", optional = true }
 
 [features]
