@@ -1,5 +1,5 @@
 #![allow(unused)]
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use struct_patch::Substrate;
 
 // TODO verify no rename on a struct using Substrate
@@ -13,7 +13,7 @@ pub struct Base {
     pub filed_numbers: PhoneNumber,
 }
 
-#[derive(Deserialize, Default)]
+#[derive(Debug, Deserialize, Serialize, Default)]
 pub struct PhoneNumber {
     country_code: u8,
     local_numbers: String,

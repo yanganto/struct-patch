@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use struct_patch::Catalyst;
-use substrate::Base;
+use substrate::{Base, PhoneNumber};
 
 #[derive(Default, Catalyst)]
 #[catalyst(bind = Base)]
@@ -8,6 +8,7 @@ use substrate::Base;
 // so the complex should have the corresponding Serialize derive
 #[catalyst(keep_field_attribute)]
 #[complex(attribute(derive(Debug, Deserialize, Serialize)))]
+#[complex(override_field_attribute("filed_numbers", serde(default)))]
 #[allow(dead_code)]
 struct Amyloid {
     pub extra_bool: bool,
@@ -39,6 +40,7 @@ impl AmyloidComplex {
 #[catalyst(keep_field_attribute)]
 #[catalyst(exclude_field_attributes = ["serde"])]
 #[complex(attribute(derive(Debug, Deserialize)))]
+#[complex(override_field_attribute("filed_numbers", serde(default)))]
 #[allow(dead_code)]
 struct ExcludedAmyloid {
     pub extra_bool: bool,
@@ -51,6 +53,7 @@ struct ExcludedAmyloid {
 #[complex(attribute(derive(Default, Deserialize)))]
 #[complex(override_field_attribute("field_string", serde(default = "default_str")))]
 #[complex(override_field_attribute("field_string", serde(rename = "renamed_field")))]
+#[complex(override_field_attribute("filed_numbers", serde(default)))]
 struct SmallAmyloid {
     pub extra_bool: bool,
 }
@@ -95,6 +98,10 @@ private_number = 0
 extra_bool = false
 extra_string = ""
 extra_private_number = 0
+
+[filed_numbers]
+country_code = 0
+local_numbers = ""
 "#
         );
         let toml_str = r#" field_bool = true
