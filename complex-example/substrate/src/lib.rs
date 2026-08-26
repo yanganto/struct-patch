@@ -10,6 +10,13 @@ pub struct Base {
     pub field_string: String,
     pub field_option: Option<usize>,
     private_number: u8,
+    pub filed_numbers: PhoneNumber,
+}
+
+#[derive(Deserialize, Default)]
+pub struct PhoneNumber {
+    country_code: u8,
+    local_numbers: String,
 }
 
 impl Base {
@@ -30,7 +37,7 @@ mod tests {
     fn expose_works() {
         assert_eq!(
             Base::expose_content(),
-            r#"{"named":[{"attrs":[{"style":"outer","meta":{"list":{"path":{"segments":[{"ident":"serde"}]},"delimiter":"paren","tokens":[{"ident":"default"}]}}}],"vis":"pub","ident":"field_bool","colon_token":true,"ty":{"path":{"segments":[{"ident":"bool"}]}}},{"vis":"pub","ident":"field_string","colon_token":true,"ty":{"path":{"segments":[{"ident":"String"}]}}},{"vis":"pub","ident":"field_option","colon_token":true,"ty":{"path":{"segments":[{"ident":"Option","arguments":{"angle_bracketed":{"args":[{"type":{"path":{"segments":[{"ident":"usize"}]}}}]}}}]}}},{"ident":"private_number","colon_token":true,"ty":{"path":{"segments":[{"ident":"u8"}]}}}]}"#
+            r#"{"named":[{"attrs":[{"style":"outer","meta":{"list":{"path":{"segments":[{"ident":"serde"}]},"delimiter":"paren","tokens":[{"ident":"default"}]}}}],"vis":"pub","ident":"field_bool","colon_token":true,"ty":{"path":{"segments":[{"ident":"bool"}]}}},{"vis":"pub","ident":"field_string","colon_token":true,"ty":{"path":{"segments":[{"ident":"String"}]}}},{"vis":"pub","ident":"field_option","colon_token":true,"ty":{"path":{"segments":[{"ident":"Option","arguments":{"angle_bracketed":{"args":[{"type":{"path":{"segments":[{"ident":"usize"}]}}}]}}}]}}},{"ident":"private_number","colon_token":true,"ty":{"path":{"segments":[{"ident":"u8"}]}}},{"vis":"pub","ident":"filed_numbers","colon_token":true,"ty":{"path":{"segments":[{"ident":"PhoneNumber"}]}}}]}"#
         );
 
         let _fields: syn::Fields = syn_serde::json::from_str(&Base::expose_content()).unwrap();
@@ -43,6 +50,7 @@ mod tests {
             "test".to_string(),
             Some(100),
             7u8,
+            PhoneNumber::default(),
         );
         assert_eq!(b.field_bool, true);
         assert_eq!(b.field_string, "test");
@@ -57,8 +65,9 @@ mod tests {
             "test".to_string(),
             Some(100),
             7u8,
+            PhoneNumber::default(),
         );
-        let (field_bool, field_string, field_option, private_number) = b.__substrate_unpack();
+        let (field_bool, field_string, field_option, private_number, _filed_numbers) = b.__substrate_unpack();
 
         assert_eq!(field_bool, true);
         assert_eq!(field_string, "test");
