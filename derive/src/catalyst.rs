@@ -15,6 +15,7 @@ pub(crate) struct Catalyst {
     attributes: Vec<TokenStream>,
     fields: syn::Fields,
     bind: String,
+    src: Option<String>,
     keep_field_attribute: bool,
     override_field_attributes: HashMap<String, Vec<TokenStream>>, // TODO handle no-std
     exclude_field_attributes: Vec<String>,
@@ -30,6 +31,7 @@ struct Field {
 const CATALYST: &str = "catalyst";
 const COMPLEX: &str = "complex";
 const BIND: &str = "bind";
+const SRC: &str = "src";
 const NAME: &str = "name";
 const ATTRIBUTE: &str = "attribute";
 const OVERRIDE: &str = "override_field_attribute";
@@ -47,6 +49,7 @@ impl Catalyst {
             attributes,
             fields,
             bind,
+            src,
             keep_field_attribute,
             override_field_attributes,
             exclude_field_attributes,
@@ -62,9 +65,13 @@ impl Catalyst {
         let mut substrate_fields: Vec<Field> = Vec::new();
         let mut catalyst_fields: Vec<Field> = Vec::new();
 
-        let substrate_str = std::env::var(bind)
-            .expect("field information of substrate is absent, please expose it in build.rs");
-        let raw_substrate_fields: syn::Fields = syn_serde::json::from_str(&substrate_str).unwrap();
+        let raw_substrate_fields: syn::Fields = if let Some(src) = src {
+            find_fields_from_src(src, bind)
+        } else {
+            let substrate_str = std::env::var(bind)
+                .expect("field information of substrate is absent, please expose it in build.rs");
+            syn_serde::json::from_str(&substrate_str).unwrap()
+        };
 
         for field in raw_substrate_fields.into_iter() {
             raw_complex_fields.push(Field::from_ast(field.clone()));
@@ -249,6 +256,7 @@ impl Catalyst {
         let mut name = None;
         let mut attributes = vec![];
         let mut bind = String::new();
+        let mut src: Option<String> = None;
         let mut keep_field_attribute = false;
         let mut override_field_attributes = HashMap::<String, Vec<TokenStream>>::new();
         let mut exclude_field_attributes = Vec::<String>::new();
@@ -306,6 +314,12 @@ impl Catalyst {
                             }
                         }
                     }
+                    SRC if attr_str == CATALYST => {
+                        // #[catalyst(src = "crate_name:/path/to/file.rs")]
+                        if let Some(lit) = crate::get_lit_str(path, &meta)? {
+                            src = Some(lit.value());
+                        }
+                    }
                     KEEP_FIELD_ATTRIBUTE if attr_str == CATALYST => {
                         // #[catalyst(keep_field_attribute)]
                         keep_field_attribute = true;
@@ -354,11 +368,57 @@ impl Catalyst {
             attributes,
             fields,
             bind,
+            src,
             keep_field_attribute,
             override_field_attributes,
             exclude_field_attributes,
         })
     }
+}
+
+fn find_fields_from_src(src: &str, struct_name: &str) -> syn::Fields {
+    let (package_name, rel_path) = src
+        .split_once(':')
+        .expect("src attribute must be 'crate_name:/path/to/file.rs'");
+
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
+        .expect("CARGO_MANIFEST_DIR is not set");
+
+    let meta = cargo_metadata::MetadataCommand::new()
+        .manifest_path(std::path::Path::new(&manifest_dir).join("Cargo.toml"))
+        .exec()
+        .expect("cargo metadata failed");
+
+    let package = meta
+        .packages
+        .iter()
+        .find(|p| p.name == package_name)
+        .unwrap_or_else(|| panic!("package `{}` not found in dependency graph", package_name));
+
+    let pkg_dir = package
+        .manifest_path
+        .parent()
+        .expect("manifest_path has no parent directory");
+
+    let src_path = std::path::Path::new(pkg_dir.as_str())
+        .join(rel_path.trim_start_matches('/'));
+
+    let content = std::fs::read_to_string(&src_path)
+        .unwrap_or_else(|e| panic!("cannot read `{}`: {}", src_path.display(), e));
+
+    let ast: syn::File = syn::parse_str(&content).expect("failed to parse source file");
+
+    ast.items
+        .iter()
+        .find_map(|item| {
+            if let syn::Item::Struct(s) = item {
+                if s.ident == struct_name {
+                    return Some(s.fields.clone());
+                }
+            }
+            None
+        })
+        .unwrap_or_else(|| panic!("struct `{}` not found in source file", struct_name))
 }
 
 impl Field {

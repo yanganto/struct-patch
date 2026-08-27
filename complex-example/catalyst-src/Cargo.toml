@@ -1,5 +1,5 @@
 [package]
-name = "catalyst"
+name = "catalyst-src"
 authors.workspace = true
 version.workspace = true
 edition.workspace = true
@@ -19,7 +19,3 @@ toml = "1.1.2"
 
 [features]
 unsafe = ["struct-patch/unsafe"]
-
-[build-dependencies]
-struct-patch.workspace = true
-substrate = { path = "../substrate" }

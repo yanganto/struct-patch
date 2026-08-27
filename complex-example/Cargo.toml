@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "substrate",
     "catalyst",
+    "catalyst-src",
 ]
 [workspace.dependencies]
 struct-patch = { path = "../lib", features = ["catalyst"] }
