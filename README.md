@@ -120,13 +120,15 @@ assert_eq!(item.list, vec![7]);
 ```
 
 #### Case 3 - Extend a struct from a crate
-Deriving `Substrate` on a struct exposes the field information so that other crates can access it in a `build.rs`.
+Deriving `Substrate` on a struct exposes the field information so that other crates can access it.
 Deriving `Catalyst` reads the field information of a `Substrate` and generates a new complex struct.
 In the other words, the catalyst is a struct with extra fields that the developer writes down in the downstream crate. The complex is a generated struct that combines the substrate's fields with the catalyst's extra fields. The overall behavior is like [chemical catalysts](https://en.wikipedia.org/wiki/Enzyme_catalysis): a catalyst **binds** onto a substrate to form a complex struct, which has all fields from both.
 A complex can also **decouple** without cloning, returning the original catalyst and substrate. Check the [complex-example](./complex-example/catalyst/src/lib.rs).
 With the `unsafe` feature, `bind` and `decouple` use `ManuallyDrop` + `ptr::read` to avoid memory moves, and `__substrate_new` uses `MaybeUninit` + `ptr::write` while `__substrate_unpack` uses `ManuallyDrop` + `ptr::read`, such that the copy will be less.
 
-In terms of crate dependencies, the crate using `Substrate` is **upstream** (a dependency), and the crate using `Catalyst` is **downstream** (it depends on the substrate crate). The downstream crate calls `Substrate::expose()` in its `build.rs` to read the field information at compile time, then uses `#[catalyst(bind = ...)]` to generate the complex struct.
+In terms of crate dependencies, the crate using `Substrate` is **upstream** (a dependency), and the crate using `Catalyst` is **downstream** (it depends on the substrate crate). There are two ways for the downstream crate to read the substrate's field layout:
+
+**Option A: via `expose()` in `build.rs`**: call `Substrate::expose()` in the downstream crate's `build.rs`. This sets a `cargo:rustc-env` variable that the `Catalyst` macro reads at compile time.
 
 ```rust
 /// In the substrate crate (src/lib.rs)
@@ -163,6 +165,30 @@ struct Amyloid {
 // }
 ```
 
+**Option B: via source code with `src` attribute**: point the `Catalyst` macro directly at the substrate crate's source file using `#[catalyst(src = "crate_name:/path/to/file.rs")]`. The macro uses `cargo_metadata` to locate the package and `syn` to parse the file, so no `build.rs` or `expose()` call is required. Check the [catalyst-src example](./complex-example/catalyst-src/src/lib.rs).
+
+```rust
+/// In the substrate crate (src/lib.rs)
+use struct_patch::Substrate;
+
+#[derive(Substrate)]
+pub struct Base {
+    pub field_bool: bool,
+    pub field_string: String,
+}
+
+/// In the catalyst crate (src/lib.rs)
+use struct_patch::Catalyst;
+
+#[derive(Catalyst)]
+#[catalyst(bind = Base, src = "substrate:/src/lib.rs")]
+struct Amyloid {
+    pub extra_bool: bool,
+    pub extra_option: Option<usize>,
+}
+// AmyloidComplex is generated identically to Option A
+```
+
 ## Attributes
 
 You can customize the generated structs by defining `#[patch(...)]`, `#[filler(...)]`, `#[complex(...)]` (catalyst feature), or `#[catalyst(...)]` (catalyst feature) attributes on the original struct or its fields.
@@ -176,7 +202,8 @@ Two attribute namespaces are provided for the catalyst feature because we need t
 - `#[patch(default_log(fn_path))]`: call `fn_path` with each patched field name on every `apply` call. Has no effect on `apply_with_log`. The function must accept `&str`.
 - `#[filler(attribute(...))]`: add attributes to the generated filler struct.
 - `#[filler(default_log(fn_path))]`: call `fn_path` with each filled field name on every `apply` call. Has no effect on `apply_with_log`. The function must accept `&str`.
-- `#[catalyst(bind = "...")]`: specify the base (substrate) structure. (catalyst feature)
+- `#[catalyst(bind = ...)]`: specify the base (substrate) structure. Need substrate expose() in build (catalyst feature)
+- `#[catalyst(bind = ..., src = "crate_name:/path/to/file")]`: specify the base (substrate) structure. No need substrate expose() and based on source code.  Avoide syn protocol change (catalyst feature)
 - `#[catalyst(keep_field_attribute)]`: pass all field attributes from a substrate or catalyst through to the complex, unless an override is explicitly specified for that field. (catalyst feature)
 - `#[catalyst(exclude_field_attributes = ["..."])]`: when `keep_field_attribute` is used, specifies attribute names to exclude from being passed through to the complex struct fields. For example, `exclude_field_attributes = ["serde"]` strips all `#[serde(...)]` field attributes from the substrate before they reach the complex. (catalyst feature)
 - `#[complex(override_field_attribute("$substrate_field_name", ...))]`: override a complex field attribute, for example `serde(default = "default_str")`. (catalyst feature)
