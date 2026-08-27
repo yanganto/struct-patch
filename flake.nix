@@ -20,6 +20,7 @@
           cargo publish -p struct-patch
         '';
         checkCatalystScript = pkgs.writeShellScriptBin "check-catalyst" ''
+          set -ex
           cd $(git rev-parse --show-toplevel 2>/dev/null)
           cd complex-example
           cargo test -p substrate
