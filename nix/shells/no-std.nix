@@ -1,4 +1,4 @@
-{ pkgs, checkNoStdScript, PROMPT ? "" }:
+{ pkgs, checkScripts, PROMPT ? "" }:
 let
   noStdRust = pkgs.rust-bin.stable.latest.default.override {
     targets = [ "thumbv7m-none-eabi" ];
@@ -11,11 +11,10 @@ pkgs.mkShell {
     export DEVSHELL=no-std
     ${PROMPT}
     echo "Scripts:"
-    echo "  ${checkNoStdScript.name}"
+    ${builtins.concatStringsSep "\n" (map (s: "echo \"  ${s.name}\"") checkScripts)}
   '';
   buildInputs = [
     noStdRust
     pkgs.qemu
-    checkNoStdScript
-  ];
+  ] ++ checkScripts;
 }

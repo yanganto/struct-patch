@@ -87,15 +87,10 @@ jobs:
           nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --features=box --example box
 
       - name: Test filler examples - no default features
-        run: |
-          MANIFEST=examples/filler-examples/Cargo.toml
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --no-default-features --example filler
+        run: nix develop .#ci -c check-filler no-default
 
       - name: Test filler examples - default features
-        run: |
-          MANIFEST=examples/filler-examples/Cargo.toml
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --example filler
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --example filler-op
+        run: nix develop .#ci -c check-filler default
 
       - name: Test in no std
         run: nix develop .#no-std -c check-no-std

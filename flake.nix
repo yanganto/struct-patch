@@ -20,6 +20,8 @@
           (builtins.readFile ./nix/scripts/check-no-std.sh);
         checkComplexScript = pkgs.writeShellScriptBin "check-complex"
           (builtins.readFile ./nix/scripts/check-complex.sh);
+        checkFillerScript = pkgs.writeShellScriptBin "check-filler"
+          (builtins.readFile ./nix/scripts/check-filler.sh);
         PROMPT = ''
           _git_ps1() {
               git rev-parse --is-inside-work-tree &>/dev/null || return
@@ -33,9 +35,9 @@
       in
       {
         devShells = {
-          default = import ./nix/shells/default.nix { inherit pkgs checkComplexScript PROMPT; };
-          ci = import ./nix/shells/ci.nix { inherit pkgs publishScript checkComplexScript PROMPT; };
-          no-std = import ./nix/shells/no-std.nix { inherit pkgs checkNoStdScript PROMPT; };
+          default = import ./nix/shells/default.nix { inherit pkgs PROMPT; checkScripts = [ checkComplexScript checkFillerScript ]; };
+          ci = import ./nix/shells/ci.nix { inherit pkgs publishScript PROMPT; checkScripts = [ checkComplexScript checkFillerScript ]; };
+          no-std = import ./nix/shells/no-std.nix { inherit pkgs PROMPT; checkScripts = [ checkNoStdScript ]; };
         };
       }
     );
