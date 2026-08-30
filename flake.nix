@@ -19,7 +19,7 @@
           sleep 10
           cargo publish -p struct-patch
         '';
-        checkCatalystScript = pkgs.writeShellScriptBin "check-catalyst" ''
+        checkComplexScript = pkgs.writeShellScriptBin "check-complex" ''
           set -ex
           cd $(git rev-parse --show-toplevel 2>/dev/null)
           cd examples/complex-examples
@@ -49,7 +49,7 @@
               openssl
               pkg-config
 
-              checkCatalystScript 
+              checkComplexScript 
             ];
           };
 
@@ -61,7 +61,7 @@
 
               publishScript
 
-              checkCatalystScript
+              checkComplexScript
             ];
           };
 

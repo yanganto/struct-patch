@@ -81,5 +81,5 @@ jobs:
           nix develop .#no-std -c cargo run --quiet --features=box --bin no-std-box
           nix develop .#no-std -c cargo run --quiet --features=option --bin no-std-option
 
-      - name: Test with catalyst
-        run: nix develop .#ci -c check-catalyst
+      - name: Test complex examples
+        run: nix develop .#ci -c check-complex
