@@ -18,15 +18,10 @@ jobs:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Test lib - no default features
-        run: |
-          nix develop .#ci -c cargo run --quiet --no-default-features --example filler
-          nix develop .#ci -c cargo test --quiet --no-default-features
+        run: nix develop .#ci -c cargo test --quiet --no-default-features
 
       - name: Test lib - std features
-        run: |
-          nix develop .#ci -c cargo run --quiet --features=std --example filler
-          nix develop .#ci -c cargo run --quiet --features=std --example filler-op
-          nix develop .#ci -c cargo test --quiet --features=std
+        run: nix develop .#ci -c cargo test --quiet --features=std
 
       - name: Test lib - merge features
         run: |
@@ -40,7 +35,6 @@ jobs:
         run: |
           MANIFEST=examples/patch-examples/Cargo.toml
           nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --no-default-features --example instance
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --no-default-features --example filler
           nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --no-default-features --example diff
           nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --no-default-features --example json
           nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --no-default-features --example rename-patch-struct
@@ -91,6 +85,17 @@ jobs:
           nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --example log
           nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --example apply-by
           nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --features=box --example box
+
+      - name: Test filler examples - no default features
+        run: |
+          MANIFEST=examples/filler-examples/Cargo.toml
+          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --no-default-features --example filler
+
+      - name: Test filler examples - default features
+        run: |
+          MANIFEST=examples/filler-examples/Cargo.toml
+          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --example filler
+          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --example filler-op
 
       - name: Test in no std
         run: nix develop .#no-std -c check-no-std
