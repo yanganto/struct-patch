@@ -1,0 +1,14 @@
+[package]
+name = "filler-examples"
+authors = ["Antonio Yang <yanganto@gmail.com>"]
+version = "0.14.1"
+edition = "2021"
+license = "MIT"
+
+[dependencies]
+struct-patch = { path = "../../lib" }
+
+[features]
+default = ["status", "op"]
+status = ["struct-patch/status"]
+op = ["struct-patch/op"]

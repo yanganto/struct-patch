@@ -17,10 +17,18 @@ updates:
     schedule:
       interval: "weekly"
   - package-ecosystem: "cargo"
-    directory: "/no-std-examples"
+    directory: "/examples/no-std-examples"
     schedule:
       interval: "weekly"
   - package-ecosystem: "cargo"
-    directory: "/complex-example"
+    directory: "/examples/complex-examples"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "cargo"
+    directory: "/examples/patch-examples"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "cargo"
+    directory: "/examples/filler-examples"
     schedule:
       interval: "weekly"

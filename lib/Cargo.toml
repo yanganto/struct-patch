@@ -15,12 +15,8 @@ rust-version.workspace = true
 struct-patch-derive = { version = "=0.14.1", path = "../derive" }
 
 [dev-dependencies]
-serde_json = "1.0"
 serde = { version = "1", features = ["derive"] }
-serde_with = "3.9.0"
-toml = "1.1.2"
-humantime-serde = "1.1.1"
-clap = { version = "4.4.7", features = ["derive"] }
+serde_json = "1.0"
 
 [features]
 default = ["status", "op"]
@@ -54,7 +50,3 @@ unsafe = [
     "struct-patch-derive/unsafe"
 ]
 
-
-[[example]]
-name = "box"
-required-features = ["box"]

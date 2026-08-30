@@ -13,64 +13,35 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
-        publishScript = pkgs.writeShellScriptBin "crate-publish" ''
-          cargo login $1
-          cargo publish -p struct-patch-derive || echo "publish struct-patch-derive fail"
-          sleep 10
-          cargo publish -p struct-patch
-        '';
-        checkCatalystScript = pkgs.writeShellScriptBin "check-catalyst" ''
-          set -ex
-          cd $(git rev-parse --show-toplevel 2>/dev/null)
-          cd complex-example
-          cargo test --quiet -p substrate
-          cargo test --quiet -p catalyst
-          cargo test --quiet -p catalyst-src
 
-          echo "Run catatyst test with unsafe features"
-          cargo test --quiet -p catalyst --features unsafe
-          cargo test --quiet -p catalyst-src --features unsafe
+        publishScript = pkgs.writeShellScriptBin "crate-publish"
+          (builtins.readFile ./nix/scripts/crate-publish.sh);
+        checkNoStdScript = pkgs.writeShellScriptBin "check-no-std"
+          (builtins.readFile ./nix/scripts/check-no-std.sh);
+        checkComplexScript = pkgs.writeShellScriptBin "check-complex"
+          (builtins.readFile ./nix/scripts/check-complex.sh);
+        checkFillerScript = pkgs.writeShellScriptBin "check-filler"
+          (builtins.readFile ./nix/scripts/check-filler.sh);
+        checkPatchScript = pkgs.writeShellScriptBin "check-patch"
+          (builtins.readFile ./nix/scripts/check-patch.sh);
+        testScript = pkgs.writeShellScriptBin "test"
+          (builtins.readFile ./nix/scripts/test.sh);
+        PROMPT = ''
+          _git_ps1() {
+              git rev-parse --is-inside-work-tree &>/dev/null || return
+              local branch dirty
+              branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+              [[ -n $(git status --porcelain) ]] && dirty='*'
+              echo "<$branch$dirty>"
+          }
+          PS1='\[\e[33m\][$DEVSHELL] \w $(_git_ps1) \$\[\e[0m\] '
         '';
       in
-      with pkgs;
       {
-        devShells = let
-          noStdRust = rust-bin.stable.latest.default.override {
-            targets = [
-              "thumbv7m-none-eabi"
-            ];
-            extensions = [ "rust-src" "llvm-tools-preview" ];
-          };
-        in
-        {
-          default = mkShell {
-            buildInputs = [
-              rust-bin.stable.latest.minimal
-              openssl
-              pkg-config
-
-              checkCatalystScript 
-            ];
-          };
-
-          ci = mkShell {
-            buildInputs = [
-              rust-bin.stable.latest.default
-              openssl
-              pkg-config
-
-              publishScript
-
-              checkCatalystScript
-            ];
-          };
-
-          no-std = mkShell {
-            buildInputs = [
-              noStdRust 
-              qemu
-            ];
-          };
+        devShells = {
+          default = import ./nix/shells/default.nix { inherit pkgs PROMPT; checkScripts = [ checkComplexScript checkFillerScript checkPatchScript testScript ]; };
+          ci = import ./nix/shells/ci.nix { inherit pkgs publishScript PROMPT; checkScripts = [ checkComplexScript checkFillerScript checkPatchScript testScript ]; };
+          no-std = import ./nix/shells/no-std.nix { inherit pkgs PROMPT; checkScripts = [ checkNoStdScript ]; };
         };
       }
     );

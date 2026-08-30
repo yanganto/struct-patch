@@ -3,5 +3,6 @@ Cargo.lock
 .envrc
 .direnv/
 struct-patch/examples
-no-std-examples/target
-complex-example/target
+examples/no-std-examples/target
+examples/complex-examples/target
+examples/patch-examples/target
