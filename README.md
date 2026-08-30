@@ -15,7 +15,7 @@ This crate provides the `Patch`, `Filler`, `Substrate`, `Catalyst` and `Complex`
 
 - If any field in a `Patch` is `Some`, it overwrites the corresponding field when applied. Use `apply_with_log` to receive a callback for each field that is actually changed.
 - If any field in the instance is empty (`None` or an empty collection), `Filler` will try to fill it. It supports `Option`, `Vec`, `VecDeque`, `LinkedList`, `HashMap`, `BTreeMap`, `HashSet`, `BTreeSet`, `BinaryHeap` fields, as well as custom types via `#[filler(extendable)]` and any type via `#[filler(empty_value = ...)]`.
-- With the `catalyst` feature, `Substrate`, `Catalyst` and `Complex` traits with accompanying derive macros help you extend a struct with extra fields from another crate.
+- With the `substrate` feature, the `Substrate` derive macro exposes field information so that other crates can access it. With the `catalyst` feature (which implies `substrate`), `Catalyst` and `Complex` derive macros help you extend a struct with extra fields from another crate.
 
 This crate supports `no_std` — check the [no-std-examples](./no-std-examples).
 
@@ -264,7 +264,8 @@ This crate includes the following optional features:
   - `none_as_default` *(optional)*: `T` needs to implement `Default`. When patching on `None`, it patches on a default instance. Mutually exclusive with `keep_none`.
   - `keep_none` *(optional)*: when patching on `None`, it stays `None`. Mutually exclusive with `none_as_default`.
 - `nesting` *(optional)*: allows a field to use `Patch` derive with the `#[patch(nesting)]` attribute.
-- `catalyst` *(optional)*: enables the `Substrate`, `Catalyst`, and `Complex` derive macros for extending a struct with fields from another crate.
+- `substrate` *(optional)*: enables the `Substrate` derive macro for exposing a struct's field layout so downstream crates can access it via `expose()` or source parsing.
+- `catalyst` *(optional)*: enables the `Catalyst` and `Complex` derive macros for extending a struct with fields from another crate. Implies `substrate`.
 - `unsafe` *(optional)*: uses `ManuallyDrop` + `ptr::read` / `MaybeUninit` + `ptr::write` in the generated `bind`, `decouple`, `__substrate_new`, and `__substrate_unpack` to avoid memory moves. Only meaningful with the `catalyst` feature.
 
 [crates-badge]: https://img.shields.io/crates/v/struct-patch.svg
