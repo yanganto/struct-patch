@@ -19,6 +19,13 @@
           sleep 10
           cargo publish -p struct-patch
         '';
+        checkNoStdScript = pkgs.writeShellScriptBin "check-no-std" ''
+          set -ex
+          cd $(git rev-parse --show-toplevel 2>/dev/null)
+          cd examples/no-std-examples
+          cargo run --quiet --features=box --bin no-std-box
+          cargo run --quiet --features=option --bin no-std-option
+        '';
         checkComplexScript = pkgs.writeShellScriptBin "check-complex" ''
           set -ex
           cd $(git rev-parse --show-toplevel 2>/dev/null)
@@ -67,8 +74,9 @@
 
           no-std = mkShell {
             buildInputs = [
-              noStdRust 
+              noStdRust
               qemu
+              checkNoStdScript
             ];
           };
         };
