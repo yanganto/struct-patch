@@ -17,6 +17,11 @@ jobs:
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Build devshells
+        run: |
+          nix develop .#ci -c echo Build ci devshell
+          nix develop .#no-std -c echo Build no-std devshell
+
       - name: Test lib
         run: |
           nix develop .#ci -c test no-default
