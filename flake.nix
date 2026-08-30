@@ -22,7 +22,7 @@
         checkCatalystScript = pkgs.writeShellScriptBin "check-catalyst" ''
           set -ex
           cd $(git rev-parse --show-toplevel 2>/dev/null)
-          cd examples/complex-example
+          cd examples/complex-examples
           cargo test --quiet -p substrate
           cargo test --quiet -p catalyst
           cargo test --quiet -p catalyst-src

@@ -6,7 +6,7 @@ members = [
 ]
 exclude = [
     "examples/no-std-examples",
-    "examples/complex-example",
+    "examples/complex-examples",
 ]
 
 [workspace.package]
