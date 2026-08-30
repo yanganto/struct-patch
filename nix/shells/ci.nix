@@ -4,9 +4,6 @@ pkgs.mkShell {
   shellHook = ''
     export DEVSHELL=ci
     ${PROMPT}
-    echo "Scripts:"
-    echo "  ${publishScript.name}"
-    ${builtins.concatStringsSep "\n" (map (s: "echo \"  ${s.name}\"") checkScripts)}
   '';
   buildInputs = [
     pkgs.rust-bin.stable.latest.default
