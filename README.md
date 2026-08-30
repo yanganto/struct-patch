@@ -17,15 +17,15 @@ This crate provides the `Patch`, `Filler`, `Substrate`, `Catalyst` and `Complex`
 - If any field in the instance is empty (`None` or an empty collection), `Filler` will try to fill it. It supports `Option`, `Vec`, `VecDeque`, `LinkedList`, `HashMap`, `BTreeMap`, `HashSet`, `BTreeSet`, `BinaryHeap` fields, as well as custom types via `#[filler(extendable)]` and any type via `#[filler(empty_value = ...)]`.
 - With the `substrate` feature, the `Substrate` derive macro exposes field information so that other crates can access it. With the `catalyst` feature (which implies `substrate`), `Catalyst` and `Complex` derive macros help you extend a struct with extra fields from another crate.
 
-This crate supports `no_std` — check the [no-std-examples](./no-std-examples).
+This crate supports `no_std` — check the [no-std-examples](./examples/no-std-examples).
 
 The following are more specific scenarios to help you learn the details:
 - A project with config from environments, files, and command line: you can use `Patch` to keep your config organized. Please check this [template](https://github.com/yanganto/ConfigTemplate).
-- A project extended from another project, where only some fields of the config differ. You can use the `catalyst` feature to expose the base struct in a build script with `Substrate`, then a `Catalyst` struct can bind to it and produce a complex struct. Check the [complex-example](./complex-example) and [Quick Example: case 3](#case-3---extend-a-struct-from-a-crate).
+- A project extended from another project, where only some fields of the config differ. You can use the `catalyst` feature to expose the base struct in a build script with `Substrate`, then a `Catalyst` struct can bind to it and produce a complex struct. Check the [complex-examples](./examples/complex-examples) and [Quick Example: case 3](#case-3---extend-a-struct-from-a-crate).
 
 ## Quick Example
 
-#### Case 1 - Patch on a Config
+#### Case 1 (Patch) - Patch on a Config
 Deriving `Patch` on a struct generates a struct similar to the original one, but with all fields wrapped in an `Option`.
 An instance of such a patch struct can be applied onto the original struct, replacing values only if they are set to `Some`, leaving them unchanged otherwise.
 See also Case Studies: 
@@ -82,7 +82,7 @@ fn patch_json() {
 }
 ```
 
-#### Case 2 - Fill up on a Config
+#### Case 2 (Filler) - Fill up on a Config
 Deriving `Filler` on a struct generates a struct similar to the original one, keeping only the fields that can be filled (`Option`, collections, `extendable`, or `empty_value` fields). Unlike `Patch`, the `Filler` only works on empty fields of the instance.
 See also Case Studies: 
   - [Log which fields were patched or filled](docs/logs.md)
@@ -119,11 +119,11 @@ assert_eq!(item.maybe_field_int, Some(7));
 assert_eq!(item.list, vec![7]);
 ```
 
-#### Case 3 - Extend a struct from a crate
+#### Case 3 (Complex) - Extend a struct from a crate
 Deriving `Substrate` on a struct exposes the field information so that other crates can access it.
 Deriving `Catalyst` reads the field information of a `Substrate` and generates a new complex struct.
 In the other words, the catalyst is a struct with extra fields that the developer writes down in the downstream crate. The complex is a generated struct that combines the substrate's fields with the catalyst's extra fields. The overall behavior is like [chemical catalysts](https://en.wikipedia.org/wiki/Enzyme_catalysis): a catalyst **binds** onto a substrate to form a complex struct, which has all fields from both.
-A complex can also **decouple** without cloning, returning the original catalyst and substrate. Check the [complex-example](./complex-example/catalyst/src/lib.rs).
+A complex can also **decouple** without cloning, returning the original catalyst and substrate. Check the [complex-examples](./examples/complex-examples/catalyst/src/lib.rs).
 With the `unsafe` feature, `bind` and `decouple` use `ManuallyDrop` + `ptr::read` to avoid memory moves, and `__substrate_new` uses `MaybeUninit` + `ptr::write` while `__substrate_unpack` uses `ManuallyDrop` + `ptr::read`, such that the copy will be less.
 
 In terms of crate dependencies, the crate using `Substrate` is **upstream** (a dependency), and the crate using `Catalyst` is **downstream** (it depends on the substrate crate). There are two ways for the downstream crate to read the substrate's field layout:
@@ -165,7 +165,7 @@ struct Amyloid {
 // }
 ```
 
-**Option B: via source code with `src` attribute**: point the `Catalyst` macro directly at the substrate crate's source file using `#[catalyst(src = "crate_name:/path/to/file.rs")]`. The macro uses `cargo_metadata` to locate the package and `syn` to parse the file, so no `build.rs` or `expose()` call is required. Check the [catalyst-src example](./complex-example/catalyst-src/src/lib.rs).
+**Option B: via source code with `src` attribute**: point the `Catalyst` macro directly at the substrate crate's source file using `#[catalyst(src = "crate_name:/path/to/file.rs")]`. The macro uses `cargo_metadata` to locate the package and `syn` to parse the file, so no `build.rs` or `expose()` call is required. Check the [catalyst-src example](./examples/complex-examples/catalyst-src/src/lib.rs).
 
 ```rust
 /// In the substrate crate (src/lib.rs)
@@ -231,7 +231,9 @@ Please check the [traits documentation][doc-traits] to learn more.
 
 ## Examples
 
-The [examples][examples] demonstrate the following scenarios:
+Examples are organised into focused sub-projects under [`examples/`](./examples):
+
+**[patch-examples](./examples/patch-examples)** — `Patch` derive macro scenarios:
 - diff two instances for a patch (`diff.rs`)
 - create a patch from a JSON string (`json.rs`)
 - rename the patch structure (`rename-patch-struct.rs`)
@@ -241,13 +243,19 @@ The [examples][examples] demonstrate the following scenarios:
 - show operators on patches (`op.rs`)
 - show example with serde crates, e.g. `humantime_serde` for durations (`time.rs`)
 - show a patch nesting another patch (`nesting.rs`)
-- show filler with all possible types (`filler.rs`)
-- show operators on fillers (`filler-op.rs`)
 - show `skip_wrap` field behavior (`instance.rs`)
 - use `Patch` with `clap` for command-line config (`clap.rs`)
 - demonstrate `default_log` and `apply_with_log` for both `Patch` and `Filler` (`log.rs`)
 - apply a heap-allocated (boxed) patch and produce a boxed diff (`box.rs`)
 - demonstrate `apply_by` for custom field-level apply logic, e.g. list concatenation (`apply-by.rs`)
+
+**[filler-examples](./examples/filler-examples)** — `Filler` derive macro scenarios:
+- show filler with all possible types (`filler.rs`)
+- show operators on fillers (`filler-op.rs`)
+
+**[no-std-examples](./examples/no-std-examples)** — `no_std` usage with a bare-metal target.
+
+**[complex-examples](./examples/complex-examples)** — `Substrate` / `Catalyst` / `Complex` derive macros for extending a struct across crates.
 
 ## Features
 
@@ -275,4 +283,4 @@ This crate includes the following optional features:
 [doc-badge]: https://img.shields.io/badge/docs-rs-orange.svg
 [doc-url]: https://docs.rs/struct-patch/
 [doc-traits]: https://docs.rs/struct-patch/latest/struct_patch/traits/trait.Patch.html#container-attributes
-[examples]: /lib/examples
+[examples]: /examples
