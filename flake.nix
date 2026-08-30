@@ -24,6 +24,8 @@
           (builtins.readFile ./nix/scripts/check-filler.sh);
         checkPatchScript = pkgs.writeShellScriptBin "check-patch"
           (builtins.readFile ./nix/scripts/check-patch.sh);
+        testScript = pkgs.writeShellScriptBin "test"
+          (builtins.readFile ./nix/scripts/test.sh);
         PROMPT = ''
           _git_ps1() {
               git rev-parse --is-inside-work-tree &>/dev/null || return
@@ -37,8 +39,8 @@
       in
       {
         devShells = {
-          default = import ./nix/shells/default.nix { inherit pkgs PROMPT; checkScripts = [ checkComplexScript checkFillerScript checkPatchScript ]; };
-          ci = import ./nix/shells/ci.nix { inherit pkgs publishScript PROMPT; checkScripts = [ checkComplexScript checkFillerScript checkPatchScript ]; };
+          default = import ./nix/shells/default.nix { inherit pkgs PROMPT; checkScripts = [ checkComplexScript checkFillerScript checkPatchScript testScript ]; };
+          ci = import ./nix/shells/ci.nix { inherit pkgs publishScript PROMPT; checkScripts = [ checkComplexScript checkFillerScript checkPatchScript testScript ]; };
           no-std = import ./nix/shells/no-std.nix { inherit pkgs PROMPT; checkScripts = [ checkNoStdScript ]; };
         };
       }

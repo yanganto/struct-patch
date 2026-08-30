@@ -17,40 +17,25 @@ jobs:
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Test lib - no default features
-        run: nix develop .#ci -c cargo test --quiet --no-default-features
-
-      - name: Test lib - std features
-        run: nix develop .#ci -c cargo test --quiet --features=std
-
-      - name: Test lib - merge features
+      - name: Test lib
         run: |
-          nix develop .#ci -c cargo test --quiet --features=merge --no-default-features
-          nix develop .#ci -c cargo test --quiet --features=merge
+          nix develop .#ci -c test no-default
+          nix develop .#ci -c cargo test std
+          nix develop .#ci -c cargo test merge
+          nix develop .#ci -c cargo test default
 
-      - name: Test lib - default features
-        run: nix develop .#ci -c cargo test --quiet
+      - name: Test patch examples
+        run: |
+          nix develop .#ci -c check-patch no-default
+          nix develop .#ci -c check-patch std
+          nix develop .#ci -c check-patch merge
+          nix develop .#ci -c check-patch option
+          nix develop .#ci -c check-patch default
 
-      - name: Test patch examples - no default features
-        run: nix develop .#ci -c check-patch no-default
-
-      - name: Test patch examples - std features
-        run: nix develop .#ci -c check-patch std
-
-      - name: Test patch examples - merge features
-        run: nix develop .#ci -c check-patch merge
-
-      - name: Test patch examples - option features
-        run: nix develop .#ci -c check-patch option
-
-      - name: Test patch examples - default features
-        run: nix develop .#ci -c check-patch default
-
-      - name: Test filler examples - no default features
-        run: nix develop .#ci -c check-filler no-default
-
-      - name: Test filler examples - default features
-        run: nix develop .#ci -c check-filler default
+      - name: Test filler examples
+        run: |
+          nix develop .#ci -c check-filler no-default
+          nix develop .#ci -c check-filler default
 
       - name: Test in no std
         run: nix develop .#no-std -c check-no-std
