@@ -6,11 +6,11 @@ members = [
     "catalyst-src",
 ]
 [workspace.dependencies]
-struct-patch = { path = "../lib", features = ["catalyst"] }
+struct-patch = { path = "../lib" }
 
 [workspace.package]
 authors = ["Antonio Yang <yanganto@gmail.com>"]
-version = "0.14.0"
+version = "0.14.1"
 edition = "2021"
 categories = ["development-tools"]
 keywords = ["struct", "patch", "macro", "derive", "overlay"]

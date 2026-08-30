@@ -85,7 +85,7 @@ pub use struct_patch_derive::Catalyst;
 pub use struct_patch_derive::Filler;
 #[doc(hidden)]
 pub use struct_patch_derive::Patch;
-#[cfg(feature = "catalyst")]
+#[cfg(feature = "substrate")]
 #[doc(hidden)]
 pub use struct_patch_derive::Substrate;
 pub mod r#box;

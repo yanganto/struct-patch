@@ -12,7 +12,7 @@ readme.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-struct-patch-derive = { version = "=0.14.0", path = "../derive" }
+struct-patch-derive = { version = "=0.14.1", path = "../derive" }
 
 [dev-dependencies]
 serde_json = "1.0"
@@ -43,8 +43,12 @@ nesting = [
 ]
 none_as_default = ["option"]
 keep_none = ["option"]
+substrate = [
+    "struct-patch-derive/substrate"
+]
 catalyst = [
-    "struct-patch-derive/catalyst"
+    "struct-patch-derive/catalyst",
+    "struct-patch-derive/substrate"
 ]
 unsafe = [
     "struct-patch-derive/unsafe"
