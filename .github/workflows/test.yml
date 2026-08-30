@@ -32,59 +32,19 @@ jobs:
         run: nix develop .#ci -c cargo test --quiet
 
       - name: Test patch examples - no default features
-        run: |
-          MANIFEST=examples/patch-examples/Cargo.toml
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --no-default-features --example instance
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --no-default-features --example diff
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --no-default-features --example json
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --no-default-features --example rename-patch-struct
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --no-default-features --example patch-attr
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --no-default-features --example time
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --no-default-features --example clap
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --no-default-features --features=nesting --example nesting
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --no-default-features --features=option --example option
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --no-default-features --example log
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --no-default-features --example apply-by
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --no-default-features --features=box --example box
+        run: nix develop .#ci -c check-patch no-default
 
       - name: Test patch examples - std features
-        run: |
-          MANIFEST=examples/patch-examples/Cargo.toml
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --features=std --example instance
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --features=std --example diff
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --features=std --example json
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --features=std --example rename-patch-struct
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --features=std --example patch-attr
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --features=std --example option
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --features=std --example box
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --features=std,nesting --example nesting
+        run: nix develop .#ci -c check-patch std
 
       - name: Test patch examples - merge features
-        run: |
-          MANIFEST=examples/patch-examples/Cargo.toml
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --features=option,merge --example option
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --features=merge --example op
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --features=merge,nesting --example nesting
+        run: nix develop .#ci -c check-patch merge
 
       - name: Test patch examples - option features
-        run: |
-          MANIFEST=examples/patch-examples/Cargo.toml
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --features=none_as_default --example option
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --features=none_as_default,nesting --example nesting
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --features=keep_none --example option
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --features=keep_none,nesting --example nesting
+        run: nix develop .#ci -c check-patch option
 
       - name: Test patch examples - default features
-        run: |
-          MANIFEST=examples/patch-examples/Cargo.toml
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --example status
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --example op
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --example clap
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --features=nesting --example nesting
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --features=nesting --example clap
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --example log
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --example apply-by
-          nix develop .#ci -c cargo run --quiet --manifest-path $MANIFEST --features=box --example box
+        run: nix develop .#ci -c check-patch default
 
       - name: Test filler examples - no default features
         run: nix develop .#ci -c check-filler no-default
