@@ -1,0 +1,32 @@
+[package]
+name = "patch-examples"
+authors = ["Antonio Yang <yanganto@gmail.com>"]
+version = "0.14.1"
+edition = "2021"
+license = "MIT"
+
+[dependencies]
+struct-patch = { path = "../../lib" }
+serde_json = "1.0"
+serde = { version = "1", features = ["derive"] }
+serde_with = "3.9.0"
+toml = "1.1.2"
+humantime-serde = "1.1.1"
+clap = { version = "4.4.7", features = ["derive"] }
+
+[features]
+default = ["status", "op"]
+status = ["struct-patch/status"]
+op = ["struct-patch/op"]
+merge = ["struct-patch/merge"]
+alloc = ["struct-patch/alloc"]
+std = ["box", "option"]
+box = ["alloc", "struct-patch/box"]
+option = ["struct-patch/option"]
+nesting = ["struct-patch/nesting"]
+none_as_default = ["option", "struct-patch/none_as_default"]
+keep_none = ["option", "struct-patch/keep_none"]
+
+[[example]]
+name = "box"
+required-features = ["box"]

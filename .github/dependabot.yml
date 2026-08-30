@@ -24,3 +24,7 @@ updates:
     directory: "/examples/complex-examples"
     schedule:
       interval: "weekly"
+  - package-ecosystem: "cargo"
+    directory: "/examples/patch-examples"
+    schedule:
+      interval: "weekly"

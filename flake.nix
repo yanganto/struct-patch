@@ -20,7 +20,6 @@
           (builtins.readFile ./nix/scripts/check-no-std.sh);
         checkComplexScript = pkgs.writeShellScriptBin "check-complex"
           (builtins.readFile ./nix/scripts/check-complex.sh);
-
         PROMPT = ''
           _git_ps1() {
               git rev-parse --is-inside-work-tree &>/dev/null || return
