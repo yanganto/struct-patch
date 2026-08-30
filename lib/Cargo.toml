@@ -14,6 +14,10 @@ rust-version.workspace = true
 [dependencies]
 struct-patch-derive = { version = "=0.14.1", path = "../derive" }
 
+[dev-dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1.0"
+
 [features]
 default = ["status", "op"]
 status = [
