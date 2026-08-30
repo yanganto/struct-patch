@@ -20,9 +20,9 @@ jobs:
       - name: Test lib
         run: |
           nix develop .#ci -c test no-default
-          nix develop .#ci -c cargo test std
-          nix develop .#ci -c cargo test merge
-          nix develop .#ci -c cargo test default
+          nix develop .#ci -c test std
+          nix develop .#ci -c test merge
+          nix develop .#ci -c test default
 
       - name: Test patch examples
         run: |
