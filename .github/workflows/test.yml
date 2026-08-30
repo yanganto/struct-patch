@@ -77,7 +77,7 @@ jobs:
 
       - name: Test in no std
         run: |
-          cd no-std-examples
+          cd examples/no-std-examples
           nix develop .#no-std -c cargo run --quiet --features=box --bin no-std-box
           nix develop .#no-std -c cargo run --quiet --features=option --bin no-std-option
 

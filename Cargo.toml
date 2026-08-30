@@ -5,8 +5,8 @@ members = [
     "derive",
 ]
 exclude = [
-    "no-std-examples",
-    "complex-example",
+    "examples/no-std-examples",
+    "examples/complex-example",
 ]
 
 [workspace.package]
