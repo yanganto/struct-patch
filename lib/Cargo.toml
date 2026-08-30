@@ -43,8 +43,12 @@ nesting = [
 ]
 none_as_default = ["option"]
 keep_none = ["option"]
+substrate = [
+    "struct-patch-derive/substrate"
+]
 catalyst = [
-    "struct-patch-derive/catalyst"
+    "struct-patch-derive/catalyst",
+    "struct-patch-derive/substrate"
 ]
 unsafe = [
     "struct-patch-derive/unsafe"

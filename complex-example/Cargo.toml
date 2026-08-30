@@ -6,7 +6,7 @@ members = [
     "catalyst-src",
 ]
 [workspace.dependencies]
-struct-patch = { path = "../lib", features = ["catalyst"] }
+struct-patch = { path = "../lib" }
 
 [workspace.package]
 authors = ["Antonio Yang <yanganto@gmail.com>"]
