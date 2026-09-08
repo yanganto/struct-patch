@@ -61,12 +61,20 @@
 /// ```
 ///
 /// ### `#[patch(default_log(fn_path))]`
-/// Automatically call `fn_path(&str)` with each patched field name inside
+/// Automatically call `fn_path(&[&str], &str)` with prefixes and field name inside
 /// every generated `apply` call. Has no effect on `apply_with_log`. The path
-/// may be any function path visible at the call site.
+/// may be any function path visible at the call site. The `prefixes` slice contains
+/// the path through nested structures (empty for top-level fields).
 /// ```rust
 /// # use struct_patch::Patch;
-/// fn log_field(field: &str) { let _ = field; }
+/// fn log_field(prefixes: &[&str], field: &str) {
+///     let path = if prefixes.is_empty() {
+///         field.to_string()
+///     } else {
+///         format!("{}.{}", prefixes.join("."), field)
+///     };
+///     println!("patched: {path}");
+/// }
 ///
 /// #[derive(Default, Patch)]
 /// #[patch(default_log(log_field))]
@@ -77,7 +85,7 @@
 ///
 /// let mut item = Item::default();
 /// item.apply(ItemPatch { field_int: Some(1), field_string: None });
-/// // log_field("field_int") is called automatically
+/// // log_field(&[], "field_int") is called automatically
 /// ```
 ///
 /// ## Field attributes
@@ -138,6 +146,9 @@ pub trait Patch<P> {
     /// The derive macro generates an override that calls `log` once per field that is
     /// actually changed.
     ///
+    /// When the `nesting` feature is enabled, `log` receives both a prefix path and field name.
+    /// When `nesting` is disabled, `log` receives only the field name.
+    ///
     /// ```rust
     /// # use struct_patch::Patch;
     /// #[derive(Default, Patch)]
@@ -150,10 +161,29 @@ pub trait Patch<P> {
     /// let patch = ItemPatch { field_int: Some(42), field_string: None };
     ///
     /// let mut patched_fields = Vec::new();
-    /// item.apply_with_log(patch, |field| patched_fields.push(field.to_string()));
+    /// #[cfg(feature = "nesting")]
+    /// item.apply_with_log(patch, |prefixes, field| {
+    ///     let path = if prefixes.is_empty() {
+    ///         field.to_string()
+    ///     } else {
+    ///         format!("{}.{}", prefixes.join("."), field)
+    ///     };
+    ///     patched_fields.push(path);
+    /// });
+    ///
+    /// #[cfg(not(feature = "nesting"))]
+    /// item.apply_with_log(patch, |field| {
+    ///     patched_fields.push(field.to_string());
+    /// });
     ///
     /// assert_eq!(patched_fields, vec!["field_int"]);
     /// ```
+    #[cfg(feature = "nesting")]
+    fn apply_with_log<F: FnMut(&[&str], &str)>(&mut self, patch: P, _log: F) {
+        self.apply(patch);
+    }
+
+    #[cfg(not(feature = "nesting"))]
     fn apply_with_log<F: FnMut(&str)>(&mut self, patch: P, _log: F) {
         self.apply(patch);
     }
@@ -178,6 +208,9 @@ pub trait Filler<F> {
     /// The derive macro generates an override that calls `log` once per field that is
     /// actually filled (i.e. the field was empty and the filler supplied a value).
     ///
+    /// When the `nesting` feature is enabled, `log` receives both a prefix path and field name.
+    /// When `nesting` is disabled, `log` receives only the field name.
+    ///
     /// ```rust
     /// # use struct_patch::Filler;
     /// #[derive(Default, Filler)]
@@ -189,10 +222,29 @@ pub trait Filler<F> {
     /// let filler = ItemFiller { value: Some(42) };
     ///
     /// let mut filled_fields = Vec::new();
-    /// item.apply_with_log(filler, |field| filled_fields.push(field.to_string()));
+    /// #[cfg(feature = "nesting")]
+    /// item.apply_with_log(filler, |prefixes, field| {
+    ///     let path = if prefixes.is_empty() {
+    ///         field.to_string()
+    ///     } else {
+    ///         format!("{}.{}", prefixes.join("."), field)
+    ///     };
+    ///     filled_fields.push(path);
+    /// });
+    ///
+    /// #[cfg(not(feature = "nesting"))]
+    /// item.apply_with_log(filler, |field| {
+    ///     filled_fields.push(field.to_string());
+    /// });
     ///
     /// assert_eq!(filled_fields, vec!["value"]);
     /// ```
+    #[cfg(feature = "nesting")]
+    fn apply_with_log<L: FnMut(&[&str], &str)>(&mut self, filler: F, _log: L) {
+        self.apply(filler);
+    }
+
+    #[cfg(not(feature = "nesting"))]
     fn apply_with_log<L: FnMut(&str)>(&mut self, filler: F, _log: L) {
         self.apply(filler);
     }

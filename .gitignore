@@ -6,3 +6,4 @@ struct-patch/examples
 examples/no-std-examples/target
 examples/complex-examples/target
 examples/patch-examples/target
+examples/filler-examples/target

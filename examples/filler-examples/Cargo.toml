@@ -12,3 +12,4 @@ struct-patch = { path = "../../lib" }
 default = ["status", "op"]
 status = ["struct-patch/status"]
 op = ["struct-patch/op"]
+nesting = ["struct-patch/nesting"]

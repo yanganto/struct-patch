@@ -52,7 +52,9 @@ fn main() {
             port: None,
             debug: Some(true),
         }),
-        |field| patched_fields.push(field.to_string()),
+        |field| {
+            patched_fields.push(field.to_string());
+        },
     );
 
     assert!(config.debug);

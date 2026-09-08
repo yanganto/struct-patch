@@ -3,7 +3,7 @@
 Both `Patch` and `Filler` support two ways to observe which fields are changed:
 
 **Ad-hoc at the call site** — use `apply_with_log`, which takes a closure that
-is called with each patched/filled field name:
+is called with each patched/filled field name and its nesting path:
 
 ```rust
 use struct_patch::{Filler, Patch};
@@ -18,7 +18,14 @@ let mut item = Item::default();
 let patch = ItemPatch { field_int: Some(42), field_string: None };
 
 let mut patched_fields = Vec::new();
-item.apply_with_log(patch, |field| patched_fields.push(field.to_string()));
+item.apply_with_log(patch, |prefixes, field| {
+    let path = if prefixes.is_empty() {
+        field.to_string()
+    } else {
+        format!("{}.{}", prefixes.join("."), field)
+    };
+    patched_fields.push(path);
+});
 
 assert_eq!(patched_fields, vec!["field_int"]);
 assert_eq!(item.field_int, 42);
@@ -32,13 +39,21 @@ let mut settings = Settings::default();
 let mut filled_fields = Vec::new();
 settings.apply_with_log(
     SettingsFiller { theme: Some("dark".into()) },
-    |field| filled_fields.push(field.to_string()),
+    |prefixes, field| {
+        let path = if prefixes.is_empty() {
+            field.to_string()
+        } else {
+            format!("{}.{}", prefixes.join("."), field)
+        };
+        filled_fields.push(path);
+    },
 );
 assert_eq!(filled_fields, vec!["theme"]);
 ```
 
 For structs using `#[patch(nesting)]`, the log closure is threaded into nested
-patches so you receive field names from all levels of nesting.
+patches so you receive field names with prefixes showing the path through nested
+structures.
 
 **Always-on via struct attribute** — use `#[patch(default_log(fn_path))]` or
 `#[filler(default_log(fn_path))]` to wire a specific function into `apply`
@@ -49,8 +64,13 @@ Has no effect on `apply_with_log`.
 ```rust
 use struct_patch::{Filler, Patch};
 
-fn my_log(field: &str) {
-    println!("patched: {field}");
+fn my_log(prefixes: &[&str], field: &str) {
+    let path = if prefixes.is_empty() {
+        field.to_string()
+    } else {
+        format!("{}.{}", prefixes.join("."), field)
+    };
+    println!("patched: {path}");
 }
 
 #[derive(Default, Patch)]
@@ -64,8 +84,13 @@ let mut cfg = Config::default();
 cfg.apply(ConfigPatch { retries: Some(3), timeout: None });
 // prints: patched: retries
 
-fn my_filler_log(field: &str) {
-    println!("filled: {field}");
+fn my_filler_log(prefixes: &[&str], field: &str) {
+    let path = if prefixes.is_empty() {
+        field.to_string()
+    } else {
+        format!("{}.{}", prefixes.join("."), field)
+    };
+    println!("filled: {path}");
 }
 
 #[derive(Default, Filler)]

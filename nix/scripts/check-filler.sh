@@ -4,11 +4,14 @@ cd examples/filler-examples
 
 run_no_default() {
     cargo run --quiet --no-default-features --example filler
+    cargo run --quiet --no-default-features --example log
 }
 
 run_default() {
     cargo run --quiet --example filler
     cargo run --quiet --example filler-op
+    cargo run --quiet --example log
+    cargo run --quiet --features nesting --example log
 }
 
 case "${1:-}" in

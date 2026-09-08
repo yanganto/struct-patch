@@ -765,8 +765,21 @@ impl Patch {
         let op_impl = quote!();
 
         // Per-field log-call token streams, parallel with each field-name vec.
-        // Emit `default_log_fn(stringify!(field));` when a struct-level log is configured,
-        // or an empty token stream otherwise.
+        // With nesting feature: emit `default_log_fn(&[], stringify!(field));`
+        // Without nesting feature: emit `default_log_fn(stringify!(field));`
+        // or empty token stream otherwise.
+        #[cfg(feature = "nesting")]
+        let make_log_calls = |names: &[Option<&Ident>]| -> Vec<TokenStream> {
+            if let Some(f) = default_log_fn {
+                names
+                    .iter()
+                    .map(|n| quote! { #f(&[], stringify!(#n)); })
+                    .collect()
+            } else {
+                names.iter().map(|_| quote! {}).collect()
+            }
+        };
+        #[cfg(not(feature = "nesting"))]
         let make_log_calls = |names: &[Option<&Ident>]| -> Vec<TokenStream> {
             if let Some(f) = default_log_fn {
                 names
@@ -796,7 +809,12 @@ impl Patch {
         let nesting_apply_section: TokenStream = if let Some(ref f) = default_log_fn {
             quote! {
                 #(
-                    self.#nesting_field_names.apply_with_log(patch.#nesting_field_names, #f);
+                    let nesting_field_name = stringify!(#nesting_field_names);
+                    self.#nesting_field_names.apply_with_log(patch.#nesting_field_names, |prefixes: &[&str], field: &str| {
+                        let mut new_prefixes = Vec::from(prefixes);
+                        new_prefixes.push(nesting_field_name);
+                        #f(&new_prefixes, field);
+                    });
                 )*
             }
         } else {
@@ -866,6 +884,7 @@ impl Patch {
                     #nesting_apply_section
                 }
 
+                #[cfg(not(feature = "nesting"))]
                 fn apply_with_log<F: FnMut(&str)>(&mut self, patch: #name #generics, mut log: F) {
                     #(
                         if let Some(v) = patch.#renamed_field_names {
@@ -917,8 +936,67 @@ impl Patch {
                             #apply_by_fns(&mut self.#apply_by_field_names, v);
                         }
                     )*
+                }
+
+                #[cfg(feature = "nesting")]
+                fn apply_with_log<F: FnMut(&[&str], &str)>(&mut self, patch: #name #generics, mut log: F) {
                     #(
-                        self.#nesting_field_names.apply_with_log(patch.#nesting_field_names, &mut log);
+                        if let Some(v) = patch.#renamed_field_names {
+                            log(&[], stringify!(#renamed_field_names));
+                            self.#renamed_field_names.apply(v);
+                        }
+                    )*
+                    #(
+                        if patch.#renamed_field_names_by_empty_value != #renamed_field_name_empty_values {
+                            log(&[], stringify!(#renamed_field_names_by_empty_value));
+                            self.#renamed_field_names_by_empty_value.apply(patch.#renamed_field_names_by_empty_value);
+                        }
+                    )*
+                    #(
+                        if let Some(v) = patch.#original_field_names {
+                            log(&[], stringify!(#original_field_names));
+                            self.#original_field_names = v;
+                        }
+                    )*
+                    #(
+                        if patch.#original_field_names_by_empty_value != #original_field_name_empty_values {
+                            log(&[], stringify!(#original_field_names_by_empty_value));
+                            self.#original_field_names_by_empty_value = patch.#original_field_names_by_empty_value;
+                        }
+                    )*
+                    #(
+                        if let Some(v) = patch.#skip_wrap_field_names {
+                            log(&[], stringify!(#skip_wrap_field_names));
+                            self.#skip_wrap_field_names = Some(v);
+                        }
+                    )*
+                    #(
+                        if let Some(v) = patch.#skip_wrap_apply_by_option_field_names {
+                            log(&[], stringify!(#skip_wrap_apply_by_option_field_names));
+                            if let Some(ref mut orig) = self.#skip_wrap_apply_by_option_field_names {
+                                #skip_wrap_apply_by_option_fns(orig, v);
+                            }
+                        }
+                    )*
+                    #(
+                        {
+                            log(&[], stringify!(#skip_wrap_apply_by_plain_field_names));
+                            #skip_wrap_apply_by_plain_fns(&mut self.#skip_wrap_apply_by_plain_field_names, patch.#skip_wrap_apply_by_plain_field_names);
+                        }
+                    )*
+                    #(
+                        if let Some(v) = patch.#apply_by_field_names {
+                            log(&[], stringify!(#apply_by_field_names));
+                            #apply_by_fns(&mut self.#apply_by_field_names, v);
+                        }
+                    )*
+                    #(
+                        let nesting_field_name = stringify!(#nesting_field_names);
+                        self.#nesting_field_names.apply_with_log(patch.#nesting_field_names, |prefixes: &[&str], field: &str| {
+                            let mut new_prefixes = Vec::from(prefixes);
+                            new_prefixes.push(nesting_field_name);
+                            log(&new_prefixes, field);
+                        });
                     )*
                 }
 
@@ -1066,6 +1144,16 @@ impl Patch {
                     struct_patch::traits::Patch::apply(self, *patch);
                 }
 
+                #[cfg(feature = "nesting")]
+                fn apply_with_log<__F: ::core::ops::FnMut(&[&str], &str)>(
+                    &mut self,
+                    patch: struct_patch::__Box< #name #generics >,
+                    log: __F,
+                ) {
+                    struct_patch::traits::Patch::apply_with_log(self, *patch, log);
+                }
+
+                #[cfg(not(feature = "nesting"))]
                 fn apply_with_log<__F: ::core::ops::FnMut(&str)>(
                     &mut self,
                     patch: struct_patch::__Box< #name #generics >,
