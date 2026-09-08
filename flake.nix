@@ -34,7 +34,8 @@
               [[ -n $(git status --porcelain) ]] && dirty='*'
               echo "<$branch$dirty>"
           }
-          PS1='\[\e[33m\][$DEVSHELL] \w $(_git_ps1) \$\[\e[0m\] '
+          export PS1='\[\e[33m\][$DEVSHELL] \w $(_git_ps1) \$\[\e[0m\] '
+          export PS4='\033[31m ⊙ \033[0m'
         '';
       in
       {

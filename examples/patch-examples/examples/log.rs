@@ -19,6 +19,18 @@ struct Config {
     debug: bool,
 }
 
+// --- Patch with nesting example ---
+
+#[cfg(feature = "nesting")]
+#[derive(Default, Patch)]
+#[patch(attribute(derive(Debug, Default)))]
+#[patch(default_log(log_patch_field))]
+struct Server {
+    name: String,
+    #[patch(nesting)]
+    config: Config,
+}
+
 // --- Filler example ---
 
 #[derive(Default, Filler)]
@@ -109,4 +121,51 @@ fn main() {
         "theme={:?}, max_connections={:?}",
         settings2.theme, settings2.max_connections
     );
+
+    // --- Patch with nesting and default_log ---
+    #[cfg(feature = "nesting")]
+    {
+        println!("\n--- Patch: apply() with nesting and default_log ---");
+        let mut server = Server::default();
+        server.apply(ServerPatch {
+            name: Some("prod-server".into()),
+            config: ConfigPatch {
+                host: Some("192.168.1.1".into()),
+                port: Some(443),
+                debug: None,
+            },
+        });
+        // Prints:
+        //   [default_log] patch field: name
+        //   [default_log] patch field: host
+        //   [default_log] patch field: port
+
+        println!(
+            "name={}, config.host={}, config.port={}, config.debug={}",
+            server.name, server.config.host, server.config.port, server.config.debug
+        );
+
+        // --- Patch with nesting and apply_with_log ---
+        println!("\n--- Patch: apply_with_log() with nesting ---");
+        let mut server2 = Server::default();
+        server2.apply_with_log(
+            ServerPatch {
+                name: None,
+                config: ConfigPatch {
+                    host: Some("10.0.0.1".into()),
+                    port: None,
+                    debug: Some(false),
+                },
+            },
+            |field| println!("[custom_log] patch field: '{field}'"),
+        );
+        // Prints:
+        //   [custom_log] patch field: 'host'
+        //   [custom_log] patch field: 'debug'
+
+        println!(
+            "name={}, config.host={}, config.port={}, config.debug={}",
+            server2.name, server2.config.host, server2.config.port, server2.config.debug
+        );
+    }
 }

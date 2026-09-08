@@ -13,6 +13,7 @@ run_no_default() {
     cargo run --quiet --no-default-features --features=nesting --example nesting
     cargo run --quiet --no-default-features --features=option --example option
     cargo run --quiet --no-default-features --example log
+    cargo run --quiet --no-default-features --features=nesting --example log
     cargo run --quiet --no-default-features --example apply-by
     cargo run --quiet --no-default-features --features=box --example box
 }
@@ -48,8 +49,7 @@ run_default() {
     cargo run --quiet --features=nesting --example nesting
     cargo run --quiet --features=nesting --example clap
     cargo run --quiet --example log
-    cargo run --quiet --example apply-by
-    cargo run --quiet --features=box --example box
+    cargo run --quiet --example apply-by cargo run --quiet --features=box --example box
 }
 
 case "${1:-}" in
