@@ -24,11 +24,30 @@ struct Config {
 #[cfg(feature = "nesting")]
 #[derive(Default, Patch)]
 #[patch(attribute(derive(Debug, Default)))]
+struct Logging {
+    level: String,
+    format: String,
+}
+
+#[cfg(feature = "nesting")]
+#[derive(Default, Patch)]
+#[patch(attribute(derive(Debug, Default)))]
+#[patch(default_log(log_patch_field))]
+struct ConfigWithLogging {
+    host: String,
+    port: u16,
+    #[patch(nesting)]
+    logging: Logging,
+}
+
+#[cfg(feature = "nesting")]
+#[derive(Default, Patch)]
+#[patch(attribute(derive(Debug, Default)))]
 #[patch(default_log(log_patch_field))]
 struct Server {
     name: String,
     #[patch(nesting)]
-    config: Config,
+    config: ConfigWithLogging,
 }
 
 // --- Filler example ---
@@ -129,10 +148,10 @@ fn main() {
         let mut server = Server::default();
         server.apply(ServerPatch {
             name: Some("prod-server".into()),
-            config: ConfigPatch {
+            config: ConfigWithLoggingPatch {
                 host: Some("192.168.1.1".into()),
                 port: Some(443),
-                debug: None,
+                logging: LoggingPatch::default(),
             },
         });
         // Prints:
@@ -141,8 +160,8 @@ fn main() {
         //   [default_log] patch field: port
 
         println!(
-            "name={}, config.host={}, config.port={}, config.debug={}",
-            server.name, server.config.host, server.config.port, server.config.debug
+            "name={}, config.host={}, config.port={}",
+            server.name, server.config.host, server.config.port
         );
 
         // --- Patch with nesting and apply_with_log ---
@@ -151,21 +170,80 @@ fn main() {
         server2.apply_with_log(
             ServerPatch {
                 name: None,
-                config: ConfigPatch {
+                config: ConfigWithLoggingPatch {
                     host: Some("10.0.0.1".into()),
                     port: None,
-                    debug: Some(false),
+                    logging: LoggingPatch::default(),
                 },
             },
             |field| println!("[custom_log] patch field: '{field}'"),
         );
         // Prints:
         //   [custom_log] patch field: 'host'
-        //   [custom_log] patch field: 'debug'
 
         println!(
-            "name={}, config.host={}, config.port={}, config.debug={}",
-            server2.name, server2.config.host, server2.config.port, server2.config.debug
+            "name={}, config.host={}, config.port={}",
+            server2.name, server2.config.host, server2.config.port
+        );
+
+        // --- Patch with deep nesting (nesting within nesting) and default_log ---
+        println!("\n--- Patch: apply() with deep nesting and default_log ---");
+        let mut server3 = Server::default();
+        server3.apply(ServerPatch {
+            name: Some("app-server".into()),
+            config: ConfigWithLoggingPatch {
+                host: Some("localhost".into()),
+                port: Some(8080),
+                logging: LoggingPatch {
+                    level: Some("debug".into()),
+                    format: Some("json".into()),
+                },
+            },
+        });
+        // Prints:
+        //   [default_log] patch field: name
+        //   [default_log] patch field: host
+        //   [default_log] patch field: port
+        //   [default_log] patch field: level
+        //   [default_log] patch field: format
+
+        println!(
+            "name={}, config.host={}, config.port={}, config.logging.level={}, config.logging.format={}",
+            server3.name,
+            server3.config.host,
+            server3.config.port,
+            server3.config.logging.level,
+            server3.config.logging.format
+        );
+
+        // --- Patch with deep nesting and apply_with_log ---
+        println!("\n--- Patch: apply_with_log() with deep nesting ---");
+        let mut server4 = Server::default();
+        server4.apply_with_log(
+            ServerPatch {
+                name: None,
+                config: ConfigWithLoggingPatch {
+                    host: None,
+                    port: Some(9000),
+                    logging: LoggingPatch {
+                        level: Some("warn".into()),
+                        format: None,
+                    },
+                },
+            },
+            |field| println!("[custom_log] patch field: '{field}'"),
+        );
+        // Prints:
+        //   [custom_log] patch field: 'port'
+        //   [custom_log] patch field: 'level'
+
+        println!(
+            "name={}, config.host={}, config.port={}, config.logging.level={}, config.logging.format={}",
+            server4.name,
+            server4.config.host,
+            server4.config.port,
+            server4.config.logging.level,
+            server4.config.logging.format
         );
     }
 }
