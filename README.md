@@ -124,7 +124,7 @@ Deriving `Substrate` on a struct exposes the field information so that other cra
 Deriving `Catalyst` reads the field information of a `Substrate` and generates a new complex struct.
 In the other words, the catalyst is a struct with extra fields that the developer writes down in the downstream crate. The complex is a generated struct that combines the substrate's fields with the catalyst's extra fields. The overall behavior is like [chemical catalysts](https://en.wikipedia.org/wiki/Enzyme_catalysis): a catalyst **binds** onto a substrate to form a complex struct, which has all fields from both.
 A complex can also **decouple** without cloning, returning the original catalyst and substrate. Check the [complex-examples](./examples/complex-examples/catalyst/src/lib.rs).
-With the `unsafe` feature, `bind` and `decouple` use `ManuallyDrop` + `ptr::read` to avoid memory moves, and `__substrate_new` uses `MaybeUninit` + `ptr::write` while `__substrate_unpack` uses `ManuallyDrop` + `ptr::read`, such that the copy will be less.
+With the `unsafe` feature, `bind` and `decouple` avoid memory moves, the copy will be less.
 
 In terms of crate dependencies, the crate using `Substrate` is **upstream** (a dependency), and the crate using `Catalyst` is **downstream** (it depends on the substrate crate). There are two ways for the downstream crate to read the substrate's field layout:
 
@@ -274,7 +274,7 @@ This crate includes the following optional features:
 - `nesting` *(optional)*: allows a field to use `Patch` derive with the `#[patch(nesting)]` attribute.
 - `substrate` *(optional)*: enables the `Substrate` derive macro for exposing a struct's field layout so downstream crates can access it via `expose()` or source parsing.
 - `catalyst` *(optional)*: enables the `Catalyst` and `Complex` derive macros for extending a struct with fields from another crate. Implies `substrate`.
-- `unsafe` *(optional)*: uses `ManuallyDrop` + `ptr::read` / `MaybeUninit` + `ptr::write` in the generated `bind`, `decouple`, `__substrate_new`, and `__substrate_unpack` to avoid memory moves. Only meaningful with the `catalyst` feature.
+- `unsafe` *(optional)*: avoid memory moves. Only meaningful with the `catalyst` feature.
 
 [crates-badge]: https://img.shields.io/crates/v/struct-patch.svg
 [crate-url]: https://crates.io/crates/struct-patch
