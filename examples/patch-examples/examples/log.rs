@@ -126,8 +126,8 @@ fn main() {
     //   [custom_log] patch field: 'config.host'
 
     println!(
-        "name={}, config.host={}, config.port={}",
-        server2.name, server2.config.host, server2.config.port
+        "config.host={}, config.port={}",
+        server2.config.host, server2.config.port
     );
 
     println!("\n--- Patch: apply() with deep nesting and default_log ---");
@@ -187,9 +187,7 @@ fn main() {
     //   [custom_log] patch field: 'config.logging.level'
 
     println!(
-        "name={}, config.host={}, config.port={}, config.logging.level={}, config.logging.format={}",
-        server4.name,
-        server4.config.host,
+        "config.port={}, config.logging.level={}, config.logging.format={}",
         server4.config.port,
         server4.config.logging.level,
         server4.config.logging.format
