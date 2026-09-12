@@ -18,7 +18,7 @@ let mut item = Item::default();
 let patch = ItemPatch { field_int: Some(42), field_string: None };
 
 let mut patched_fields = Vec::new();
-item.apply_with_log(patch, |field| patched_fields.push(field.to_string()));
+item.apply_with_log(patch, |field| patched_fields.push(field.to_string()) );
 
 assert_eq!(patched_fields, vec!["field_int"]);
 assert_eq!(item.field_int, 42);
@@ -32,13 +32,18 @@ let mut settings = Settings::default();
 let mut filled_fields = Vec::new();
 settings.apply_with_log(
     SettingsFiller { theme: Some("dark".into()) },
-    |field| filled_fields.push(field.to_string()),
+    |field| filled_fields.push(field.to_string())
 );
 assert_eq!(filled_fields, vec!["theme"]);
 ```
 
-For structs using `#[patch(nesting)]`, the log closure is threaded into nested
-patches so you receive field names from all levels of nesting.
+**Function Signature for `default_log`:**
+- **Without `nesting` feature**: Define your logging function as `fn(&str)` that takes only the 
+  field name.
+- **With `nesting` feature enabled**: Define your logging function as `fn(&[&str], &str)` where 
+  the first parameter contains path segments for nested fields (e.g., `["config", "logging"]` for a 
+  nested field), and the second parameter is the field name. This allows you to see the 
+  complete path through nested structures.
 
 **Always-on via struct attribute** — use `#[patch(default_log(fn_path))]` or
 `#[filler(default_log(fn_path))]` to wire a specific function into `apply`
@@ -46,11 +51,41 @@ itself. Every call to `apply` on that struct will automatically invoke the
 function for each field that is changed, with no extra effort at call sites.
 Has no effect on `apply_with_log`.
 
+Example without `nesting` feature:
+
+```rust
+use struct_patch::Filler;
+
+// Your clean logging function that takes only the field name
+#[cfg(not(feature = "nesting"))]
+fn my_filler_log(field: &str) {
+    println!("filled: {field}");
+}
+
+
+#[derive(Default, Filler)]
+#[filler(default_log(my_filler_log))]
+struct Settings {
+    theme: Option<String>,
+}
+
+let mut settings = Settings::default();
+settings.apply(SettingsFiller { theme: Some("dark".into()) });
+// prints: filled: theme
+```
+
+Example with `nesting` feature:
+
 ```rust
 use struct_patch::{Filler, Patch};
 
-fn my_log(field: &str) {
-    println!("patched: {field}");
+fn my_log(prefixes: &[&str], field: &str) {
+    let path = if prefixes.is_empty() {
+        field.to_string()
+    } else {
+        format!("{}.{}", prefixes.join("."), field)
+    };
+    println!("patched: {path}");
 }
 
 #[derive(Default, Patch)]
@@ -64,8 +99,13 @@ let mut cfg = Config::default();
 cfg.apply(ConfigPatch { retries: Some(3), timeout: None });
 // prints: patched: retries
 
-fn my_filler_log(field: &str) {
-    println!("filled: {field}");
+fn my_filler_log(prefixes: &[&str], field: &str) {
+    let path = if prefixes.is_empty() {
+        field.to_string()
+    } else {
+        format!("{}.{}", prefixes.join("."), field)
+    };
+    println!("filled: {path}");
 }
 
 #[derive(Default, Filler)]

@@ -1,0 +1,2 @@
+[default_log] field changed: host
+[default_log] field changed: port

@@ -1,0 +1,7 @@
+--- Patch: apply() with default_log ---
+[default_log] patch field: host
+[default_log] patch field: port
+host=localhost, port=8080
+
+--- Patch: apply_with_log() with custom format ---
+host=localhost, port=8080

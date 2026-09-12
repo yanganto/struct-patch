@@ -1,0 +1,7 @@
+--- Filler: apply() with default_log ---
+[default_log] filler field: theme
+[default_log] filler field: max_connections
+theme=Some("dark"), max_connections=Some(100)
+
+--- Filler: apply() again (fields already filled, no log) ---
+theme=Some("dark"), max_connections=Some(100)

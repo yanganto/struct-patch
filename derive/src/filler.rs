@@ -12,6 +12,7 @@ const EXTENDABLE: &str = "extendable";
 const EMPTY_VALUE: &str = "empty_value";
 const ADDABLE: &str = "addable";
 const DEFAULT_LOG: &str = "default_log";
+const NESTING: &str = "nesting";
 
 pub(crate) struct Filler {
     visibility: syn::Visibility,
@@ -55,6 +56,8 @@ struct Field {
     fty: FillerType,
     #[cfg(feature = "op")]
     addable: Addable,
+    #[cfg(feature = "nesting")]
+    nesting: bool,
 }
 
 impl Filler {
@@ -126,6 +129,17 @@ impl Filler {
             .map(|f| !matches!(f.addable, Addable::Disable))
             .collect::<Vec<_>>();
 
+        // Nesting fields
+        #[cfg(not(feature = "nesting"))]
+        let nesting_field_names: Vec<Option<&Ident>> = Vec::new();
+
+        #[cfg(feature = "nesting")]
+        let nesting_field_names = fields
+            .iter()
+            .filter(|f| f.nesting)
+            .map(|f| f.ident.as_ref())
+            .collect::<Vec<_>>();
+
         let mapped_attributes = attributes
             .iter()
             .map(|a| {
@@ -160,6 +174,11 @@ impl Filler {
                     )*
                     #(
                         if self.#native_value_field_names != #native_value_field_empty_values {
+                            return false
+                        }
+                    )*
+                    #(
+                        if !self.#nesting_field_names.is_empty() {
                             return false
                         }
                     )*
@@ -228,6 +247,18 @@ impl Filler {
         #[cfg(not(feature = "op"))]
         let op_impl = quote!();
 
+        #[cfg(feature = "nesting")]
+        let make_log_calls = |names: &[Option<&Ident>]| -> Vec<TokenStream> {
+            if let Some(f) = default_log_fn {
+                names
+                    .iter()
+                    .map(|n| quote! { #f(&[], stringify!(#n)); })
+                    .collect()
+            } else {
+                names.iter().map(|_| quote! {}).collect()
+            }
+        };
+        #[cfg(not(feature = "nesting"))]
         let make_log_calls = |names: &[Option<&Ident>]| -> Vec<TokenStream> {
             if let Some(f) = default_log_fn {
                 names
@@ -241,6 +272,26 @@ impl Filler {
         let native_value_log_calls = make_log_calls(&native_value_field_names);
         let extendable_log_calls = make_log_calls(&extendable_field_names);
         let option_log_calls = make_log_calls(&option_field_names);
+
+        // For the `apply` method: propagate `default_log_fn` into nesting fields
+        #[cfg(feature = "nesting")]
+        let nesting_apply_section: TokenStream = if let Some(ref f) = default_log_fn {
+            quote! {
+                #(
+                    self.#nesting_field_names.apply_with_log(filler.#nesting_field_names, |_prefixes: &[&str], field: &str| {
+                        #f(&[], field);
+                    });
+                )*
+            }
+        } else {
+            quote! {
+                #(
+                    self.#nesting_field_names.apply(filler.#nesting_field_names);
+                )*
+            }
+        };
+        #[cfg(not(feature = "nesting"))]
+        let nesting_apply_section: TokenStream = quote! {};
 
         let filler_impl = quote! {
             #[automatically_derived]
@@ -266,8 +317,10 @@ impl Filler {
                             }
                         }
                     )*
+                    #nesting_apply_section
                 }
 
+                #[cfg(not(feature = "nesting"))]
                 fn apply_with_log<__L: FnMut(&str)>(&mut self, filler: #name #generics, mut log: __L) {
                     #(
                         if self.#native_value_field_names == #native_value_field_empty_values {
@@ -291,11 +344,44 @@ impl Filler {
                     )*
                 }
 
+                #[cfg(feature = "nesting")]
+                fn apply_with_log<__L: FnMut(&[&str], &str)>(&mut self, filler: #name #generics, mut log: __L) {
+                    #(
+                        if self.#native_value_field_names == #native_value_field_empty_values {
+                            log(&[], stringify!(#native_value_field_names));
+                            self.#native_value_field_names = filler.#native_value_field_names;
+                        }
+                    )*
+                    #(
+                        if self.#extendable_field_names.is_empty() {
+                            log(&[], stringify!(#extendable_field_names));
+                            self.#extendable_field_names.extend(filler.#extendable_field_names.into_iter());
+                        }
+                    )*
+                    #(
+                        if let Some(v) = filler.#option_field_names {
+                            if self.#option_field_names.is_none() {
+                                log(&[], stringify!(#option_field_names));
+                                self.#option_field_names = Some(v);
+                            }
+                        }
+                    )*
+                    #(
+                        let nesting_field_name = stringify!(#nesting_field_names);
+                        self.#nesting_field_names.apply_with_log(filler.#nesting_field_names, |prefixes: &[&str], field: &str| {
+                            let mut new_prefixes = Vec::from(prefixes);
+                            new_prefixes.push(nesting_field_name);
+                            log(&new_prefixes, field);
+                        });
+                    )*
+                }
+
                 fn new_empty_filler() -> #name #generics {
                     #name {
                         #(#option_field_names: None,)*
                         #(#extendable_field_names: #extendable_field_types::default(),)*
                         #(#native_value_field_names: #native_value_field_empty_values,)*
+                        #(#nesting_field_names: Default::default(),)*
                     }
                 }
             }
@@ -432,6 +518,8 @@ impl Field {
         let mut attributes = vec![];
         #[cfg(feature = "op")]
         let mut addable = Addable::Disable;
+        #[cfg(feature = "nesting")]
+        let mut nesting = false;
 
         for attr in attrs {
             if attr.path().to_string().as_str() != FILLER {
@@ -488,6 +576,19 @@ impl Field {
                             "`addable` needs `op` feature",
                         ));
                     },
+                    #[cfg(feature = "nesting")]
+                    NESTING => {
+                        // #[filler(nesting)]
+                        nesting = true;
+                    }
+                    #[cfg(not(feature = "nesting"))]
+                    NESTING => {
+                        use syn::spanned::Spanned;
+                        return Err(syn::Error::new(
+                            ident.span(),
+                            "`nesting` needs `nesting` feature",
+                        ));
+                    },
                     _ => {
                         return Err(meta.error(format_args!(
                             "unknown patch field attribute `{}`",
@@ -506,6 +607,8 @@ impl Field {
             fty,
             #[cfg(feature = "op")]
             addable,
+            #[cfg(feature = "nesting")]
+            nesting,
         }))
     }
 }
