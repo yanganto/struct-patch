@@ -61,31 +61,62 @@
 /// ```
 ///
 /// ### `#[patch(default_log(fn_path))]`
-/// Automatically call `fn_path(&[&str], &str)` with prefixes and field name inside
+/// Automatically call `fn_path` with patched field information inside
 /// every generated `apply` call. Has no effect on `apply_with_log`. The path
-/// may be any function path visible at the call site. The `prefixes` slice contains
-/// the path through nested structures (empty for top-level fields).
+/// may be any function path visible at the call site.
+///
+/// When the `nesting` feature is enabled, `fn_path` receives both a prefix path and field name.
+/// When `nesting` is disabled, `fn_path` receives only the field name.
+///
 /// ```rust
 /// # use struct_patch::Patch;
-/// fn log_field(prefixes: &[&str], field: &str) {
-///     let path = if prefixes.is_empty() {
-///         field.to_string()
-///     } else {
-///         format!("{}.{}", prefixes.join("."), field)
-///     };
-///     println!("patched: {path}");
-/// }
-///
 /// #[derive(Default, Patch)]
-/// #[patch(default_log(log_field))]
 /// struct Item {
 ///     field_int: usize,
 ///     field_string: String,
 /// }
 ///
 /// let mut item = Item::default();
-/// item.apply(ItemPatch { field_int: Some(1), field_string: None });
-/// // log_field(&[], "field_int") is called automatically
+/// let patch = ItemPatch { field_int: Some(1), field_string: None };
+///
+/// #[cfg(feature = "nesting")]
+/// {
+///     fn log_field(prefixes: &[&str], field: &str) {
+///         let path = if prefixes.is_empty() {
+///             field.to_string()
+///         } else {
+///             format!("{}.{}", prefixes.join("."), field)
+///         };
+///         println!("patched: {path}");
+///     }
+///
+///     #[derive(Default, Patch)]
+///     #[patch(default_log(log_field))]
+///     struct Config {
+///         field_int: usize,
+///         field_string: String,
+///     }
+///     let mut config = Config::default();
+///     config.apply(ConfigPatch { field_int: Some(1), field_string: None });
+///     // log_field(&[], "field_int") is called automatically
+/// }
+///
+/// #[cfg(not(feature = "nesting"))]
+/// {
+///     fn log_field(field: &str) {
+///         println!("patched: {field}");
+///     }
+///
+///     #[derive(Default, Patch)]
+///     #[patch(default_log(log_field))]
+///     struct Config {
+///         field_int: usize,
+///         field_string: String,
+///     }
+///     let mut config = Config::default();
+///     config.apply(ConfigPatch { field_int: Some(1), field_string: None });
+///     // log_field("field_int") is called automatically
+/// }
 /// ```
 ///
 /// ## Field attributes
