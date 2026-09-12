@@ -13,11 +13,11 @@ config.host=10.0.0.1, config.port=0
 [default_log] patch field: name
 [default_log] patch field: config.host
 [default_log] patch field: config.port
-[default_log] patch field: logging.config.level
-[default_log] patch field: logging.config.format
+[default_log] patch field: config.logging.level
+[default_log] patch field: config.logging.format
 name=app-server, config.host=localhost, config.port=8080, config.logging.level=debug, config.logging.format=json
 
 --- Patch: apply_with_log() with deep nesting and full path ---
 [custom_log] patch field: 'config.port'
-[custom_log] patch field: 'logging.config.level'
+[custom_log] patch field: 'config.logging.level'
 config.port=9000, config.logging.level=warn, config.logging.format=
