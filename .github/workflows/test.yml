@@ -24,10 +24,10 @@ jobs:
 
       - name: Test lib
         run: |
-          nix develop .#ci -c test no-default
-          nix develop .#ci -c test std
-          nix develop .#ci -c test merge
-          nix develop .#ci -c test default
+          nix develop .#ci -c run-test no-default
+          nix develop .#ci -c run-test std
+          nix develop .#ci -c run-test merge
+          nix develop .#ci -c run-test default
 
       - name: Test patch examples
         run: |

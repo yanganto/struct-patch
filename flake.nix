@@ -24,8 +24,8 @@
           (builtins.readFile ./nix/scripts/check-filler.sh);
         checkPatchScript = pkgs.writeShellScriptBin "check-patch"
           (builtins.readFile ./nix/scripts/check-patch.sh);
-        testScript = pkgs.writeShellScriptBin "test"
-          (builtins.readFile ./nix/scripts/test.sh);
+        testScript = pkgs.writeShellScriptBin "run-test"
+          (builtins.readFile ./nix/scripts/run-test.sh);
         PROMPT = ''
           _git_ps1() {
               git rev-parse --is-inside-work-tree &>/dev/null || return
