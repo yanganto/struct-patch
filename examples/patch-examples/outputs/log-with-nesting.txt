@@ -1,0 +1,23 @@
+
+--- Patch: apply() with nesting and default_log ---
+[default_log] patch field: name
+[default_log] patch field: config.host
+[default_log] patch field: config.port
+name=prod-server, config.host=192.168.1.1, config.port=443
+
+--- Patch: apply_with_log() with nesting and prefix path ---
+[custom_log] patch field: 'config.host'
+config.host=10.0.0.1, config.port=0
+
+--- Patch: apply() with deep nesting and default_log ---
+[default_log] patch field: name
+[default_log] patch field: config.host
+[default_log] patch field: config.port
+[default_log] patch field: logging.config.level
+[default_log] patch field: logging.config.format
+name=app-server, config.host=localhost, config.port=8080, config.logging.level=debug, config.logging.format=json
+
+--- Patch: apply_with_log() with deep nesting and full path ---
+[custom_log] patch field: 'config.port'
+[custom_log] patch field: 'logging.config.level'
+config.port=9000, config.logging.level=warn, config.logging.format=

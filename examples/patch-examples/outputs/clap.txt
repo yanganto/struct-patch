@@ -1,0 +1,4 @@
+Config {
+    log_level: 10,
+    debug: false,
+}
