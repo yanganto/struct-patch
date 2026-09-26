@@ -765,30 +765,24 @@ impl Patch {
         let op_impl = quote!();
 
         // Per-field log-call token streams, parallel with each field-name vec.
-        // With nesting feature: emit `default_log_fn(&[], stringify!(field));`
-        // Without nesting feature: emit `default_log_fn(stringify!(field));`
-        // or empty token stream otherwise.
-        #[cfg(feature = "nesting")]
         let make_log_calls = |names: &[Option<&Ident>]| -> Vec<TokenStream> {
             if let Some(f) = default_log_fn {
-                names
-                    .iter()
-                    .map(|n| quote! { #f(&[], stringify!(#n)); })
-                    .collect()
-            } else {
-                names.iter().map(|_| quote! {}).collect()
+                #[cfg(feature = "nesting")]
+                {
+                    return names
+                        .iter()
+                        .map(|n| quote! { #f(&[], stringify!(#n)); })
+                        .collect();
+                }
+                #[cfg(not(feature = "nesting"))]
+                {
+                    return names
+                        .iter()
+                        .map(|n| quote! { #f(stringify!(#n)); })
+                        .collect();
+                }
             }
-        };
-        #[cfg(not(feature = "nesting"))]
-        let make_log_calls = |names: &[Option<&Ident>]| -> Vec<TokenStream> {
-            if let Some(f) = default_log_fn {
-                names
-                    .iter()
-                    .map(|n| quote! { #f(stringify!(#n)); })
-                    .collect()
-            } else {
-                names.iter().map(|_| quote! {}).collect()
-            }
+            names.iter().map(|_| quote! {}).collect()
         };
         let renamed_log_calls = make_log_calls(&renamed_field_names);
         let renamed_by_ev_log_calls = make_log_calls(&renamed_field_names_by_empty_value);
@@ -801,10 +795,7 @@ impl Patch {
             make_log_calls(&skip_wrap_apply_by_plain_field_names);
         let apply_by_log_calls = make_log_calls(&apply_by_field_names);
 
-        // For the `apply` method: propagate `default_log_fn` into nesting fields so
-        // that sub-fields of nested structs are also logged when applying with a
-        // struct-level default log. When no default_log_fn is set, fall back to plain
-        // `.apply()` so nested structs use their own log config (if any).
+        // For the `apply` method: propagate `default_log_fn` into nesting fields.
         #[cfg(feature = "nesting")]
         let nesting_apply_section: TokenStream = if let Some(ref f) = default_log_fn {
             quote! {
@@ -826,6 +817,125 @@ impl Patch {
         };
         #[cfg(not(feature = "nesting"))]
         let nesting_apply_section: TokenStream = quote! {};
+
+        #[cfg(not(feature = "nesting"))]
+        let apply_with_log_impl = quote! {
+            fn apply_with_log<F: FnMut(&str)>(&mut self, patch: #name #generics, mut log: F) {
+                #(
+                    if let Some(v) = patch.#renamed_field_names {
+                        log(stringify!(#renamed_field_names));
+                        self.#renamed_field_names.apply(v);
+                    }
+                )*
+                #(
+                    if patch.#renamed_field_names_by_empty_value != #renamed_field_name_empty_values {
+                        log(stringify!(#renamed_field_names_by_empty_value));
+                        self.#renamed_field_names_by_empty_value.apply(patch.#renamed_field_names_by_empty_value);
+                    }
+                )*
+                #(
+                    if let Some(v) = patch.#original_field_names {
+                        log(stringify!(#original_field_names));
+                        self.#original_field_names = v;
+                    }
+                )*
+                #(
+                    if patch.#original_field_names_by_empty_value != #original_field_name_empty_values {
+                        log(stringify!(#original_field_names_by_empty_value));
+                        self.#original_field_names_by_empty_value = patch.#original_field_names_by_empty_value;
+                    }
+                )*
+                #(
+                    if let Some(v) = patch.#skip_wrap_field_names {
+                        log(stringify!(#skip_wrap_field_names));
+                        self.#skip_wrap_field_names = Some(v);
+                    }
+                )*
+                #(
+                    if let Some(v) = patch.#skip_wrap_apply_by_option_field_names {
+                        log(stringify!(#skip_wrap_apply_by_option_field_names));
+                        if let Some(ref mut orig) = self.#skip_wrap_apply_by_option_field_names {
+                            #skip_wrap_apply_by_option_fns(orig, v);
+                        }
+                    }
+                )*
+                #(
+                    {
+                        log(stringify!(#skip_wrap_apply_by_plain_field_names));
+                        #skip_wrap_apply_by_plain_fns(&mut self.#skip_wrap_apply_by_plain_field_names, patch.#skip_wrap_apply_by_plain_field_names);
+                    }
+                )*
+                #(
+                    if let Some(v) = patch.#apply_by_field_names {
+                        log(stringify!(#apply_by_field_names));
+                        #apply_by_fns(&mut self.#apply_by_field_names, v);
+                    }
+                )*
+            }
+        };
+        #[cfg(feature = "nesting")]
+        let apply_with_log_impl = quote! {
+            fn apply_with_log<F: FnMut(&[&str], &str)>(&mut self, patch: #name #generics, mut log: F) {
+                #(
+                    if let Some(v) = patch.#renamed_field_names {
+                        log(&[], stringify!(#renamed_field_names));
+                        self.#renamed_field_names.apply(v);
+                    }
+                )*
+                #(
+                    if patch.#renamed_field_names_by_empty_value != #renamed_field_name_empty_values {
+                        log(&[], stringify!(#renamed_field_names_by_empty_value));
+                        self.#renamed_field_names_by_empty_value.apply(patch.#renamed_field_names_by_empty_value);
+                    }
+                )*
+                #(
+                    if let Some(v) = patch.#original_field_names {
+                        log(&[], stringify!(#original_field_names));
+                        self.#original_field_names = v;
+                    }
+                )*
+                #(
+                    if patch.#original_field_names_by_empty_value != #original_field_name_empty_values {
+                        log(&[], stringify!(#original_field_names_by_empty_value));
+                        self.#original_field_names_by_empty_value = patch.#original_field_names_by_empty_value;
+                    }
+                )*
+                #(
+                    if let Some(v) = patch.#skip_wrap_field_names {
+                        log(&[], stringify!(#skip_wrap_field_names));
+                        self.#skip_wrap_field_names = Some(v);
+                    }
+                )*
+                #(
+                    if let Some(v) = patch.#skip_wrap_apply_by_option_field_names {
+                        log(&[], stringify!(#skip_wrap_apply_by_option_field_names));
+                        if let Some(ref mut orig) = self.#skip_wrap_apply_by_option_field_names {
+                            #skip_wrap_apply_by_option_fns(orig, v);
+                        }
+                    }
+                )*
+                #(
+                    {
+                        log(&[], stringify!(#skip_wrap_apply_by_plain_field_names));
+                        #skip_wrap_apply_by_plain_fns(&mut self.#skip_wrap_apply_by_plain_field_names, patch.#skip_wrap_apply_by_plain_field_names);
+                    }
+                )*
+                #(
+                    if let Some(v) = patch.#apply_by_field_names {
+                        log(&[], stringify!(#apply_by_field_names));
+                        #apply_by_fns(&mut self.#apply_by_field_names, v);
+                    }
+                )*
+                #(
+                    let nesting_field_name = stringify!(#nesting_field_names);
+                    self.#nesting_field_names.apply_with_log(patch.#nesting_field_names, |prefixes: &[&str], field: &str| {
+                        let mut new_prefixes = vec![nesting_field_name];
+                        new_prefixes.extend_from_slice(prefixes);
+                        log(&new_prefixes, field);
+                    });
+                )*
+            }
+        };
 
         let patch_impl = quote! {
             #[automatically_derived]
@@ -884,121 +994,7 @@ impl Patch {
                     #nesting_apply_section
                 }
 
-                #[cfg(not(feature = "nesting"))]
-                fn apply_with_log<F: FnMut(&str)>(&mut self, patch: #name #generics, mut log: F) {
-                    #(
-                        if let Some(v) = patch.#renamed_field_names {
-                            log(stringify!(#renamed_field_names));
-                            self.#renamed_field_names.apply(v);
-                        }
-                    )*
-                    #(
-                        if patch.#renamed_field_names_by_empty_value != #renamed_field_name_empty_values {
-                            log(stringify!(#renamed_field_names_by_empty_value));
-                            self.#renamed_field_names_by_empty_value.apply(patch.#renamed_field_names_by_empty_value);
-                        }
-                    )*
-                    #(
-                        if let Some(v) = patch.#original_field_names {
-                            log(stringify!(#original_field_names));
-                            self.#original_field_names = v;
-                        }
-                    )*
-                    #(
-                        if patch.#original_field_names_by_empty_value != #original_field_name_empty_values {
-                            log(stringify!(#original_field_names_by_empty_value));
-                            self.#original_field_names_by_empty_value = patch.#original_field_names_by_empty_value;
-                        }
-                    )*
-                    #(
-                        if let Some(v) = patch.#skip_wrap_field_names {
-                            log(stringify!(#skip_wrap_field_names));
-                            self.#skip_wrap_field_names = Some(v);
-                        }
-                    )*
-                    #(
-                        if let Some(v) = patch.#skip_wrap_apply_by_option_field_names {
-                            log(stringify!(#skip_wrap_apply_by_option_field_names));
-                            if let Some(ref mut orig) = self.#skip_wrap_apply_by_option_field_names {
-                                #skip_wrap_apply_by_option_fns(orig, v);
-                            }
-                        }
-                    )*
-                    #(
-                        {
-                            log(stringify!(#skip_wrap_apply_by_plain_field_names));
-                            #skip_wrap_apply_by_plain_fns(&mut self.#skip_wrap_apply_by_plain_field_names, patch.#skip_wrap_apply_by_plain_field_names);
-                        }
-                    )*
-                    #(
-                        if let Some(v) = patch.#apply_by_field_names {
-                            log(stringify!(#apply_by_field_names));
-                            #apply_by_fns(&mut self.#apply_by_field_names, v);
-                        }
-                    )*
-                }
-
-                #[cfg(feature = "nesting")]
-                fn apply_with_log<F: FnMut(&[&str], &str)>(&mut self, patch: #name #generics, mut log: F) {
-                    #(
-                        if let Some(v) = patch.#renamed_field_names {
-                            log(&[], stringify!(#renamed_field_names));
-                            self.#renamed_field_names.apply(v);
-                        }
-                    )*
-                    #(
-                        if patch.#renamed_field_names_by_empty_value != #renamed_field_name_empty_values {
-                            log(&[], stringify!(#renamed_field_names_by_empty_value));
-                            self.#renamed_field_names_by_empty_value.apply(patch.#renamed_field_names_by_empty_value);
-                        }
-                    )*
-                    #(
-                        if let Some(v) = patch.#original_field_names {
-                            log(&[], stringify!(#original_field_names));
-                            self.#original_field_names = v;
-                        }
-                    )*
-                    #(
-                        if patch.#original_field_names_by_empty_value != #original_field_name_empty_values {
-                            log(&[], stringify!(#original_field_names_by_empty_value));
-                            self.#original_field_names_by_empty_value = patch.#original_field_names_by_empty_value;
-                        }
-                    )*
-                    #(
-                        if let Some(v) = patch.#skip_wrap_field_names {
-                            log(&[], stringify!(#skip_wrap_field_names));
-                            self.#skip_wrap_field_names = Some(v);
-                        }
-                    )*
-                    #(
-                        if let Some(v) = patch.#skip_wrap_apply_by_option_field_names {
-                            log(&[], stringify!(#skip_wrap_apply_by_option_field_names));
-                            if let Some(ref mut orig) = self.#skip_wrap_apply_by_option_field_names {
-                                #skip_wrap_apply_by_option_fns(orig, v);
-                            }
-                        }
-                    )*
-                    #(
-                        {
-                            log(&[], stringify!(#skip_wrap_apply_by_plain_field_names));
-                            #skip_wrap_apply_by_plain_fns(&mut self.#skip_wrap_apply_by_plain_field_names, patch.#skip_wrap_apply_by_plain_field_names);
-                        }
-                    )*
-                    #(
-                        if let Some(v) = patch.#apply_by_field_names {
-                            log(&[], stringify!(#apply_by_field_names));
-                            #apply_by_fns(&mut self.#apply_by_field_names, v);
-                        }
-                    )*
-                    #(
-                        let nesting_field_name = stringify!(#nesting_field_names);
-                        self.#nesting_field_names.apply_with_log(patch.#nesting_field_names, |prefixes: &[&str], field: &str| {
-                            let mut new_prefixes = vec![nesting_field_name];
-                            new_prefixes.extend_from_slice(prefixes);
-                            log(&new_prefixes, field);
-                        });
-                    )*
-                }
+                #apply_with_log_impl
 
                 fn into_patch(self) -> #name #generics {
                     #name {
@@ -1134,6 +1130,26 @@ impl Patch {
         // chain when `Filler` (which shares the method name `apply`) is used in
         // the same crate, triggering a recursion-limit overflow.  A concrete
         // impl per derived type terminates the solver immediately.
+        #[cfg(all(feature = "box", feature = "nesting"))]
+        let box_apply_with_log_impl = quote! {
+            fn apply_with_log<__F: ::core::ops::FnMut(&[&str], &str)>(
+                &mut self,
+                patch: struct_patch::__Box< #name #generics >,
+                log: __F,
+            ) {
+                struct_patch::traits::Patch::apply_with_log(self, *patch, log);
+            }
+        };
+        #[cfg(all(feature = "box", not(feature = "nesting")))]
+        let box_apply_with_log_impl = quote! {
+            fn apply_with_log<__F: ::core::ops::FnMut(&str)>(
+                &mut self,
+                patch: struct_patch::__Box< #name #generics >,
+                log: __F,
+            ) {
+                struct_patch::traits::Patch::apply_with_log(self, *patch, log);
+            }
+        };
         #[cfg(feature = "box")]
         let box_impl = quote! {
             #[automatically_derived]
@@ -1144,23 +1160,7 @@ impl Patch {
                     struct_patch::traits::Patch::apply(self, *patch);
                 }
 
-                #[cfg(feature = "nesting")]
-                fn apply_with_log<__F: ::core::ops::FnMut(&[&str], &str)>(
-                    &mut self,
-                    patch: struct_patch::__Box< #name #generics >,
-                    log: __F,
-                ) {
-                    struct_patch::traits::Patch::apply_with_log(self, *patch, log);
-                }
-
-                #[cfg(not(feature = "nesting"))]
-                fn apply_with_log<__F: ::core::ops::FnMut(&str)>(
-                    &mut self,
-                    patch: struct_patch::__Box< #name #generics >,
-                    log: __F,
-                ) {
-                    struct_patch::traits::Patch::apply_with_log(self, *patch, log);
-                }
+                #box_apply_with_log_impl
 
                 fn into_patch(self) -> struct_patch::__Box< #name #generics > {
                     struct_patch::__Box::new(
