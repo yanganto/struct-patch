@@ -78,6 +78,10 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+#[cfg(feature = "alloc")]
+#[doc(hidden)]
+pub use alloc::vec as __vec;
+
 #[cfg(feature = "catalyst")]
 #[doc(hidden)]
 pub use struct_patch_derive::Catalyst;

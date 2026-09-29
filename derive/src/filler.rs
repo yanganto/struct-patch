@@ -276,8 +276,11 @@ impl Filler {
         let nesting_apply_section: TokenStream = if let Some(ref f) = default_log_fn {
             quote! {
                 #(
-                    self.#nesting_field_names.apply_with_log(filler.#nesting_field_names, |_prefixes: &[&str], field: &str| {
-                        #f(&[], field);
+                    let nesting_field_name = stringify!(#nesting_field_names);
+                    self.#nesting_field_names.apply_with_log(filler.#nesting_field_names, |prefixes: &[&str], field: &str| {
+                        let mut new_prefixes = struct_patch::__vec![nesting_field_name];
+                        new_prefixes.extend_from_slice(prefixes);
+                        #f(&new_prefixes , field);
                     });
                 )*
             }
@@ -342,8 +345,8 @@ impl Filler {
                 #(
                     let nesting_field_name = stringify!(#nesting_field_names);
                     self.#nesting_field_names.apply_with_log(filler.#nesting_field_names, |prefixes: &[&str], field: &str| {
-                        let mut new_prefixes = Vec::from(prefixes);
-                        new_prefixes.push(nesting_field_name);
+                        let mut new_prefixes = struct_patch::__vec![nesting_field_name];
+                        new_prefixes.extend_from_slice(prefixes);
                         log(&new_prefixes, field);
                     });
                 )*

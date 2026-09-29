@@ -35,7 +35,7 @@ std = ["box", "option"]
 box = ["alloc", "struct-patch-derive/box"]
 option = []
 nesting = [
-    "struct-patch-derive/nesting"
+    "alloc", "struct-patch-derive/nesting"
 ]
 none_as_default = ["option"]
 keep_none = ["option"]
