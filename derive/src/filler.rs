@@ -272,7 +272,23 @@ impl Filler {
         let option_log_calls = make_log_calls(&option_field_names);
 
         // For the `apply` method: propagate `default_log_fn` into nesting fields
-        #[cfg(feature = "nesting")]
+        #[cfg(feature = "simple-nesting")]
+        let nesting_apply_section: TokenStream = if let Some(ref f) = default_log_fn {
+            quote! {
+                #(
+                    self.#nesting_field_names.apply_with_log(filler.#nesting_field_names, |_prefix: &str, field: &str| {
+                        #f(stringify!(#nesting_field_names), field);
+                    });
+                )*
+            }
+        } else {
+            quote! {
+                #(
+                    self.#nesting_field_names.apply(filler.#nesting_field_names);
+                )*
+            }
+        };
+        #[cfg(all(feature = "nesting", not(feature = "simple-nesting")))]
         let nesting_apply_section: TokenStream = if let Some(ref f) = default_log_fn {
             quote! {
                 #(
@@ -319,7 +335,37 @@ impl Filler {
                 )*
             }
         };
-        #[cfg(feature = "nesting")]
+        #[cfg(feature = "simple-nesting")]
+        let apply_with_log_impl = quote! {
+            fn apply_with_log<__L: FnMut(&str, &str)>(&mut self, filler: #name #generics, mut log: __L) {
+                #(
+                    if self.#native_value_field_names == #native_value_field_empty_values {
+                        log("", stringify!(#native_value_field_names));
+                        self.#native_value_field_names = filler.#native_value_field_names;
+                    }
+                )*
+                #(
+                    if self.#extendable_field_names.is_empty() {
+                        log("", stringify!(#extendable_field_names));
+                        self.#extendable_field_names.extend(filler.#extendable_field_names.into_iter());
+                    }
+                )*
+                #(
+                    if let Some(v) = filler.#option_field_names {
+                        if self.#option_field_names.is_none() {
+                            log("", stringify!(#option_field_names));
+                            self.#option_field_names = Some(v);
+                        }
+                    }
+                )*
+                #(
+                    self.#nesting_field_names.apply_with_log(filler.#nesting_field_names, |prefixes: &[&str], field: &str| {
+                        log(stringify!(#nesting_field_names), field);
+                    });
+                )*
+            }
+        };
+        #[cfg(all(feature = "nesting", not(feature = "simple-nesting")))]
         let apply_with_log_impl = quote! {
             fn apply_with_log<__L: FnMut(&[&str], &str)>(&mut self, filler: #name #generics, mut log: __L) {
                 #(
