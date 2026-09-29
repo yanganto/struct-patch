@@ -16,6 +16,7 @@ panic-semihosting = "0.7"
 default = []
 box = ["struct-patch/box"]
 option = ["struct-patch/option"]
+nesting = ["struct-patch/nesting"]
 
 [[bin]]
 name = "no-std-box"
@@ -24,3 +25,7 @@ path = "src/box.rs"
 [[bin]]
 name = "no-std-option"
 path = "src/option.rs"
+
+[[bin]]
+name = "no-std-nesting"
+path = "src/nesting.rs"
