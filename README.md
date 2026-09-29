@@ -199,9 +199,9 @@ Two attribute namespaces are provided for the catalyst feature because we need t
 - `#[patch(name = "...")]`: change the name of the generated patch struct.
 - `#[patch(attribute(...))]`: add attributes to the generated patch struct.
 - `#[patch(attribute(derive(...)))]`: add derives to the generated patch struct.
-- `#[patch(default_log(fn_path))]`: call `fn_path` with each patched field name on every `apply` call. Has no effect on `apply_with_log`. Function signature: `fn(&str)` without nesting feature, or `fn(&[&str], &str)` with nesting feature.
+- `#[patch(default_log(fn_path))]`: call `fn_path` with each patched field name on every `apply` call. Has no effect on `apply_with_log`. Function signature: `fn(&str)` without nesting feature, `fn(&str, &str)` with `simple-nesting` feature, or `fn(&[&str], &str)` with nesting feature.
 - `#[filler(attribute(...))]`: add attributes to the generated filler struct.
-- `#[filler(default_log(fn_path))]`: call `fn_path` with each filled field name on every `apply` call. Has no effect on `apply_with_log`. Function signature: `fn(&str)` without nesting feature, or `fn(&[&str], &str)` with nesting feature.
+- `#[filler(default_log(fn_path))]`: call `fn_path` with each filled field name on every `apply` call. Has no effect on `apply_with_log`. Function signature: `fn(&str)` without nesting feature, `fn(&str, &str)` with `simple-nesting` feature, or `fn(&[&str], &str)` with nesting feature.
 - `#[catalyst(bind = ...)]`: specify the base (substrate) structure. Need substrate expose() in build (catalyst feature)
 - `#[catalyst(bind = ..., src = "crate_name:/path/to/file")]`: specify the base (substrate) structure. No need substrate expose() and based on source code.  Avoide syn protocol change (catalyst feature)
 - `#[catalyst(keep_field_attribute)]`: pass all field attributes from a substrate or catalyst through to the complex, unless an override is explicitly specified for that field. (catalyst feature)
@@ -273,6 +273,7 @@ This crate includes the following optional features:
   - `none_as_default` *(optional)*: `T` needs to implement `Default`. When patching on `None`, it patches on a default instance. Mutually exclusive with `keep_none`.
   - `keep_none` *(optional)*: when patching on `None`, it stays `None`. Mutually exclusive with `none_as_default`.
 - `nesting` *(optional)*: allows a field to use `Patch` derive with the `#[patch(nesting)]` attribute.
+- simple-`nesting` *(optional)*: allows a field to use `Patch` derive with the `#[patch(nesting)]` attribute, only one layer nesting, in which the log in `fn(prefix: &str, field: &str)` without vector, such that is good for no-std without alloc.
 - `substrate` *(optional)*: enables the `Substrate` derive macro for exposing a struct's field layout so downstream crates can access it via `expose()` or source parsing.
 - `catalyst` *(optional)*: enables the `Catalyst` and `Complex` derive macros for extending a struct with fields from another crate. Implies `substrate`.
 - `unsafe` *(optional)*: avoid memory moves. Only meaningful with the `catalyst` feature.
