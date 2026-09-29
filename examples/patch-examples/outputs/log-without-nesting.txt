@@ -4,4 +4,5 @@
 host=localhost, port=8080
 
 --- Patch: apply_with_log() with custom format ---
-host=localhost, port=8080
+[custom_log] patch field 'port' was updated
+host=localhost, port=8081

@@ -65,7 +65,7 @@ fn main() {
     config.apply_with_log(
         ConfigPatch {
             host: None,
-            port: None,
+            port: Some(8081),
         },
         |field| {
             println!("[custom_log] patch field '{}' was updated", field);
