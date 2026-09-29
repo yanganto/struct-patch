@@ -37,6 +37,9 @@ option = []
 nesting = [
     "alloc", "struct-patch-derive/nesting"
 ]
+simple-nesting = [
+    "struct-patch-derive/simple-nesting"
+]
 none_as_default = ["option"]
 keep_none = ["option"]
 substrate = [

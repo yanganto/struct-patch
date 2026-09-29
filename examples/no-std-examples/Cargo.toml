@@ -17,6 +17,7 @@ default = []
 box = ["struct-patch/box"]
 option = ["struct-patch/option"]
 nesting = ["struct-patch/nesting"]
+simple-nesting = ["struct-patch/simple-nesting"]
 
 [[bin]]
 name = "no-std-box"

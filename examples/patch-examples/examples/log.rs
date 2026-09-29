@@ -72,7 +72,7 @@ fn main() {
         },
     );
     // Prints:
-    //   [custom_log] patch field 'debug' was updated
+    //   [custom_log] patch field port was updated
 
     println!(
         "host={}, port={}",

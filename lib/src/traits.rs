@@ -81,11 +81,21 @@
 ///
 /// #[cfg(feature = "nesting")]
 /// {
+///     #[cfg(not(feature = "simple-nesting"))]
 ///     fn log_field(prefixes: &[&str], field: &str) {
 ///         let path = if prefixes.is_empty() {
 ///             field.to_string()
 ///         } else {
 ///             format!("{}.{}", prefixes.join("."), field)
+///         };
+///         println!("patched: {path}");
+///     }
+///     #[cfg(feature = "simple-nesting")]
+///     fn log_field(prefix: &str, field: &str) {
+///         let path = if prefix.is_empty() {
+///             field.to_string()
+///         } else {
+///             format!("{}.{}", prefix, field)
 ///         };
 ///         println!("patched: {path}");
 ///     }
@@ -98,7 +108,8 @@
 ///     }
 ///     let mut config = Config::default();
 ///     config.apply(ConfigPatch { field_int: Some(1), field_string: None });
-///     // log_field(&[], "field_int") is called automatically
+///     // log_field(&[], "field_int") is called automatically without simple-nesting
+///     // log_field("", "field_int") is called automatically with simple-nesting
 /// }
 ///
 /// #[cfg(not(feature = "nesting"))]
@@ -192,7 +203,16 @@ pub trait Patch<P> {
     /// let patch = ItemPatch { field_int: Some(42), field_string: None };
     ///
     /// let mut patched_fields = Vec::new();
-    /// #[cfg(feature = "nesting")]
+    /// #[cfg(feature = "simple-nesting")]
+    /// item.apply_with_log(patch, |prefix, field| {
+    ///     let path = if prefix.is_empty() {
+    ///         field.to_string()
+    ///     } else {
+    ///         format!("{}.{}", prefix, field)
+    ///     };
+    ///     patched_fields.push(path);
+    /// });
+    /// #[cfg(all(feature = "nesting", not(feature = "simple-nesting")))]
     /// item.apply_with_log(patch, |prefixes, field| {
     ///     let path = if prefixes.is_empty() {
     ///         field.to_string()
@@ -209,12 +229,16 @@ pub trait Patch<P> {
     ///
     /// assert_eq!(patched_fields, vec!["field_int"]);
     /// ```
-    #[cfg(feature = "nesting")]
+    #[cfg(feature = "simple-nesting")]
+    fn apply_with_log<F: FnMut(&str, &str)>(&mut self, patch: P, _log: F) {
+        self.apply(patch);
+    }
+    #[cfg(all(feature = "nesting", not(feature = "simple-nesting")))]
     fn apply_with_log<F: FnMut(&[&str], &str)>(&mut self, patch: P, _log: F) {
         self.apply(patch);
     }
 
-    #[cfg(not(feature = "nesting"))]
+    #[cfg(all(not(feature = "nesting"), not(feature = "simple-nesting")))]
     fn apply_with_log<F: FnMut(&str)>(&mut self, patch: P, _log: F) {
         self.apply(patch);
     }
@@ -270,12 +294,17 @@ pub trait Filler<F> {
     ///
     /// assert_eq!(filled_fields, vec!["value"]);
     /// ```
-    #[cfg(feature = "nesting")]
+    #[cfg(feature = "simple-nesting")]
+    fn apply_with_log<L: FnMut(&str, &str)>(&mut self, filler: F, _log: L) {
+        self.apply(filler);
+    }
+
+    #[cfg(all(feature = "nesting", not(feature = "simple-nesting")))]
     fn apply_with_log<L: FnMut(&[&str], &str)>(&mut self, filler: F, _log: L) {
         self.apply(filler);
     }
 
-    #[cfg(not(feature = "nesting"))]
+    #[cfg(all(not(feature = "nesting"), not(feature = "simple-nesting")))]
     fn apply_with_log<L: FnMut(&str)>(&mut self, filler: F, _log: L) {
         self.apply(filler);
     }
