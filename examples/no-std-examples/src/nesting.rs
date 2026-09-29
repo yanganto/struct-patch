@@ -35,7 +35,6 @@ fn main() -> ! {
     }
 
     use struct_patch::Patch;
-    use alloc::vec; // Should not need this
 
     #[derive(Clone, Debug, Default, Patch, PartialEq)]
     #[patch(attribute(derive(Debug, PartialEq)))]
@@ -66,7 +65,10 @@ fn main() -> ! {
 
 
     let mut item = Item::default();
-    item.apply(patch);
+    item.apply_with_log(patch, |_prefixes: &[&str], _field: &str| {
+        // log if you want
+    });
+
     assert_eq!(item, item_b);
 
     debug::exit(Ok(()));

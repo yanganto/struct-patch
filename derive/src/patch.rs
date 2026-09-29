@@ -802,7 +802,7 @@ impl Patch {
                 #(
                     let nesting_field_name = stringify!(#nesting_field_names);
                     self.#nesting_field_names.apply_with_log(patch.#nesting_field_names, |prefixes: &[&str], field: &str| {
-                        let mut new_prefixes = vec![nesting_field_name];
+                        let mut new_prefixes = struct_patch::__vec![nesting_field_name];
                         new_prefixes.extend_from_slice(prefixes);
                         #f(&new_prefixes, field);
                     });
@@ -929,7 +929,7 @@ impl Patch {
                 #(
                     let nesting_field_name = stringify!(#nesting_field_names);
                     self.#nesting_field_names.apply_with_log(patch.#nesting_field_names, |prefixes: &[&str], field: &str| {
-                        let mut new_prefixes = vec![nesting_field_name];
+                        let mut new_prefixes = struct_patch::__vec![nesting_field_name];
                         new_prefixes.extend_from_slice(prefixes);
                         log(&new_prefixes, field);
                     });
