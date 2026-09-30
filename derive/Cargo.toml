@@ -25,6 +25,7 @@ cargo_metadata = { version = "0.23", optional = true }
 status = []
 op = []
 merge = []
+log = []
 nesting = []
 simple-nesting = ["nesting"]
 substrate = [ "syn-serde", "syn/full" ]
