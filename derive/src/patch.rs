@@ -28,6 +28,7 @@ pub(crate) struct Patch {
     generics: syn::Generics,
     attributes: Vec<TokenStream>,
     fields: Vec<Field>,
+    #[cfg(feature = "log")]
     default_log_fn: Option<syn::Path>,
 }
 
@@ -108,6 +109,7 @@ impl Patch {
             generics,
             attributes,
             fields,
+            #[cfg(feature = "log")]
             default_log_fn,
         } = self;
 
@@ -765,6 +767,7 @@ impl Patch {
         let op_impl = quote!();
 
         // Per-field log-call token streams, parallel with each field-name vec.
+        #[cfg(feature = "log")]
         let make_log_calls = |names: &[Option<&Ident>]| -> Vec<TokenStream> {
             if let Some(f) = default_log_fn {
                 #[cfg(feature = "nesting")]
@@ -784,6 +787,11 @@ impl Patch {
             }
             names.iter().map(|_| quote! {}).collect()
         };
+        #[cfg(not(feature = "log"))]
+        let make_log_calls = |names: &[Option<&Ident>]| -> Vec<TokenStream> {
+            names.iter().map(|_| quote! {}).collect()
+        };
+
         let renamed_log_calls = make_log_calls(&renamed_field_names);
         let renamed_by_ev_log_calls = make_log_calls(&renamed_field_names_by_empty_value);
         let original_log_calls = make_log_calls(&original_field_names);
@@ -796,7 +804,7 @@ impl Patch {
         let apply_by_log_calls = make_log_calls(&apply_by_field_names);
 
         // For the `apply` method: propagate `default_log_fn` into nesting fields.
-        #[cfg(feature = "simple-nesting")]
+        #[cfg(all(feature = "log", feature = "simple-nesting"))]
         let nesting_apply_section: TokenStream = if let Some(ref f) = default_log_fn {
             quote! {
                 #(
@@ -812,7 +820,7 @@ impl Patch {
                 )*
             }
         };
-        #[cfg(all(feature = "nesting", not(feature = "simple-nesting")))]
+        #[cfg(all(feature = "log", feature = "nesting", not(feature = "simple-nesting")))]
         let nesting_apply_section: TokenStream = if let Some(ref f) = default_log_fn {
             quote! {
                 #(
@@ -831,10 +839,22 @@ impl Patch {
                 )*
             }
         };
+        #[cfg(all(feature = "simple-nesting", not(feature = "log")))]
+        let nesting_apply_section: TokenStream = quote! {
+            #(
+                self.#nesting_field_names.apply(patch.#nesting_field_names);
+            )*
+        };
+        #[cfg(all(feature = "nesting", not(feature = "simple-nesting"), not(feature = "log")))]
+        let nesting_apply_section: TokenStream = quote! {
+            #(
+                self.#nesting_field_names.apply(patch.#nesting_field_names);
+            )*
+        };
         #[cfg(not(feature = "nesting"))]
         let nesting_apply_section: TokenStream = quote! {};
 
-        #[cfg(not(feature = "nesting"))]
+        #[cfg(all(feature = "log", not(feature = "nesting")))]
         let apply_with_log_impl = quote! {
             fn apply_with_log<F: FnMut(&str)>(&mut self, patch: #name #generics, mut log: F) {
                 #(
@@ -889,7 +909,7 @@ impl Patch {
                 )*
             }
         };
-        #[cfg(feature = "simple-nesting")]
+        #[cfg(all(feature = "log", feature = "simple-nesting"))]
         let apply_with_log_impl = quote! {
             fn apply_with_log<F: FnMut(&str, &str)>(&mut self, patch: #name #generics, mut log: F) {
                 #(
@@ -949,7 +969,7 @@ impl Patch {
                 )*
             }
         };
-        #[cfg(all(feature = "nesting", not(feature = "simple-nesting")))]
+        #[cfg(all(feature = "log", feature = "nesting", not(feature = "simple-nesting")))]
         let apply_with_log_impl = quote! {
             fn apply_with_log<F: FnMut(&[&str], &str)>(&mut self, patch: #name #generics, mut log: F) {
                 #(
@@ -1012,6 +1032,8 @@ impl Patch {
                 )*
             }
         };
+        #[cfg(not(feature = "log"))]
+        let apply_with_log_impl = quote! {};
 
         let patch_impl = quote! {
             #[automatically_derived]
@@ -1206,7 +1228,7 @@ impl Patch {
         // chain when `Filler` (which shares the method name `apply`) is used in
         // the same crate, triggering a recursion-limit overflow.  A concrete
         // impl per derived type terminates the solver immediately.
-        #[cfg(all(feature = "box", feature = "nesting"))]
+        #[cfg(all(feature = "box", feature = "log", feature = "nesting"))]
         let box_apply_with_log_impl = quote! {
             fn apply_with_log<__F: ::core::ops::FnMut(&[&str], &str)>(
                 &mut self,
@@ -1216,7 +1238,7 @@ impl Patch {
                 struct_patch::traits::Patch::apply_with_log(self, *patch, log);
             }
         };
-        #[cfg(all(feature = "box", not(feature = "nesting")))]
+        #[cfg(all(feature = "box", feature = "log", not(feature = "nesting")))]
         let box_apply_with_log_impl = quote! {
             fn apply_with_log<__F: ::core::ops::FnMut(&str)>(
                 &mut self,
@@ -1226,6 +1248,8 @@ impl Patch {
                 struct_patch::traits::Patch::apply_with_log(self, *patch, log);
             }
         };
+        #[cfg(all(feature = "box", not(feature = "log")))]
+        let box_apply_with_log_impl = quote! {};
         #[cfg(feature = "box")]
         let box_impl = quote! {
             #[automatically_derived]
@@ -1300,6 +1324,7 @@ impl Patch {
         let mut name = None;
         let mut attributes = vec![];
         let mut fields = vec![];
+        #[cfg(feature = "log")]
         let mut default_log_fn: Option<syn::Path> = None;
 
         for attr in attrs {
@@ -1334,11 +1359,16 @@ impl Patch {
                         let attribute: TokenStream = content.parse()?;
                         attributes.push(attribute);
                     }
+                    #[cfg(feature = "log")]
                     DEFAULT_LOG => {
                         // #[patch(default_log(path::to::fn))]
                         let content;
                         parenthesized!(content in meta.input);
                         default_log_fn = Some(content.parse()?);
+                    }
+                    #[cfg(not(feature = "log"))]
+                    DEFAULT_LOG => {
+                        return Err(meta.error("`default_log` attribute requires the `log` feature"));
                     }
                     _ => {
                         return Err(meta.error(format_args!(
@@ -1368,6 +1398,7 @@ impl Patch {
             generics,
             attributes,
             fields,
+            #[cfg(feature = "log")]
             default_log_fn,
         })
     }
@@ -1688,6 +1719,7 @@ mod tests {
             patch_struct_name: syn::Ident::new("MyPatch", Span::call_site()),
             generics: syn::Generics::default(),
             attributes: vec![quote! { derive(Debug, PartialEq, Clone, Serialize, Deserialize) }],
+            #[cfg(feature = "log")]
             default_log_fn: None,
             fields: vec![
                 Field {

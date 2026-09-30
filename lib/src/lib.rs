@@ -75,10 +75,10 @@
 //! ```
 #![no_std]
 
-#[cfg(feature = "alloc")]
+#[cfg(use_alloc)]
 extern crate alloc;
 
-#[cfg(feature = "alloc")]
+#[cfg(use_alloc)]
 #[doc(hidden)]
 pub use alloc::vec as __vec;
 
