@@ -19,14 +19,14 @@ const HEAP_SIZE: usize = 1024;
 static mut HEAP: MaybeUninit<[u8; HEAP_SIZE]> = MaybeUninit::uninit();
 
 #[entry]
-#[cfg(all(not(feature = "nesting"), not(feature = "simple-nesting")))]
+#[cfg(all(not(feature = "nesting"), not(feature = "simple-nesting"), not(feature = "pure-nesting")))]
 fn main() -> ! {
     debug::exit(debug::EXIT_FAILURE);
     loop {}
 }
 
 #[entry]
-#[cfg(any(feature = "nesting", feature = "simple-nesting"))]
+#[cfg(any(feature = "nesting", feature = "simple-nesting", feature = "pure-nesting"))]
 fn main() -> ! {
     unsafe {
         ALLOCATOR
@@ -66,10 +66,12 @@ fn main() -> ! {
 
     let mut item = Item::default();
 
-    #[cfg(not(feature = "simple-nesting"))]
+    #[cfg(feature = "nesting")]
     item.apply_with_log(patch, |_prefixes: &[&str], _field: &str| {
         // log if you want
     });
+    #[cfg(feature = "pure-nesting")]
+    item.apply(patch);
     #[cfg(feature = "simple-nesting")]
     item.apply_with_log(patch, |_prefix: &str, _field: &str| {
         // log if you want
