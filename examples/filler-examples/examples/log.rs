@@ -13,7 +13,7 @@ fn log_filler_field(prefixes: &[&str], field: &str) {
     let path = if prefixes.is_empty() {
         field.to_string()
     } else {
-        format!("{}.{}", prefixes.join("."), field)
+        format!("{}.{field}", prefixes.join("."))
     };
     println!("[default_log] filler field: {path}");
 }

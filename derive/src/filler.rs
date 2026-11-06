@@ -548,7 +548,7 @@ impl Filler {
                 fields.push(f);
             }
         }
-        let ts = TokenStream::from_str(&format!("{}Filler", ident)).unwrap();
+        let ts = TokenStream::from_str(&format!("{ident}Filler")).unwrap();
         let lit = LitStr::new(&ts.to_string(), Span::call_site());
         let filler_struct_name = lit.parse()?;
 

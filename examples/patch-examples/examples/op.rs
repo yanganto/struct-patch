@@ -1,6 +1,6 @@
 #[cfg(feature = "op")]
 fn str_concat(a: String, b: String) -> String {
-    format!("{}, {}", a, b)
+    format!("{a}, {b}")
 }
 
 #[cfg(feature = "op")]

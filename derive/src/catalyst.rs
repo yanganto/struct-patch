@@ -355,7 +355,7 @@ impl Catalyst {
             ));
         }
         let complex_struct_name = name.unwrap_or({
-            let ts = TokenStream::from_str(&format!("{}Complex", ident)).unwrap();
+            let ts = TokenStream::from_str(&format!("{ident}Complex")).unwrap();
             let lit = LitStr::new(&ts.to_string(), Span::call_site());
             lit.parse()?
         });

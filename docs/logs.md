@@ -86,7 +86,7 @@ fn my_log(prefixes: &[&str], field: &str) {
     let path = if prefixes.is_empty() {
         field.to_string()
     } else {
-        format!("{}.{}", prefixes.join("."), field)
+        format!("{}.{field}", prefixes.join("."))
     };
     println!("patched: {path}");
 }
@@ -125,7 +125,7 @@ fn log_field(prefix: &str, field: &str) {
     let path = if prefix.is_empty() {
         field.to_string()
     } else {
-        format!("{}.{}", prefix, field)
+        format!("{prefix}.{field}")
     };
     println!("patched: {path}");
 }
@@ -163,7 +163,7 @@ item.apply_with_log(patch, |prefix, field| {
     let path = if prefix.is_empty() {
         field.to_string()
     } else {
-        format!("{}.{}", prefix, field)
+        format!("{prefix}.{field}")
     };
     println!("patched: {path}");
 });

@@ -1396,7 +1396,7 @@ impl Patch {
         Ok(Patch {
             visibility: vis,
             patch_struct_name: name.unwrap_or({
-                let ts = TokenStream::from_str(&format!("{}Patch", ident)).unwrap();
+                let ts = TokenStream::from_str(&format!("{ident}Patch")).unwrap();
                 let lit = LitStr::new(&ts.to_string(), Span::call_site());
                 lit.parse()?
             }),
