@@ -28,6 +28,7 @@ jobs:
           nix develop .#ci -c run-test std
           nix develop .#ci -c run-test merge
           nix develop .#ci -c run-test default
+          nix develop .#ci -c run-test keep_log
 
       - name: Test patch examples
         run: |

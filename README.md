@@ -277,6 +277,8 @@ This crate includes the following optional features:
 - `substrate` *(optional)*: enables the `Substrate` derive macro for exposing a struct's field layout so downstream crates can access it via `expose()` or source parsing.
 - `catalyst` *(optional)*: enables the `Catalyst` and `Complex` derive macros for extending a struct with fields from another crate. Implies `substrate`.
 - `unsafe` *(optional)*: avoid memory moves. Only meaningful with the `catalyst` feature.
+- `copy_doc` *(optional)*: copy the documentation of the original struct and its fields to the patched one.
+  This is useful when a trait, derived on the patch structure, uses the doc attributes, typically for auto-documentation of some sort.
 
 [crates-badge]: https://img.shields.io/crates/v/struct-patch.svg
 [crate-url]: https://crates.io/crates/struct-patch

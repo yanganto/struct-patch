@@ -55,4 +55,6 @@ catalyst = [
 unsafe = [
     "struct-patch-derive/unsafe"
 ]
-
+copy_doc = [
+    "struct-patch-derive/copy_doc"
+]
