@@ -56,7 +56,7 @@ impl Catalyst {
         } = self;
 
         let substrate_name: Ident = {
-            let lit = LitStr::new(&bind, Span::call_site());
+            let lit = LitStr::new(bind, Span::call_site());
             lit.parse()?
         };
 
@@ -355,7 +355,7 @@ impl Catalyst {
             ));
         }
         let complex_struct_name = name.unwrap_or({
-            let ts = TokenStream::from_str(&format!("{}Complex", &ident,)).unwrap();
+            let ts = TokenStream::from_str(&format!("{}Complex", ident)).unwrap();
             let lit = LitStr::new(&ts.to_string(), Span::call_site());
             lit.parse()?
         });
@@ -445,13 +445,13 @@ impl Field {
         }
 
         if keep_field_attribute {
-            if attrs.len() > 0 {
+            if !attrs.is_empty() {
                 // from substrate: filter out excluded attribute namespaces
                 let filtered_attrs: Vec<&Attribute> = attrs
                     .iter()
                     .filter(|a| {
                         let path = a.path().to_token_stream().to_string();
-                        !exclude_field_attributes.iter().any(|e| path == *e)
+                        !exclude_field_attributes.contains(&path)
                     })
                     .collect();
                 Ok(quote! {
@@ -527,15 +527,12 @@ impl Field {
             }
             let _ = attr.parse_nested_meta(|meta| {
                 let path = meta.path.to_string();
-                match path.as_str() {
-                    ATTRIBUTE => {
-                        // #[complex(attribute(serde(default))]
-                        let content;
-                        parenthesized!(content in meta.input);
-                        let attribute: TokenStream = content.parse()?;
-                        attributes.push(attribute);
-                    }
-                    _ => {}
+                if path.as_str() == ATTRIBUTE {
+                    // #[complex(attribute(serde(default))]
+                    let content;
+                    parenthesized!(content in meta.input);
+                    let attribute: TokenStream = content.parse()?;
+                    attributes.push(attribute);
                 }
                 Ok(())
             });

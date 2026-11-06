@@ -1396,7 +1396,7 @@ impl Patch {
         Ok(Patch {
             visibility: vis,
             patch_struct_name: name.unwrap_or({
-                let ts = TokenStream::from_str(&format!("{}Patch", &ident,)).unwrap();
+                let ts = TokenStream::from_str(&format!("{}Patch", ident)).unwrap();
                 let lit = LitStr::new(&ts.to_string(), Span::call_site());
                 lit.parse()?
             }),
@@ -1451,7 +1451,7 @@ impl Field {
                 if *nesting {
                     // TODO handle rename
                     let patch_type = syn::Ident::new(
-                        &format!("{}Patch", &ty.to_token_stream()),
+                        &format!("{}Patch", ty.to_token_stream()),
                         Span::call_site(),
                     );
                     Ok(quote! {
@@ -1489,7 +1489,7 @@ impl Field {
                 if *nesting {
                     // TODO handle rename
                     let patch_type = syn::Ident::new(
-                        &format!("{}Patch", &ty.to_token_stream()),
+                        &format!("{}Patch", ty.to_token_stream()),
                         Span::call_site(),
                     );
                     Ok(quote! {
