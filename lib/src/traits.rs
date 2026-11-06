@@ -238,7 +238,11 @@ pub trait Patch<P> {
         self.apply(patch);
     }
 
-    #[cfg(all(feature = "log", not(feature = "nesting"), not(feature = "simple-nesting")))]
+    #[cfg(all(
+        feature = "log",
+        not(feature = "nesting"),
+        not(feature = "simple-nesting")
+    ))]
     fn apply_with_log<F: FnMut(&str)>(&mut self, patch: P, _log: F) {
         self.apply(patch);
     }
@@ -304,7 +308,11 @@ pub trait Filler<F> {
         self.apply(filler);
     }
 
-    #[cfg(all(feature = "log", not(feature = "nesting"), not(feature = "simple-nesting")))]
+    #[cfg(all(
+        feature = "log",
+        not(feature = "nesting"),
+        not(feature = "simple-nesting")
+    ))]
     fn apply_with_log<L: FnMut(&str)>(&mut self, filler: F, _log: L) {
         self.apply(filler);
     }

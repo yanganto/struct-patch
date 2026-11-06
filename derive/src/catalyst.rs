@@ -381,8 +381,7 @@ fn find_fields_from_src(src: &str, struct_name: &str) -> syn::Fields {
         .split_once(':')
         .expect("src attribute must be 'crate_name:/path/to/file.rs'");
 
-    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-        .expect("CARGO_MANIFEST_DIR is not set");
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is not set");
 
     let meta = cargo_metadata::MetadataCommand::new()
         .manifest_path(std::path::Path::new(&manifest_dir).join("Cargo.toml"))
@@ -400,8 +399,7 @@ fn find_fields_from_src(src: &str, struct_name: &str) -> syn::Fields {
         .parent()
         .expect("manifest_path has no parent directory");
 
-    let src_path = std::path::Path::new(pkg_dir.as_str())
-        .join(rel_path.trim_start_matches('/'));
+    let src_path = std::path::Path::new(pkg_dir.as_str()).join(rel_path.trim_start_matches('/'));
 
     let content = std::fs::read_to_string(&src_path)
         .unwrap_or_else(|e| panic!("cannot read `{}`: {}", src_path.display(), e));
