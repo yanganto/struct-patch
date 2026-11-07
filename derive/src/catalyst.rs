@@ -56,7 +56,7 @@ impl Catalyst {
         } = self;
 
         let substrate_name: Ident = {
-            let lit = LitStr::new(&bind, Span::call_site());
+            let lit = LitStr::new(bind, Span::call_site());
             lit.parse()?
         };
 
@@ -355,7 +355,7 @@ impl Catalyst {
             ));
         }
         let complex_struct_name = name.unwrap_or({
-            let ts = TokenStream::from_str(&format!("{}Complex", &ident,)).unwrap();
+            let ts = TokenStream::from_str(&format!("{ident}Complex")).unwrap();
             let lit = LitStr::new(&ts.to_string(), Span::call_site());
             lit.parse()?
         });
@@ -381,8 +381,7 @@ fn find_fields_from_src(src: &str, struct_name: &str) -> syn::Fields {
         .split_once(':')
         .expect("src attribute must be 'crate_name:/path/to/file.rs'");
 
-    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR")
-        .expect("CARGO_MANIFEST_DIR is not set");
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is not set");
 
     let meta = cargo_metadata::MetadataCommand::new()
         .manifest_path(std::path::Path::new(&manifest_dir).join("Cargo.toml"))
@@ -400,8 +399,7 @@ fn find_fields_from_src(src: &str, struct_name: &str) -> syn::Fields {
         .parent()
         .expect("manifest_path has no parent directory");
 
-    let src_path = std::path::Path::new(pkg_dir.as_str())
-        .join(rel_path.trim_start_matches('/'));
+    let src_path = std::path::Path::new(pkg_dir.as_str()).join(rel_path.trim_start_matches('/'));
 
     let content = std::fs::read_to_string(&src_path)
         .unwrap_or_else(|e| panic!("cannot read `{}`: {}", src_path.display(), e));
@@ -447,13 +445,13 @@ impl Field {
         }
 
         if keep_field_attribute {
-            if attrs.len() > 0 {
+            if !attrs.is_empty() {
                 // from substrate: filter out excluded attribute namespaces
                 let filtered_attrs: Vec<&Attribute> = attrs
                     .iter()
                     .filter(|a| {
                         let path = a.path().to_token_stream().to_string();
-                        !exclude_field_attributes.iter().any(|e| path == *e)
+                        !exclude_field_attributes.contains(&path)
                     })
                     .collect();
                 Ok(quote! {
@@ -529,15 +527,12 @@ impl Field {
             }
             let _ = attr.parse_nested_meta(|meta| {
                 let path = meta.path.to_string();
-                match path.as_str() {
-                    ATTRIBUTE => {
-                        // #[complex(attribute(serde(default))]
-                        let content;
-                        parenthesized!(content in meta.input);
-                        let attribute: TokenStream = content.parse()?;
-                        attributes.push(attribute);
-                    }
-                    _ => {}
+                if path.as_str() == ATTRIBUTE {
+                    // #[complex(attribute(serde(default))]
+                    let content;
+                    parenthesized!(content in meta.input);
+                    let attribute: TokenStream = content.parse()?;
+                    attributes.push(attribute);
                 }
                 Ok(())
             });

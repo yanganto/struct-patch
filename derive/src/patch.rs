@@ -9,6 +9,8 @@ use syn::{parenthesized, DeriveInput, Lit, LitStr, Result, Type};
 #[cfg(feature = "op")]
 use crate::Addable;
 
+#[cfg(feature = "copy_doc")]
+const DOC: &str = "doc";
 const PATCH: &str = "patch";
 const NAME: &str = "name";
 const ATTRIBUTE: &str = "attribute";
@@ -845,7 +847,11 @@ impl Patch {
                 self.#nesting_field_names.apply(patch.#nesting_field_names);
             )*
         };
-        #[cfg(all(feature = "nesting", not(feature = "simple-nesting"), not(feature = "log")))]
+        #[cfg(all(
+            feature = "nesting",
+            not(feature = "simple-nesting"),
+            not(feature = "log")
+        ))]
         let nesting_apply_section: TokenStream = quote! {
             #(
                 self.#nesting_field_names.apply(patch.#nesting_field_names);
@@ -1328,6 +1334,13 @@ impl Patch {
         let mut default_log_fn: Option<syn::Path> = None;
 
         for attr in attrs {
+            #[cfg(feature = "copy_doc")]
+            if attr.path().to_string().as_str() == DOC {
+                if let syn::Meta::NameValue(name_value) = &attr.meta {
+                    attributes.push(name_value.to_token_stream());
+                }
+            }
+
             if attr.path().to_string().as_str() != PATCH {
                 continue;
             }
@@ -1368,7 +1381,9 @@ impl Patch {
                     }
                     #[cfg(not(feature = "log"))]
                     DEFAULT_LOG => {
-                        return Err(meta.error("`default_log` attribute requires the `log` feature"));
+                        return Err(
+                            meta.error("`default_log` attribute requires the `log` feature")
+                        );
                     }
                     _ => {
                         return Err(meta.error(format_args!(
@@ -1390,7 +1405,7 @@ impl Patch {
         Ok(Patch {
             visibility: vis,
             patch_struct_name: name.unwrap_or({
-                let ts = TokenStream::from_str(&format!("{}Patch", &ident,)).unwrap();
+                let ts = TokenStream::from_str(&format!("{ident}Patch")).unwrap();
                 let lit = LitStr::new(&ts.to_string(), Span::call_site());
                 lit.parse()?
             }),
@@ -1445,7 +1460,7 @@ impl Field {
                 if *nesting {
                     // TODO handle rename
                     let patch_type = syn::Ident::new(
-                        &format!("{}Patch", &ty.to_token_stream()),
+                        &format!("{}Patch", ty.to_token_stream()),
                         Span::call_site(),
                     );
                     Ok(quote! {
@@ -1483,7 +1498,7 @@ impl Field {
                 if *nesting {
                     // TODO handle rename
                     let patch_type = syn::Ident::new(
-                        &format!("{}Patch", &ty.to_token_stream()),
+                        &format!("{}Patch", ty.to_token_stream()),
                         Span::call_site(),
                     );
                     Ok(quote! {
@@ -1522,6 +1537,13 @@ impl Field {
         let mut nesting = false;
 
         for attr in attrs {
+            #[cfg(feature = "copy_doc")]
+            if attr.path().to_string().as_str() == DOC {
+                if let syn::Meta::NameValue(name_value) = &attr.meta {
+                    attributes.push(name_value.to_token_stream());
+                }
+            }
+
             if attr.path().to_string().as_str() != PATCH {
                 continue;
             }
@@ -1702,9 +1724,11 @@ mod tests {
     fn parse_patch() {
         // Test case 1: Valid patch with attributes and fields
         let input = quote! {
+            /// Item struct doc
             #[derive(Patch)]
             #[patch(name = "MyPatch", attribute(derive(Debug, PartialEq, Clone, Serialize, Deserialize)))]
             pub struct Item {
+                /// Field 1 doc
                 #[patch(name = "SubItemPatch")]
                 pub field1: SubItem,
                 #[patch(skip)]
@@ -1718,7 +1742,11 @@ mod tests {
             struct_name: syn::Ident::new("Item", Span::call_site()),
             patch_struct_name: syn::Ident::new("MyPatch", Span::call_site()),
             generics: syn::Generics::default(),
-            attributes: vec![quote! { derive(Debug, PartialEq, Clone, Serialize, Deserialize) }],
+            attributes: vec![
+                #[cfg(feature = "copy_doc")]
+                quote! { doc = r" Item struct doc" },
+                quote! { derive(Debug, PartialEq, Clone, Serialize, Deserialize) },
+            ],
             #[cfg(feature = "log")]
             default_log_fn: None,
             fields: vec![
@@ -1729,7 +1757,10 @@ mod tests {
                             .parse()
                             .unwrap(),
                     ),
-                    attributes: vec![],
+                    attributes: vec![
+                        #[cfg(feature = "copy_doc")]
+                        quote! { doc = r" Field 1 doc" },
+                    ],
                     #[cfg(feature = "op")]
                     addable: Addable::Disable,
                     #[cfg(feature = "nesting")]
@@ -1758,5 +1789,8 @@ mod tests {
             format!("{:?}", result.to_token_stream()),
             format!("{:?}", expected.to_token_stream())
         );
+
+        // Check that the generated token stream is syntactically correct.
+        syn::parse2::<syn::File>(result.to_token_stream().unwrap()).unwrap();
     }
 }

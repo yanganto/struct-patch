@@ -32,6 +32,8 @@ substrate = [ "syn-serde", "syn/full" ]
 catalyst = [ "substrate", "dep:cargo_metadata" ]
 unsafe = []
 box = []
+copy_doc = []
 
 [dev-dependencies]
 pretty_assertions_sorted = "1.2.3"
+syn = { version =  "3", features = ["full"] }
