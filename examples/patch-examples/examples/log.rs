@@ -56,10 +56,7 @@ fn main() {
     //   [default_log] patch field: host
     //   [default_log] patch field: port
 
-    println!(
-        "host={}, port={}",
-        config.host, config.port
-    );
+    println!("host={}, port={}", config.host, config.port);
 
     println!("\n--- Patch: apply_with_log() with custom format ---");
     config.apply_with_log(
@@ -74,10 +71,7 @@ fn main() {
     // Prints:
     //   [custom_log] patch field port was updated
 
-    println!(
-        "host={}, port={}",
-        config.host, config.port
-    );
+    println!("host={}, port={}", config.host, config.port);
 }
 
 #[cfg(feature = "nesting")]
@@ -188,8 +182,6 @@ fn main() {
 
     println!(
         "config.port={}, config.logging.level={}, config.logging.format={}",
-        server4.config.port,
-        server4.config.logging.level,
-        server4.config.logging.format
+        server4.config.port, server4.config.logging.level, server4.config.logging.format
     );
 }
