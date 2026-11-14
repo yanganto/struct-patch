@@ -248,6 +248,8 @@ Examples are organised into focused sub-projects under [`examples/`](./examples)
 - demonstrate `default_log` and `apply_with_log` for both `Patch` and `Filler` (`log.rs`)
 - apply a heap-allocated (boxed) patch and produce a boxed diff (`box.rs`)
 - demonstrate `apply_by` for custom field-level apply logic, e.g. list concatenation (`apply-by.rs`)
+- copy, and optionally modify, the documentation attribute(s) of the original structure and its fields
+  to the patched structure (`jsonschema.rs`)
 
 **[filler-examples](./examples/filler-examples)** — `Filler` derive macro scenarios:
 - show filler with all possible types (`filler.rs`)
