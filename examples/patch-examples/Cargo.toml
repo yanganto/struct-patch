@@ -34,4 +34,4 @@ required-features = ["box"]
 
 [[example]]
 name = "jsonschema"
-required-features = ["struct-patch/copy_doc"]
+required-features = ["struct-patch/doc"]

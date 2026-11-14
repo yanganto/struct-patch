@@ -9,7 +9,7 @@ use syn::{parenthesized, DeriveInput, Lit, LitStr, Result, Type};
 #[cfg(feature = "op")]
 use crate::Addable;
 
-#[cfg(feature = "copy_doc")]
+#[cfg(feature = "doc")]
 const DOC: &str = "doc";
 const PATCH: &str = "patch";
 const NAME: &str = "name";
@@ -1334,7 +1334,7 @@ impl Patch {
         let mut default_log_fn: Option<syn::Path> = None;
 
         for attr in attrs {
-            #[cfg(feature = "copy_doc")]
+            #[cfg(feature = "doc")]
             if attr.path().to_string().as_str() == DOC {
                 if let syn::Meta::NameValue(name_value) = &attr.meta {
                     attributes.push(name_value.to_token_stream());
@@ -1537,7 +1537,7 @@ impl Field {
         let mut nesting = false;
 
         for attr in attrs {
-            #[cfg(feature = "copy_doc")]
+            #[cfg(feature = "doc")]
             if attr.path().to_string().as_str() == DOC {
                 if let syn::Meta::NameValue(name_value) = &attr.meta {
                     attributes.push(name_value.to_token_stream());
@@ -1743,7 +1743,7 @@ mod tests {
             patch_struct_name: syn::Ident::new("MyPatch", Span::call_site()),
             generics: syn::Generics::default(),
             attributes: vec![
-                #[cfg(feature = "copy_doc")]
+                #[cfg(feature = "doc")]
                 quote! { doc = r" Item struct doc" },
                 quote! { derive(Debug, PartialEq, Clone, Serialize, Deserialize) },
             ],
@@ -1758,7 +1758,7 @@ mod tests {
                             .unwrap(),
                     ),
                     attributes: vec![
-                        #[cfg(feature = "copy_doc")]
+                        #[cfg(feature = "doc")]
                         quote! { doc = r" Field 1 doc" },
                     ],
                     #[cfg(feature = "op")]
