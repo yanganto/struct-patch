@@ -27,6 +27,7 @@ option = ["struct-patch/option"]
 nesting = ["struct-patch/nesting"]
 none_as_default = ["option", "struct-patch/none_as_default"]
 keep_none = ["option", "struct-patch/keep_none"]
+doc = ["struct-patch/doc"]
 
 [[example]]
 name = "box"
@@ -34,4 +35,4 @@ required-features = ["box"]
 
 [[example]]
 name = "jsonschema"
-required-features = ["struct-patch/doc"]
+required-features = ["doc"]

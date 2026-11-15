@@ -63,7 +63,7 @@ fn main() {
         get_description(&schema, "my_field_5").unwrap(),
         "The documentation for my field 5 is ignored."
     );
-    dbg!(schema);
+    println!("{schema:#?}");
 
     let schema = schema_for!(MyStructPatch);
     assert_eq!(schema.get("title").unwrap(), "MyStructPatch");
@@ -88,5 +88,5 @@ fn main() {
         "Set the doc part 1.\nSet the doc part 2."
     );
     assert!(get_description(&schema, "my_field_5").is_none());
-    dbg!(schema);
+    println!("{schema:#?}");
 }
