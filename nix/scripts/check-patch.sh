@@ -19,7 +19,7 @@ run_no_default() {
     cargo run --quiet --no-default-features --features=box --example log | verify_log_output outputs/log-with-box.txt
     cargo run --quiet --no-default-features --example apply-by | verify_log_output outputs/apply-by.txt
     cargo run --quiet --no-default-features --features=box --example box | verify_log_output outputs/box.txt
-    cargo run --quiet --no-default-features --features=doc --example jsonschema
+    cargo run --quiet --no-default-features --features=doc --example jsonschema | verify_log_output outputs/jsonschema.txt
 }
 
 run_std() {
@@ -31,7 +31,7 @@ run_std() {
     cargo run --quiet --features=std --example option
     cargo run --quiet --features=std --example box | verify_log_output outputs/box-std.txt
     cargo run --quiet --features=std,nesting --example nesting
-    cargo run --quiet --features=std,doc --example jsonschema
+    cargo run --quiet --features=std,doc --example jsonschema | verify_log_output outputs/jsonschema.txt
 }
 
 run_merge() {
