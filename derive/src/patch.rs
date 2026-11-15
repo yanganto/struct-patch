@@ -1,13 +1,15 @@
 extern crate proc_macro;
+
+#[cfg(feature = "op")]
+use crate::Addable;
+#[cfg(feature = "doc")]
+use either::Either;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
 use std::str::FromStr;
 #[cfg(not(feature = "op"))]
 use syn::spanned::Spanned;
 use syn::{parenthesized, DeriveInput, Lit, LitStr, Result, Type};
-
-#[cfg(feature = "op")]
-use crate::Addable;
 
 const PATCH: &str = "patch";
 const NAME: &str = "name";
@@ -20,7 +22,7 @@ const EMPTY_VALUE: &str = "empty_value";
 const SKIP_WRAP: &str = "skip_wrap";
 const DEFAULT_LOG: &str = "default_log";
 const APPLY_BY: &str = "apply_by";
-const SET_DOC: &str = "set_doc";
+const SET_DOC: &str = "doc";
 const APPEND_TO_DOC: &str = "append_to_doc";
 const PREPEND_TO_DOC: &str = "prepend_to_doc";
 const SKIP_DOC: &str = "skip_doc";
@@ -1335,7 +1337,7 @@ impl Patch {
         let mut attributes = vec![];
         let mut fields = vec![];
         #[cfg(feature = "doc")]
-        let mut doc_attrs = DocAttrs::default();
+        let mut doc_attrs = PatchDocAttrs::default();
         #[cfg(feature = "log")]
         let mut default_log_fn: Option<syn::Path> = None;
 
@@ -1344,7 +1346,7 @@ impl Patch {
             if attr.path().to_string().as_str() == DOC {
                 if let syn::Meta::NameValue(name_value) = &attr.meta {
                     let value = &name_value.value;
-                    doc_attrs.original.push(quote! { doc = #value });
+                    doc_attrs.push_original(quote! { doc = #value });
                 }
             }
 
@@ -1393,51 +1395,55 @@ impl Patch {
                         );
                     }
                     SET_DOC => {
-                        // #[patch(set_doc = "Foo bar")]
+                        // #[patch(doc = "Foo bar")]
                         #[cfg(not(feature = "doc"))]
-                        return Err(meta.error(
-                            "#[patch(set_doc = \"...\")] only work with `doc` feature",
-                        ));
+                        return Err(meta.error(format!(
+                            "#[patch({SET_DOC} = \"...\")] only works with `doc` feature"
+                        )));
                         #[cfg(feature = "doc")]
                         {
                             let expr: LitStr = meta.value()?.parse()?;
-                            doc_attrs.patched_set.push(quote! { doc = #expr });
+                            doc_attrs
+                                .set(quote! { doc = #expr })
+                                .map_err(|err| meta.error(err))?;
                         }
                     }
                     APPEND_TO_DOC => {
                         // #[patch(append_to_doc = "Foo bar")]
                         #[cfg(not(feature = "doc"))]
-                        return Err(meta.error(
-                            "#[patch(append_to_doc = \"...\")] only work with `doc` feature",
-                        ));
+                        return Err(meta.error(format!(
+                            "#[patch({APPEND_TO_DOC} = \"...\")] only works with `doc` feature"
+                        )));
                         #[cfg(feature = "doc")]
                         {
                             let expr: LitStr = meta.value()?.parse()?;
-                            doc_attrs.patched_append.push(quote! { doc = #expr });
+                            doc_attrs
+                                .append(quote! { doc = #expr })
+                                .map_err(|err| meta.error(err))?;
                         }
                     }
                     PREPEND_TO_DOC => {
                         // #[patch(prepend_to_doc = "Foo bar")]
                         #[cfg(not(feature = "doc"))]
-                        return Err(meta.error(
-                            "#[patch(prepend_to_doc = \"...\")] only work with `doc` feature",
-                        ));
+                        return Err(meta.error(format!(
+                            "#[patch({PREPEND_TO_DOC} = \"...\")] only works with `doc` feature"
+                        )));
                         #[cfg(feature = "doc")]
                         {
                             let expr: LitStr = meta.value()?.parse()?;
-                            doc_attrs.patched_prepend.push(quote! { doc = #expr });
+                            doc_attrs
+                                .prepend(quote! { doc = #expr })
+                                .map_err(|err| meta.error(err))?;
                         }
                     }
                     SKIP_DOC => {
                         // #[patch(skip_doc)]
                         #[cfg(not(feature = "doc"))]
-                        return Err(meta.error(
-                            "#[patch(skip_doc = \"...\")] only work with `doc` feature",
-                        ));
+                        return Err(meta.error(format!(
+                            "#[patch({SKIP_DOC})] only works with `doc` feature"
+                        )));
                         #[cfg(feature = "doc")]
-                        {
-                            doc_attrs.skip = true;
-                        }
+                        doc_attrs.skip().map_err(|err| meta.error(err))?;
                     }
                     _ => {
                         return Err(meta.error(format_args!(
@@ -1588,7 +1594,7 @@ impl Field {
         let mut skip = false;
         let mut special_attr = SpecialAttr::None;
         #[cfg(feature = "doc")]
-        let mut doc_attrs = DocAttrs::default();
+        let mut doc_attrs = PatchDocAttrs::default();
         #[cfg(feature = "op")]
         let mut addable = Addable::Disable;
         #[cfg(feature = "nesting")]
@@ -1599,7 +1605,7 @@ impl Field {
             if attr.path().to_string().as_str() == DOC {
                 if let syn::Meta::NameValue(name_value) = &attr.meta {
                     let value = &name_value.value;
-                    doc_attrs.original.push(quote! { doc = #value });
+                    doc_attrs.push_original(quote! { doc = #value });
                 }
             }
 
@@ -1725,51 +1731,55 @@ impl Field {
                         };
                     }
                     SET_DOC => {
-                        // #[patch(set_doc = "Foo bar")]
+                        // #[patch(doc = "Foo bar")]
                         #[cfg(not(feature = "doc"))]
-                        return Err(
-                            meta.error("#[patch(set_doc = \"...\")] only work with `doc` feature")
-                        );
+                        return Err(meta.error(format!(
+                            "#[patch({SET_DOC} = \"...\")] only works with `doc` feature"
+                        )));
                         #[cfg(feature = "doc")]
                         {
                             let expr: LitStr = meta.value()?.parse()?;
-                            doc_attrs.patched_set.push(quote! { doc = #expr });
+                            doc_attrs
+                                .set(quote! { doc = #expr })
+                                .map_err(|err| meta.error(err))?;
                         }
                     }
                     APPEND_TO_DOC => {
                         // #[patch(append_to_doc = "Foo bar")]
                         #[cfg(not(feature = "doc"))]
-                        return Err(
-                            meta.error("#[patch(append_to_doc = \"...\")] only work with `doc` feature")
-                        );
+                        return Err(meta.error(format!(
+                            "#[patch({APPEND_TO_DOC} = \"...\")] only works with `doc` feature"
+                        )));
                         #[cfg(feature = "doc")]
                         {
                             let expr: LitStr = meta.value()?.parse()?;
-                            doc_attrs.patched_append.push(quote! { doc = #expr });
+                            doc_attrs
+                                .append(quote! { doc = #expr })
+                                .map_err(|err| meta.error(err))?;
                         }
                     }
                     PREPEND_TO_DOC => {
                         // #[patch(prepend_to_doc = "Foo bar")]
                         #[cfg(not(feature = "doc"))]
-                        return Err(
-                            meta.error("#[patch(prepend_to_doc = \"...\")] only work with `doc` feature")
-                        );
+                        return Err(meta.error(format!(
+                            "#[patch({PREPEND_TO_DOC} = \"...\")] only works with `doc` feature"
+                        )));
                         #[cfg(feature = "doc")]
                         {
                             let expr: LitStr = meta.value()?.parse()?;
-                            doc_attrs.patched_prepend.push(quote! { doc = #expr });
+                            doc_attrs
+                                .prepend(quote! { doc = #expr })
+                                .map_err(|err| meta.error(err))?;
                         }
                     }
                     SKIP_DOC => {
                         // #[patch(skip_doc)]
                         #[cfg(not(feature = "doc"))]
-                        return Err(
-                            meta.error("#[patch(skip_doc = \"...\")] only work with `doc` feature")
-                        );
+                        return Err(meta.error(format!(
+                            "#[patch({SKIP_DOC})] only works with `doc` feature"
+                        )));
                         #[cfg(feature = "doc")]
-                        {
-                            doc_attrs.skip = true;
-                        }
+                        doc_attrs.skip().map_err(|err| meta.error(err))?;
                     }
                     _ => {
                         return Err(meta.error(format_args!(
@@ -1812,30 +1822,139 @@ fn is_option_type(ty: &syn::Type) -> bool {
     false
 }
 
+/// Doc-related attributes, for a field or a structure.
 #[cfg(feature = "doc")]
-#[derive(Default, Debug)]
-struct DocAttrs {
-    original: Vec<TokenStream>,
-    patched_set: Vec<TokenStream>,
-    patched_append: Vec<TokenStream>,
-    patched_prepend: Vec<TokenStream>,
-    skip: bool,
+enum PatchDocAttrs {
+    /// Original attributes, without any modification.
+    Origin {
+        body: Vec<TokenStream>,
+    },
+    /// Overwritten attributes (prepended, appended, or reset).
+    Overwrite {
+        head: Vec<TokenStream>,
+        // Left contains the original doc attributes, Right the (re)set ones.
+        body: Either<Vec<TokenStream>, Vec<TokenStream>>,
+        tail: Vec<TokenStream>,
+    },
+    /// Completely skip the doc for the patched field/structure.
+    Skip,
 }
 
 #[cfg(feature = "doc")]
-impl DocAttrs {
+impl Default for PatchDocAttrs {
+    fn default() -> Self {
+        Self::Origin { body: Vec::new() }
+    }
+}
+
+#[cfg(feature = "doc")]
+impl PatchDocAttrs {
+    /// Get the final vector of TokenStream for doc attributes.
     fn into_tokens(self) -> Vec<TokenStream> {
-        if self.skip {
-            return Vec::new();
+        match self {
+            PatchDocAttrs::Origin { body } => body,
+            PatchDocAttrs::Overwrite { head, body, tail } => {
+                head.into_iter().chain(
+                body.into_iter()
+
+                ).chain(tail).collect()
+            }
+            PatchDocAttrs::Skip => Vec::new(),
         }
-        if self.patched_set.is_empty() {
-            self.patched_prepend
-                .into_iter()
-                .chain(self.original)
-                .chain(self.patched_append)
-                .collect()
+    }
+
+    /// Push a new doc attribute coming from the original, unpatched structure.
+    fn push_original(&mut self, doc: TokenStream) {
+        if let PatchDocAttrs::Origin { body }
+        | PatchDocAttrs::Overwrite {
+            // Do nothing if Either::Right (it has already been (re)set).
+            body: Either::Left(body),
+            ..
+        } = self
+        {
+            body.push(doc);
+        }
+    }
+
+    /// Reset the documentation, or append this new element to an already set one.
+    fn set(&mut self, doc: TokenStream) -> std::result::Result<(), String> {
+        match self {
+            PatchDocAttrs::Origin { .. } => {
+                *self = PatchDocAttrs::Overwrite {
+                    head: Vec::new(),
+                    // Drop/replace the original doc.
+                    body: Either::Right(vec![doc]),
+                    tail: Vec::new(),
+                };
+                Ok(())
+            }
+            PatchDocAttrs::Overwrite { body: body  @ Either::Left(..), .. } => {
+                // Drop/replace the original doc, leave the other fields untouched.
+                *body = Either::Right(vec![doc]);
+                Ok(())
+            }
+            PatchDocAttrs::Overwrite { body: Either::Right(body), .. } => {
+                // Push to the already reset doc, leave the other fields untouched.
+                body.push(doc);
+                Ok(())
+            }
+            PatchDocAttrs::Skip => Err(format!(
+                "the attribute #[patch({SET_DOC} = \"...\")] is incompatible with #[patch({SKIP_DOC} = \"...\")]",
+            )),
+        }
+    }
+
+    /// Append a new doc element.
+    fn append(&mut self, doc: TokenStream) -> std::result::Result<(), String> {
+        match self {
+            PatchDocAttrs::Origin { body } => {
+                let body = std::mem::take(body);
+                *self = PatchDocAttrs::Overwrite {
+                    head: Vec::new(),
+                    body: Either::Left(body),
+                    tail: vec![doc],
+                };
+                Ok(())
+            }
+            PatchDocAttrs::Overwrite { tail, .. } => {
+                tail.push(doc);
+                Ok(())
+            }
+            PatchDocAttrs::Skip => Err(format!(
+                "the attribute #[patch({APPEND_TO_DOC} = \"...\")] is incompatible with #[patch({SKIP_DOC})]",
+            )),
+        }
+    }
+
+    /// Prepend a new doc element.
+    fn prepend(&mut self, doc: TokenStream) -> std::result::Result<(), String> {
+        match self {
+            PatchDocAttrs::Origin { body } => {
+                let body = std::mem::take(body);
+                *self = PatchDocAttrs::Overwrite {
+                    head: vec![doc],
+                    body: Either::Left(body),
+                    tail: Vec::new(),
+                };
+                Ok(())
+            }
+            PatchDocAttrs::Overwrite { head,.. } => {
+                head.push(doc);
+                Ok(())
+            }
+            PatchDocAttrs::Skip => Err(format!(
+                "the attribute #[patch({PREPEND_TO_DOC} = \"...\")] is incompatible with #[patch({SKIP_DOC})]",
+            ))
+        }
+    }
+
+    /// Completely skip the doc for this field or structure.
+    fn skip(&mut self) -> std::result::Result<(), String> {
+        if let PatchDocAttrs::Origin { .. } | PatchDocAttrs::Skip = self {
+            *self = PatchDocAttrs::Skip;
+            Ok(())
         } else {
-            self.patched_set
+            Err(format!("the attribute #[patch({SKIP_DOC})] is incompatible with other doc-related attributes"))
         }
     }
 }
@@ -1940,8 +2059,8 @@ mod tests {
                 pub field2: Option<String>,
                 /// Field 3 doc ignored.
                 #[patch(empty_value = false)]
-                #[patch(set_doc = "Field 3 doc for patch part 1")]
-                #[patch(set_doc = "Field 3 doc for patch part 2")]
+                #[patch(doc = "Field 3 doc for patch part 1")]
+                #[patch(doc = "Field 3 doc for patch part 2")]
                 pub field3: bool,
                 #[patch(append_to_doc = "Field 4 doc appended.")]
                 /// Field 4 doc

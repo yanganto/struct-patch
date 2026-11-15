@@ -17,12 +17,12 @@ struct MyStruct {
     #[patch(append_to_doc = "Append something part 1.")]
     #[patch(append_to_doc = "Append something part 2.")]
     my_field_3: bool,
-    /// The documentation for my field 4 is ignored.
-    #[patch(set_doc = "Set the doc part 1.")]
-    #[patch(set_doc = "Set the doc part 2.")]
-    #[patch(append_to_doc = "This is ignored.")]
+    /// The original documentation for my field 4 is ignored.
+    #[patch(doc = "Set the doc part 1.")]
+    #[patch(doc = "Set the doc part 2.")]
+    #[patch(append_to_doc = "This is appended.")]
     my_field_4: bool,
-    /// The documentation for my field 5 is ignored.
+    /// The original documentation for my field 5 is ignored.
     #[patch(skip_doc)]
     my_field_5: bool,
 }
@@ -57,11 +57,11 @@ fn main() {
     );
     assert_eq!(
         get_description(&schema, "my_field_4").unwrap(),
-        "The documentation for my field 4 is ignored."
+        "The original documentation for my field 4 is ignored."
     );
     assert_eq!(
         get_description(&schema, "my_field_5").unwrap(),
-        "The documentation for my field 5 is ignored."
+        "The original documentation for my field 5 is ignored."
     );
     println!("{schema:#?}");
 
@@ -85,7 +85,7 @@ fn main() {
     );
     assert_eq!(
         get_description(&schema, "my_field_4").unwrap(),
-        "Set the doc part 1.\nSet the doc part 2."
+        "Set the doc part 1.\nSet the doc part 2.\nThis is appended."
     );
     assert!(get_description(&schema, "my_field_5").is_none());
     println!("{schema:#?}");

@@ -16,11 +16,11 @@ Schema(
                 "type": String("boolean"),
             },
             "my_field_4": Object {
-                "description": String("The documentation for my field 4 is ignored."),
+                "description": String("The original documentation for my field 4 is ignored."),
                 "type": String("boolean"),
             },
             "my_field_5": Object {
-                "description": String("The documentation for my field 5 is ignored."),
+                "description": String("The original documentation for my field 5 is ignored."),
                 "type": String("boolean"),
             },
         },
@@ -62,7 +62,7 @@ Schema(
                 ],
             },
             "my_field_4": Object {
-                "description": String("Set the doc part 1.\nSet the doc part 2."),
+                "description": String("Set the doc part 1.\nSet the doc part 2.\nThis is appended."),
                 "type": Array [
                     String("boolean"),
                     String("null"),
