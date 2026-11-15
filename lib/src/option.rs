@@ -139,7 +139,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     extern crate alloc;
     use crate as struct_patch;
     use crate::Patch;
