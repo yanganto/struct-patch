@@ -73,10 +73,7 @@ fn get_lit(attr_name: String, meta: &ParseNestedMeta) -> syn::Result<Option<syn:
     } else {
         Err(Error::new(
             expr.span(),
-            format!(
-                "expected serde {} attribute to be lit: `{} = \"...\"`",
-                attr_name, attr_name
-            ),
+            format!("expected serde {attr_name} attribute to be lit: `{attr_name} = \"...\"`"),
         ))
     }
 }
@@ -96,17 +93,14 @@ fn get_lit_str(attr_name: String, meta: &ParseNestedMeta) -> syn::Result<Option<
         if !suffix.is_empty() {
             return Err(Error::new(
                 lit.span(),
-                format!("unexpected suffix `{}` on string literal", suffix),
+                format!("unexpected suffix `{suffix}` on string literal"),
             ));
         }
         Ok(Some(lit.clone()))
     } else {
         Err(Error::new(
             expr.span(),
-            format!(
-                "expected serde {} attribute to be a string: `{} = \"...\"`",
-                attr_name, attr_name
-            ),
+            format!("expected serde {attr_name} attribute to be a string: `{attr_name} = \"...\"`",),
         ))
     }
 }

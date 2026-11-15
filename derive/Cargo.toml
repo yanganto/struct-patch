@@ -20,6 +20,7 @@ quote = "1.0"
 syn = { version =  "3", features = ["parsing"] }
 syn-serde = { package = "syn-serde3", version = "0.0.1", features = ["json"], optional = true }
 cargo_metadata = { version = "0.23", optional = true }
+either = { version = "1.13.0", optional = true }
 
 [features]
 status = []
@@ -32,6 +33,8 @@ substrate = [ "syn-serde", "syn/full" ]
 catalyst = [ "substrate", "dep:cargo_metadata" ]
 unsafe = []
 box = []
+doc = [ "dep:either" ]
 
 [dev-dependencies]
 pretty_assertions_sorted = "1.2.3"
+syn = { version =  "3", features = ["full"] }

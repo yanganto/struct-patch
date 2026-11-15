@@ -13,6 +13,7 @@ serde_with = "3.9.0"
 toml = "1.1.2"
 humantime-serde = "1.1.1"
 clap = { version = "4.4.7", features = ["derive"] }
+schemars = "1.2.3"
 
 [features]
 default = ["status", "op"]
@@ -26,7 +27,12 @@ option = ["struct-patch/option"]
 nesting = ["struct-patch/nesting"]
 none_as_default = ["option", "struct-patch/none_as_default"]
 keep_none = ["option", "struct-patch/keep_none"]
+doc = ["struct-patch/doc"]
 
 [[example]]
 name = "box"
 required-features = ["box"]
+
+[[example]]
+name = "jsonschema"
+required-features = ["doc"]

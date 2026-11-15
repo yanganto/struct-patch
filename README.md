@@ -248,6 +248,8 @@ Examples are organised into focused sub-projects under [`examples/`](./examples)
 - demonstrate `default_log` and `apply_with_log` for both `Patch` and `Filler` (`log.rs`)
 - apply a heap-allocated (boxed) patch and produce a boxed diff (`box.rs`)
 - demonstrate `apply_by` for custom field-level apply logic, e.g. list concatenation (`apply-by.rs`)
+- copy, and optionally modify, the documentation attribute(s) of the original structure and its fields
+  to the patched structure (`jsonschema.rs`)
 
 **[filler-examples](./examples/filler-examples)** — `Filler` derive macro scenarios:
 - show filler with all possible types (`filler.rs`)
@@ -277,6 +279,8 @@ This crate includes the following optional features:
 - `substrate` *(optional)*: enables the `Substrate` derive macro for exposing a struct's field layout so downstream crates can access it via `expose()` or source parsing.
 - `catalyst` *(optional)*: enables the `Catalyst` and `Complex` derive macros for extending a struct with fields from another crate. Implies `substrate`.
 - `unsafe` *(optional)*: avoid memory moves. Only meaningful with the `catalyst` feature.
+- `doc` *(optional)*: copy the documentation of the original struct and its fields to the patched one.
+  This is useful when a trait, derived on the patch structure, uses the doc attributes, typically for auto-documentation of some sort.
 
 [crates-badge]: https://img.shields.io/crates/v/struct-patch.svg
 [crate-url]: https://crates.io/crates/struct-patch

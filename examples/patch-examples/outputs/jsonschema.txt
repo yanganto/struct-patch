@@ -1,0 +1,81 @@
+Schema(
+    Object {
+        "$schema": String("https://json-schema.org/draft/2020-12/schema"),
+        "description": String("The documentation for my structure."),
+        "properties": Object {
+            "my_field_1": Object {
+                "description": String("The documentation for my field 1."),
+                "type": String("boolean"),
+            },
+            "my_field_2": Object {
+                "description": String("The documentation for my field 2."),
+                "type": String("boolean"),
+            },
+            "my_field_3": Object {
+                "description": String("The documentation for my field 3."),
+                "type": String("boolean"),
+            },
+            "my_field_4": Object {
+                "description": String("The original documentation for my field 4 is ignored."),
+                "type": String("boolean"),
+            },
+            "my_field_5": Object {
+                "description": String("The original documentation for my field 5 is ignored."),
+                "type": String("boolean"),
+            },
+        },
+        "required": Array [
+            String("my_field_1"),
+            String("my_field_2"),
+            String("my_field_3"),
+            String("my_field_4"),
+            String("my_field_5"),
+        ],
+        "title": String("MyStruct"),
+        "type": String("object"),
+    },
+)
+Schema(
+    Object {
+        "$schema": String("https://json-schema.org/draft/2020-12/schema"),
+        "description": String("The documentation for my structure.\nAppend something."),
+        "properties": Object {
+            "my_field_1": Object {
+                "description": String("The documentation for my field 1."),
+                "type": Array [
+                    String("boolean"),
+                    String("null"),
+                ],
+            },
+            "my_field_2": Object {
+                "description": String("Prepend something.\nThe documentation for my field 2.\nAppend something."),
+                "type": Array [
+                    String("boolean"),
+                    String("null"),
+                ],
+            },
+            "my_field_3": Object {
+                "description": String("The documentation for my field 3.\nAppend something part 1.\nAppend something part 2."),
+                "type": Array [
+                    String("boolean"),
+                    String("null"),
+                ],
+            },
+            "my_field_4": Object {
+                "description": String("Set the doc part 1.\nSet the doc part 2.\nThis is appended."),
+                "type": Array [
+                    String("boolean"),
+                    String("null"),
+                ],
+            },
+            "my_field_5": Object {
+                "type": Array [
+                    String("boolean"),
+                    String("null"),
+                ],
+            },
+        },
+        "title": String("MyStructPatch"),
+        "type": String("object"),
+    },
+)

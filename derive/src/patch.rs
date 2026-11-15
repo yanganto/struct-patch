@@ -1,13 +1,15 @@
 extern crate proc_macro;
+
+#[cfg(feature = "op")]
+use crate::Addable;
+#[cfg(feature = "doc")]
+use either::Either;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
 use std::str::FromStr;
 #[cfg(not(feature = "op"))]
 use syn::spanned::Spanned;
 use syn::{parenthesized, DeriveInput, Lit, LitStr, Result, Type};
-
-#[cfg(feature = "op")]
-use crate::Addable;
 
 const PATCH: &str = "patch";
 const NAME: &str = "name";
@@ -20,6 +22,12 @@ const EMPTY_VALUE: &str = "empty_value";
 const SKIP_WRAP: &str = "skip_wrap";
 const DEFAULT_LOG: &str = "default_log";
 const APPLY_BY: &str = "apply_by";
+const SET_DOC: &str = "doc";
+const APPEND_TO_DOC: &str = "append_to_doc";
+const PREPEND_TO_DOC: &str = "prepend_to_doc";
+const SKIP_DOC: &str = "skip_doc";
+#[cfg(feature = "doc")]
+const DOC: &str = "doc";
 
 pub(crate) struct Patch {
     visibility: syn::Visibility,
@@ -845,7 +853,11 @@ impl Patch {
                 self.#nesting_field_names.apply(patch.#nesting_field_names);
             )*
         };
-        #[cfg(all(feature = "nesting", not(feature = "simple-nesting"), not(feature = "log")))]
+        #[cfg(all(
+            feature = "nesting",
+            not(feature = "simple-nesting"),
+            not(feature = "log")
+        ))]
         let nesting_apply_section: TokenStream = quote! {
             #(
                 self.#nesting_field_names.apply(patch.#nesting_field_names);
@@ -1324,10 +1336,20 @@ impl Patch {
         let mut name = None;
         let mut attributes = vec![];
         let mut fields = vec![];
+        #[cfg(feature = "doc")]
+        let mut doc_attrs = PatchDocAttrs::default();
         #[cfg(feature = "log")]
         let mut default_log_fn: Option<syn::Path> = None;
 
         for attr in attrs {
+            #[cfg(feature = "doc")]
+            if attr.path().to_string().as_str() == DOC {
+                if let syn::Meta::NameValue(name_value) = &attr.meta {
+                    let value = &name_value.value;
+                    doc_attrs.push_original(quote! { doc = #value });
+                }
+            }
+
             if attr.path().to_string().as_str() != PATCH {
                 continue;
             }
@@ -1368,7 +1390,60 @@ impl Patch {
                     }
                     #[cfg(not(feature = "log"))]
                     DEFAULT_LOG => {
-                        return Err(meta.error("`default_log` attribute requires the `log` feature"));
+                        return Err(
+                            meta.error("`default_log` attribute requires the `log` feature")
+                        );
+                    }
+                    SET_DOC => {
+                        // #[patch(doc = "Foo bar")]
+                        #[cfg(not(feature = "doc"))]
+                        return Err(meta.error(format!(
+                            "#[patch({SET_DOC} = \"...\")] only works with `doc` feature"
+                        )));
+                        #[cfg(feature = "doc")]
+                        {
+                            let expr: LitStr = meta.value()?.parse()?;
+                            doc_attrs
+                                .set(quote! { doc = #expr })
+                                .map_err(|err| meta.error(err))?;
+                        }
+                    }
+                    APPEND_TO_DOC => {
+                        // #[patch(append_to_doc = "Foo bar")]
+                        #[cfg(not(feature = "doc"))]
+                        return Err(meta.error(format!(
+                            "#[patch({APPEND_TO_DOC} = \"...\")] only works with `doc` feature"
+                        )));
+                        #[cfg(feature = "doc")]
+                        {
+                            let expr: LitStr = meta.value()?.parse()?;
+                            doc_attrs
+                                .append(quote! { doc = #expr })
+                                .map_err(|err| meta.error(err))?;
+                        }
+                    }
+                    PREPEND_TO_DOC => {
+                        // #[patch(prepend_to_doc = "Foo bar")]
+                        #[cfg(not(feature = "doc"))]
+                        return Err(meta.error(format!(
+                            "#[patch({PREPEND_TO_DOC} = \"...\")] only works with `doc` feature"
+                        )));
+                        #[cfg(feature = "doc")]
+                        {
+                            let expr: LitStr = meta.value()?.parse()?;
+                            doc_attrs
+                                .prepend(quote! { doc = #expr })
+                                .map_err(|err| meta.error(err))?;
+                        }
+                    }
+                    SKIP_DOC => {
+                        // #[patch(skip_doc)]
+                        #[cfg(not(feature = "doc"))]
+                        return Err(meta.error(format!(
+                            "#[patch({SKIP_DOC})] only works with `doc` feature"
+                        )));
+                        #[cfg(feature = "doc")]
+                        doc_attrs.skip().map_err(|err| meta.error(err))?;
                     }
                     _ => {
                         return Err(meta.error(format_args!(
@@ -1387,10 +1462,13 @@ impl Patch {
             }
         }
 
+        #[cfg(feature = "doc")]
+        attributes.extend(doc_attrs.into_tokens());
+
         Ok(Patch {
             visibility: vis,
             patch_struct_name: name.unwrap_or({
-                let ts = TokenStream::from_str(&format!("{}Patch", &ident,)).unwrap();
+                let ts = TokenStream::from_str(&format!("{ident}Patch")).unwrap();
                 let lit = LitStr::new(&ts.to_string(), Span::call_site());
                 lit.parse()?
             }),
@@ -1445,7 +1523,7 @@ impl Field {
                 if *nesting {
                     // TODO handle rename
                     let patch_type = syn::Ident::new(
-                        &format!("{}Patch", &ty.to_token_stream()),
+                        &format!("{}Patch", ty.to_token_stream()),
                         Span::call_site(),
                     );
                     Ok(quote! {
@@ -1483,7 +1561,7 @@ impl Field {
                 if *nesting {
                     // TODO handle rename
                     let patch_type = syn::Ident::new(
-                        &format!("{}Patch", &ty.to_token_stream()),
+                        &format!("{}Patch", ty.to_token_stream()),
                         Span::call_site(),
                     );
                     Ok(quote! {
@@ -1515,13 +1593,22 @@ impl Field {
         let mut field_type = None;
         let mut skip = false;
         let mut special_attr = SpecialAttr::None;
-
+        #[cfg(feature = "doc")]
+        let mut doc_attrs = PatchDocAttrs::default();
         #[cfg(feature = "op")]
         let mut addable = Addable::Disable;
         #[cfg(feature = "nesting")]
         let mut nesting = false;
 
         for attr in attrs {
+            #[cfg(feature = "doc")]
+            if attr.path().to_string().as_str() == DOC {
+                if let syn::Meta::NameValue(name_value) = &attr.meta {
+                    let value = &name_value.value;
+                    doc_attrs.push_original(quote! { doc = #value });
+                }
+            }
+
             if attr.path().to_string().as_str() != PATCH {
                 continue;
             }
@@ -1643,6 +1730,57 @@ impl Field {
                             }
                         };
                     }
+                    SET_DOC => {
+                        // #[patch(doc = "Foo bar")]
+                        #[cfg(not(feature = "doc"))]
+                        return Err(meta.error(format!(
+                            "#[patch({SET_DOC} = \"...\")] only works with `doc` feature"
+                        )));
+                        #[cfg(feature = "doc")]
+                        {
+                            let expr: LitStr = meta.value()?.parse()?;
+                            doc_attrs
+                                .set(quote! { doc = #expr })
+                                .map_err(|err| meta.error(err))?;
+                        }
+                    }
+                    APPEND_TO_DOC => {
+                        // #[patch(append_to_doc = "Foo bar")]
+                        #[cfg(not(feature = "doc"))]
+                        return Err(meta.error(format!(
+                            "#[patch({APPEND_TO_DOC} = \"...\")] only works with `doc` feature"
+                        )));
+                        #[cfg(feature = "doc")]
+                        {
+                            let expr: LitStr = meta.value()?.parse()?;
+                            doc_attrs
+                                .append(quote! { doc = #expr })
+                                .map_err(|err| meta.error(err))?;
+                        }
+                    }
+                    PREPEND_TO_DOC => {
+                        // #[patch(prepend_to_doc = "Foo bar")]
+                        #[cfg(not(feature = "doc"))]
+                        return Err(meta.error(format!(
+                            "#[patch({PREPEND_TO_DOC} = \"...\")] only works with `doc` feature"
+                        )));
+                        #[cfg(feature = "doc")]
+                        {
+                            let expr: LitStr = meta.value()?.parse()?;
+                            doc_attrs
+                                .prepend(quote! { doc = #expr })
+                                .map_err(|err| meta.error(err))?;
+                        }
+                    }
+                    SKIP_DOC => {
+                        // #[patch(skip_doc)]
+                        #[cfg(not(feature = "doc"))]
+                        return Err(meta.error(format!(
+                            "#[patch({SKIP_DOC})] only works with `doc` feature"
+                        )));
+                        #[cfg(feature = "doc")]
+                        doc_attrs.skip().map_err(|err| meta.error(err))?;
+                    }
                     _ => {
                         return Err(meta.error(format_args!(
                             "unknown patch field attribute `{}`",
@@ -1656,6 +1794,9 @@ impl Field {
                 return Ok(None);
             }
         }
+
+        #[cfg(feature = "doc")]
+        attributes.extend(doc_attrs.into_tokens());
 
         Ok(Some(Field {
             ident,
@@ -1679,6 +1820,143 @@ fn is_option_type(ty: &syn::Type) -> bool {
         }
     }
     false
+}
+
+/// Doc-related attributes, for a field or a structure.
+#[cfg(feature = "doc")]
+enum PatchDocAttrs {
+    /// Original attributes, without any modification.
+    Origin {
+        body: Vec<TokenStream>,
+    },
+    /// Overwritten attributes (prepended, appended, or reset).
+    Overwrite {
+        head: Vec<TokenStream>,
+        // Left contains the original doc attributes, Right the (re)set ones.
+        body: Either<Vec<TokenStream>, Vec<TokenStream>>,
+        tail: Vec<TokenStream>,
+    },
+    /// Completely skip the doc for the patched field/structure.
+    Skip,
+}
+
+#[cfg(feature = "doc")]
+impl Default for PatchDocAttrs {
+    fn default() -> Self {
+        Self::Origin { body: Vec::new() }
+    }
+}
+
+#[cfg(feature = "doc")]
+impl PatchDocAttrs {
+    /// Get the final vector of TokenStream for doc attributes.
+    fn into_tokens(self) -> Vec<TokenStream> {
+        match self {
+            PatchDocAttrs::Origin { body } => body,
+            PatchDocAttrs::Overwrite { head, body, tail } => {
+                head.into_iter().chain(
+                body.into_iter()
+
+                ).chain(tail).collect()
+            }
+            PatchDocAttrs::Skip => Vec::new(),
+        }
+    }
+
+    /// Push a new doc attribute coming from the original, unpatched structure.
+    fn push_original(&mut self, doc: TokenStream) {
+        if let PatchDocAttrs::Origin { body }
+        | PatchDocAttrs::Overwrite {
+            // Do nothing if Either::Right (it has already been (re)set).
+            body: Either::Left(body),
+            ..
+        } = self
+        {
+            body.push(doc);
+        }
+    }
+
+    /// Reset the documentation, or append this new element to an already set one.
+    fn set(&mut self, doc: TokenStream) -> std::result::Result<(), String> {
+        match self {
+            PatchDocAttrs::Origin { .. } => {
+                *self = PatchDocAttrs::Overwrite {
+                    head: Vec::new(),
+                    // Drop/replace the original doc.
+                    body: Either::Right(vec![doc]),
+                    tail: Vec::new(),
+                };
+                Ok(())
+            }
+            PatchDocAttrs::Overwrite { body: body  @ Either::Left(..), .. } => {
+                // Drop/replace the original doc, leave the other fields untouched.
+                *body = Either::Right(vec![doc]);
+                Ok(())
+            }
+            PatchDocAttrs::Overwrite { body: Either::Right(body), .. } => {
+                // Push to the already reset doc, leave the other fields untouched.
+                body.push(doc);
+                Ok(())
+            }
+            PatchDocAttrs::Skip => Err(format!(
+                "the attribute #[patch({SET_DOC} = \"...\")] is incompatible with #[patch({SKIP_DOC} = \"...\")]",
+            )),
+        }
+    }
+
+    /// Append a new doc element.
+    fn append(&mut self, doc: TokenStream) -> std::result::Result<(), String> {
+        match self {
+            PatchDocAttrs::Origin { body } => {
+                let body = std::mem::take(body);
+                *self = PatchDocAttrs::Overwrite {
+                    head: Vec::new(),
+                    body: Either::Left(body),
+                    tail: vec![doc],
+                };
+                Ok(())
+            }
+            PatchDocAttrs::Overwrite { tail, .. } => {
+                tail.push(doc);
+                Ok(())
+            }
+            PatchDocAttrs::Skip => Err(format!(
+                "the attribute #[patch({APPEND_TO_DOC} = \"...\")] is incompatible with #[patch({SKIP_DOC})]",
+            )),
+        }
+    }
+
+    /// Prepend a new doc element.
+    fn prepend(&mut self, doc: TokenStream) -> std::result::Result<(), String> {
+        match self {
+            PatchDocAttrs::Origin { body } => {
+                let body = std::mem::take(body);
+                *self = PatchDocAttrs::Overwrite {
+                    head: vec![doc],
+                    body: Either::Left(body),
+                    tail: Vec::new(),
+                };
+                Ok(())
+            }
+            PatchDocAttrs::Overwrite { head,.. } => {
+                head.push(doc);
+                Ok(())
+            }
+            PatchDocAttrs::Skip => Err(format!(
+                "the attribute #[patch({PREPEND_TO_DOC} = \"...\")] is incompatible with #[patch({SKIP_DOC})]",
+            ))
+        }
+    }
+
+    /// Completely skip the doc for this field or structure.
+    fn skip(&mut self) -> std::result::Result<(), String> {
+        if let PatchDocAttrs::Origin { .. } | PatchDocAttrs::Skip = self {
+            *self = PatchDocAttrs::Skip;
+            Ok(())
+        } else {
+            Err(format!("the attribute #[patch({SKIP_DOC})] is incompatible with other doc-related attributes"))
+        }
+    }
 }
 
 trait ToStr {
@@ -1758,5 +2036,123 @@ mod tests {
             format!("{:?}", result.to_token_stream()),
             format!("{:?}", expected.to_token_stream())
         );
+
+        // Check that the generated token stream is syntactically correct.
+        syn::parse2::<syn::File>(result.to_token_stream().unwrap()).unwrap();
+    }
+
+    #[test]
+    #[cfg(feature = "doc")]
+    fn parse_patch_with_doc() {
+        // Test case 1: Valid patch with attributes and fields
+        let input = quote! {
+            /// Item struct doc
+            #[derive(Patch)]
+            #[patch(name = "MyPatch", attribute(derive(Debug, PartialEq, Clone, Serialize, Deserialize)))]
+            #[ patch(prepend_to_doc = "Patched structure")]
+            pub struct Item {
+                /// Field 1 doc
+                #[patch(name = "SubItemPatch")]
+                pub field1: SubItem,
+                 /// Field 2 doc
+                #[patch(skip)]
+                pub field2: Option<String>,
+                /// Field 3 doc ignored.
+                #[patch(empty_value = false)]
+                #[patch(doc = "Field 3 doc for patch part 1")]
+                #[patch(doc = "Field 3 doc for patch part 2")]
+                pub field3: bool,
+                #[patch(append_to_doc = "Field 4 doc appended.")]
+                /// Field 4 doc
+                pub field4: u32,
+                /// Field 5 doc
+                #[patch(skip_doc)]
+                pub field5: u32
+            }
+        };
+        let expected = Patch {
+            visibility: syn::Visibility::Public(Pub::default()),
+            struct_name: syn::Ident::new("Item", Span::call_site()),
+            patch_struct_name: syn::Ident::new("MyPatch", Span::call_site()),
+            generics: syn::Generics::default(),
+            attributes: vec![
+                quote! { derive(Debug, PartialEq, Clone, Serialize, Deserialize) },
+                #[cfg(feature = "doc")]
+                quote! { doc = "Patched structure" },
+                #[cfg(feature = "doc")]
+                quote! { doc = r" Item struct doc" },
+            ],
+            #[cfg(feature = "log")]
+            default_log_fn: None,
+            fields: vec![
+                Field {
+                    ident: Some(syn::Ident::new("field1", Span::call_site())),
+                    ty: FieldType::Retyped(
+                        LitStr::new("SubItemPatch", Span::call_site())
+                            .parse()
+                            .unwrap(),
+                    ),
+                    attributes: vec![quote! { doc = r" Field 1 doc" }],
+                    #[cfg(feature = "op")]
+                    addable: Addable::Disable,
+                    #[cfg(feature = "nesting")]
+                    nesting: false,
+                    special_attr: SpecialAttr::None,
+                },
+                Field {
+                    ident: Some(syn::Ident::new("field3", Span::call_site())),
+                    ty: FieldType::Original(
+                        LitStr::new("bool", Span::call_site()).parse().unwrap(),
+                    ),
+                    attributes: vec![
+                        #[cfg(feature = "doc")]
+                        quote! { doc = "Field 3 doc for patch part 1" },
+                        #[cfg(feature = "doc")]
+                        quote! { doc = "Field 3 doc for patch part 2" },
+                    ],
+                    #[cfg(feature = "op")]
+                    addable: Addable::Disable,
+                    #[cfg(feature = "nesting")]
+                    nesting: false,
+                    special_attr: SpecialAttr::EmptyValue(Lit::Bool(syn::LitBool::new(
+                        false,
+                        Span::call_site(),
+                    ))),
+                },
+                Field {
+                    ident: Some(syn::Ident::new("field4", Span::call_site())),
+                    ty: FieldType::Original(LitStr::new("u32", Span::call_site()).parse().unwrap()),
+                    attributes: vec![
+                        #[cfg(feature = "doc")]
+                        quote! { doc = r" Field 4 doc" },
+                        #[cfg(feature = "doc")]
+                        quote! { doc = "Field 4 doc appended." },
+                    ],
+                    #[cfg(feature = "op")]
+                    addable: Addable::Disable,
+                    #[cfg(feature = "nesting")]
+                    nesting: false,
+                    special_attr: SpecialAttr::None,
+                },
+                Field {
+                    ident: Some(syn::Ident::new("field5", Span::call_site())),
+                    ty: FieldType::Original(LitStr::new("u32", Span::call_site()).parse().unwrap()),
+                    attributes: vec![],
+                    #[cfg(feature = "op")]
+                    addable: Addable::Disable,
+                    #[cfg(feature = "nesting")]
+                    nesting: false,
+                    special_attr: SpecialAttr::None,
+                },
+            ],
+        };
+        let result = Patch::from_ast(syn::parse2(input).unwrap()).unwrap();
+        assert_eq_sorted!(
+            format!("{:?}", result.to_token_stream()),
+            format!("{:?}", expected.to_token_stream())
+        );
+
+        // Check that the generated token stream is syntactically correct.
+        syn::parse2::<syn::File>(result.to_token_stream().unwrap()).unwrap();
     }
 }

@@ -407,6 +407,7 @@ mod tests {
     fn test_add_patches() {
         #[derive(Patch)]
         #[patch(attribute(derive(Debug, PartialEq)))]
+        #[allow(dead_code, reason = "used for the test of derive(Patch)")]
         struct Item {
             field: u32,
             other: String,
@@ -435,6 +436,7 @@ mod tests {
     #[should_panic]
     fn test_add_conflict_patches_panic() {
         #[derive(Patch, Debug, PartialEq)]
+        #[allow(dead_code, reason = "used for the test of derive(Patch)")]
         struct Item {
             field: u32,
         }

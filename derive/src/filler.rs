@@ -321,7 +321,11 @@ impl Filler {
                 self.#nesting_field_names.apply(filler.#nesting_field_names);
             )*
         };
-        #[cfg(all(feature = "nesting", not(feature = "simple-nesting"), not(feature = "log")))]
+        #[cfg(all(
+            feature = "nesting",
+            not(feature = "simple-nesting"),
+            not(feature = "log")
+        ))]
         let nesting_apply_section: TokenStream = quote! {
             #(
                 self.#nesting_field_names.apply(filler.#nesting_field_names);
@@ -524,7 +528,9 @@ impl Filler {
                     }
                     #[cfg(not(feature = "log"))]
                     DEFAULT_LOG => {
-                        return Err(meta.error("`default_log` attribute requires the `log` feature"));
+                        return Err(
+                            meta.error("`default_log` attribute requires the `log` feature")
+                        );
                     }
                     _ => {
                         return Err(meta.error(format_args!(
@@ -542,7 +548,7 @@ impl Filler {
                 fields.push(f);
             }
         }
-        let ts = TokenStream::from_str(&format!("{}Filler", &ident,)).unwrap();
+        let ts = TokenStream::from_str(&format!("{ident}Filler")).unwrap();
         let lit = LitStr::new(&ts.to_string(), Span::call_site());
         let filler_struct_name = lit.parse()?;
 
